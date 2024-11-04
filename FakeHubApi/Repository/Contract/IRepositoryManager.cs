@@ -2,4 +2,5 @@
 
 public interface IRepositoryManager
 {
+    public IUserRepository UserRepository { get; }
 }

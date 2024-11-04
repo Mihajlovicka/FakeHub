@@ -2,6 +2,7 @@
 
 namespace FakeHubApi.Repository.Implementation;
 
-public class RepositoryManager: IRepositoryManager
+public class RepositoryManager(IUserRepository userRepository) : IRepositoryManager
 {
+    public IUserRepository UserRepository {get;} = userRepository;
 }

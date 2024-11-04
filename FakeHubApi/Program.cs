@@ -1,5 +1,7 @@
 using FakeHubApi.Data;
 using FakeHubApi.Extensions;
+using FakeHubApi.Model.Entity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +23,15 @@ builder.Services.AddCustomServices();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.SuppressModelStateInvalidFilter = true
 );
+
+builder
+    .Services.AddIdentity<ApplicationUser, IdentityRole<int>>(
+        options => {
+            options.User.RequireUniqueEmail = true;
+        }
+    )
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddControllers();
 
