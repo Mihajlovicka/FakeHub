@@ -1,11 +1,26 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FakeHubApi.Model.Entity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace FakeHubApi.Data;
 
-public class AppDbContext : DbContext
-{
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
 
+        }
+
+        public virtual DbSet<ApplicationUser> ApplicationUsers { get; set; }
+        
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            
+            modelBuilder.Entity<IdentityRole<int>>().HasData(
+                new IdentityRole<int> { Id = 1, Name = Role.ADMIN.ToString(), NormalizedName = Role.ADMIN.ToString() },
+                new IdentityRole<int> { Id = 2, Name = Role.USER.ToString(), NormalizedName = Role.USER.ToString() });
+            
+        }
     }
-}
