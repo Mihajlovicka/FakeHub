@@ -1,4 +1,4 @@
-﻿using FakeHubApi.Model.Dto;
+using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Mapper.UserMapper;
