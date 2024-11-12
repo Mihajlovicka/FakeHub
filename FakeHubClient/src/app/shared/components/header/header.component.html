@@ -1,0 +1,69 @@
+<nav class="navbar navbar-dark navbar-expand-lg">
+  <div class="navbar-container">
+    <div class="navbar-leftpart">
+      <div>
+        <a class="navbar-brand" href="#">
+          <img src="icons/fakehub-icon.png" width="30" class="logo-img" />
+          FakeHub
+        </a>
+      </div>
+      <div *ngIf="isLoggedIn" class="navbar-links">
+        <a class="nav-link text-white mx-2" href="#">Explore</a>
+        <a class="nav-link text-white mx-2" href="#">Repositories</a>
+        <a class="nav-link text-white mx-2" href="#">Organizations</a>
+      </div>
+    </div>
+    <div class="navbar-rightpart">
+      <div class="search">
+        <form action="#">
+          <input
+            type="text"
+            placeholder="Search.."
+            name="search"
+            class="search-input"
+            autocomplete="off"
+          />
+          <button type="submit" class="search-button">
+            <img src="icons/search.png" width="25rem" height="25rem" />
+          </button>
+        </form>
+      </div>
+      <div>
+        <button
+          *ngIf="isLoggedIn"
+          class="btn-hover color-9"
+          (click)="toggleDropdown($event)"
+        >
+          {{ capitalizeFirstLetter("vesna") }}
+        </button>
+
+        <button
+          *ngIf="!isLoggedIn"
+          class="btn-hover color-9 sign-in-btn button-font"
+        >
+          Sign In
+        </button>
+        <button
+          *ngIf="!isLoggedIn"
+          (click)="goToRegistration()"
+          class="btn-hover color-9 button-font"
+        >
+          Sign Up
+        </button>
+
+        <div class="dropdown" [class.show]="isDropdownVisible">
+          <div class="dropdown-content">
+            <a href="#" (click)="goToProfile()">
+              <i class="fa fa-user"></i>
+              My Profile
+            </a>
+            <a href="#" (click)="signOut()">
+              <i class="fa fa-sign-out"></i>
+              Sign Out
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
