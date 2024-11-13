@@ -9,47 +9,54 @@ using Microsoft.AspNetCore.Identity;
 namespace FakeHubApi.Service.Implementation;
 
 public class AuthService(
-    IRepositoryManager _repository,
-    UserManager<ApplicationUser> _userManager,
-    IMapperManager _mapperManager
+    UserManager<User> userManager,
+    IMapperManager mapperManager,
+    IJwtTokenGenerator jwtTokenGenerator
 ) : IAuthService
 {
+    public async Task<ResponseBase> Login(LoginRequestDto loginRequestDto)
+    {
+        var user = await userManager.FindByEmailAsync(loginRequestDto.Email);
+        if (user == null)
+        {
+            return ResponseBase.ErrorResponse("User not found");
+        }
+
+        if (!await userManager.CheckPasswordAsync(user, loginRequestDto.Password))
+            throw new BadHttpRequestException("Email or password is incorrect");
+
+        var roles = await userManager.GetRolesAsync(user);
+        var token = jwtTokenGenerator.GenerateToken(user, roles);
+        return ResponseBase.SuccessResponse(new LoginResponseDto { Token = token });
+    }
 
     public async Task<ResponseBase> Register(RegistrationRequestDto registrationRequestDto)
     {
-        var response = new ResponseBase();
-        var user = _mapperManager.RegistrationsRequestDtoToApplicationUserMapper.Map(
+        var user = mapperManager.RegistrationsRequestDtoToApplicationUserMapper.Map(
             registrationRequestDto
         );
         try
         {
-            var result = await _userManager.CreateAsync(user, registrationRequestDto.Password);
+            var result = await userManager.CreateAsync(user, registrationRequestDto.Password);
             if (!result.Succeeded)
             {
-                return CreateErrorResponse(
+                return ResponseBase.ErrorResponse(
                     result.Errors.FirstOrDefault()?.Description ?? "Registration failed"
                 );
             }
         }
         catch
         {
-            return CreateErrorResponse("An error occurred during user creation");
+            return ResponseBase.ErrorResponse("An error occurred during user creation");
         }
 
-        var createdUser = await _repository.UserRepository.GetByUsername(
-            registrationRequestDto.Username
-        );
+        var createdUser = await userManager.FindByEmailAsync(registrationRequestDto.Email);
         if (createdUser == null)
         {
-            return CreateErrorResponse("User creation failed");
+            return ResponseBase.ErrorResponse("User creation failed");
         }
 
-        await _userManager.AddToRoleAsync(user, registrationRequestDto.Role);
-        return response;
-    }
-
-    private ResponseBase CreateErrorResponse(string errorMessage)
-    {
-        return new ResponseBase { Success = false, ErrorMessage = errorMessage };
+        await userManager.AddToRoleAsync(user, registrationRequestDto.Role);
+        return ResponseBase.SuccessResponse();
     }
 }

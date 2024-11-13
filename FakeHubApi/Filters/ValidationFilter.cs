@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace FakeHubApi.Filters;
 
-public class ValidationFilterAttribute : IActionFilter
+public class ValidationFilter : IActionFilter
 {
     public void OnActionExecuting(ActionExecutingContext context)
     {
@@ -21,10 +21,11 @@ public class ValidationFilterAttribute : IActionFilter
             var response = new ResponseBase()
             {
                 Success = false,
-                ErrorMessage = string.Join(", \n", errorMessages) 
+                ErrorMessage = string.Join(", \n", errorMessages),
             };
             context.Result = new BadRequestObjectResult(response);
         }
     }
-    public void OnActionExecuted(ActionExecutedContext context) {}
+
+    public void OnActionExecuted(ActionExecutedContext context) { }
 }

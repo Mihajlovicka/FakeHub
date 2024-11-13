@@ -3,7 +3,7 @@ using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Repository.Contract;
 
-public interface IUserRepository : ICrudRepository<ApplicationUser>
+public interface IUserRepository : ICrudRepository<User>
 {
-    Task<ApplicationUser> GetByUsername(string username);
+    Task<User> GetByUsername(string username);
 }

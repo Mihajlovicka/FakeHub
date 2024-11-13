@@ -1,9 +1,11 @@
 using FakeHubApi.Data;
 using FakeHubApi.Extensions;
+using FakeHubApi.Filters;
 using FakeHubApi.Model.Entity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,28 +20,62 @@ builder.Services.AddDbContext<AppDbContext>(option =>
 });
 
 builder.Services.AddCustomCors();
-builder.Services.AddCustomServices();
+builder.Services.AddCustomServices(builder.Configuration);
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
     options.SuppressModelStateInvalidFilter = true
 );
 
 builder
-    .Services.AddIdentity<ApplicationUser, IdentityRole<int>>(
-        options => {
-            options.User.RequireUniqueEmail = true;
-        }
-    )
+    .Services.AddIdentity<User, IdentityRole<int>>(options =>
+    {
+        options.User.RequireUniqueEmail = true;
+    })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddControllers();
+builder.AddAuthenticationAndAuthorization();
+
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(opt =>
+{
+    opt.SwaggerDoc("v1", new OpenApiInfo { Title = "MyAPI", Version = "v1" });
+    opt.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Description = "Please enter token",
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            BearerFormat = "JWT",
+            Scheme = "bearer",
+        }
+    );
 
-builder.Services.AddAuthorization();
+    opt.AddSecurityRequirement(
+        new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer",
+                    },
+                },
+                new string[] { }
+            },
+        }
+    );
+});
 
 var app = builder.Build();
 

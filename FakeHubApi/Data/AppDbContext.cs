@@ -5,22 +5,32 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FakeHubApi.Data;
 
-public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
+public class AppDbContext : IdentityDbContext<User, IdentityRole<int>, int>
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options) { }
+
+    public virtual DbSet<User> Users { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-        {
+        base.OnModelCreating(modelBuilder);
 
-        }
-
-        public virtual DbSet<ApplicationUser> ApplicationUsers { get; set; }
-        
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-            
-            modelBuilder.Entity<IdentityRole<int>>().HasData(
-                new IdentityRole<int> { Id = 1, Name = Role.ADMIN.ToString(), NormalizedName = Role.ADMIN.ToString() },
-                new IdentityRole<int> { Id = 2, Name = Role.USER.ToString(), NormalizedName = Role.USER.ToString() });
-            
-        }
+        modelBuilder
+            .Entity<IdentityRole<int>>()
+            .HasData(
+                new IdentityRole<int>
+                {
+                    Id = 1,
+                    Name = Role.ADMIN.ToString(),
+                    NormalizedName = Role.ADMIN.ToString(),
+                },
+                new IdentityRole<int>
+                {
+                    Id = 2,
+                    Name = Role.USER.ToString(),
+                    NormalizedName = Role.USER.ToString(),
+                }
+            );
     }
+}
