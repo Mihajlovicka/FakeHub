@@ -14,7 +14,7 @@ import { UserService } from "../../../core/services/user.service";
 import { Router } from "@angular/router";
 
 @Component({
-  selector: "app-register",
+  selector: "app-login",
   standalone: true,
   imports: [
     MatInputModule,
@@ -24,26 +24,24 @@ import { Router } from "@angular/router";
     FormsModule,
     RouterLink,
   ],
-  templateUrl: "./register.component.html",
-  styleUrl: "./register.component.css",
+  templateUrl: "./login.component.html",
+  styleUrl: "./login.component.css",
 })
-export class RegisterComponent {
+export class LoginComponent {
   service: UserService = inject(UserService);
   router: Router = inject(Router);
 
-  registerForm: FormGroup = new FormGroup({
-    username: new FormControl("", Validators.required),
+  loginForm: FormGroup = new FormGroup({
     email: new FormControl("", [Validators.required, Validators.email]),
     password: new FormControl("", Validators.required),
-    role: new FormControl("USER"),
   });
 
   onSubmit(): void {
-    if (this.registerForm.invalid) return;
+    if (this.loginForm.invalid) return;
 
-    this.service.register(this.registerForm.value).subscribe({
+    this.service.login(this.loginForm.value).subscribe({
       next: () => {
-        this.router.navigate(["/login"]);
+        this.router.navigate(["/"]);
       },
     });
   }

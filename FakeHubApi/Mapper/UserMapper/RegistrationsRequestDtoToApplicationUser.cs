@@ -1,18 +1,12 @@
-﻿
-using FakeHubApi.Mapper;
-using FakeHubApi.Model.Dto;
+﻿using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 
-namespace AuthService.Mapper.UserMapper;
+namespace FakeHubApi.Mapper.UserMapper;
 
-public class RegistrationsRequestDtoToApplicationUser: BaseMapper<RegistrationRequestDto, ApplicationUser>
+public class RegistrationsRequestDtoToApplicationUser : BaseMapper<RegistrationRequestDto, User>
 {
-    public override ApplicationUser Map(RegistrationRequestDto source)
+    public override User Map(RegistrationRequestDto source)
     {
-        return new()
-        {
-            UserName = source.Username,
-            Email = source.Email,
-        };
+        return new() { UserName = source.Username, Email = source.Email };
     }
 }

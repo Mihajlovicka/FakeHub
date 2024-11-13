@@ -4,7 +4,12 @@ using FakeHubApi.Model.Entity;
 namespace FakeHubApi.Mapper;
 
 public class MapperManager(
-    IBaseMapper<RegistrationRequestDto, ApplicationUser> registrationsRequestDtoToApplicationUserMapper) : IMapperManager
+    IBaseMapper<RegistrationRequestDto, User> registrationsRequestDtoToApplicationUserMapper
+) : IMapperManager
 {
-    public IBaseMapper<RegistrationRequestDto, ApplicationUser> RegistrationsRequestDtoToApplicationUserMapper { get; } = registrationsRequestDtoToApplicationUserMapper;
+    public IBaseMapper<
+        RegistrationRequestDto,
+        User
+    > RegistrationsRequestDtoToApplicationUserMapper { get; } =
+        registrationsRequestDtoToApplicationUserMapper;
 }

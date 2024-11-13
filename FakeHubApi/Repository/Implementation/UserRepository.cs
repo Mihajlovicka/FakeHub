@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FakeHubApi.Repository.Implementation;
 
-public class UserRepository(AppDbContext context) : CrudRepository<ApplicationUser>(context), IUserRepository
+public class UserRepository(AppDbContext context) : CrudRepository<User>(context), IUserRepository
 {
-    public async Task<ApplicationUser> GetByUsername(string username)
-        => await _context.ApplicationUsers.FirstOrDefaultAsync(x => x.UserName == username);
+    public async Task<User> GetByUsername(string username) =>
+        await _context.Users.FirstOrDefaultAsync(x => x.UserName == username);
 }

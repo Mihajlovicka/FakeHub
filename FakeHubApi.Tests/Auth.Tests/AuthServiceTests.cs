@@ -2,31 +2,28 @@ using FakeHubApi.Data;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
-using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
+using FakeHubApi.Service.Implementation;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 
-namespace FakeHubApi.Tests;
+namespace FakeHubApi.Tests.Auth.Tests;
 
 public class Tests
 {
-    private Mock<AppDbContext> _mockDbContext;
-    private Mock<IRepositoryManager> _repositoryManagerMock;
     private Mock<IMapperManager> _mapperManagerMock;
-    private Mock<UserManager<ApplicationUser>> _mockUserManager;
+    private Mock<UserManager<User>> _mockUserManager;
+    private Mock<IJwtTokenGenerator> _mockJwtTokenGenerator;
     private IAuthService _authService;
 
     [SetUp]
     public void Setup()
     {
-        _mockDbContext = new Mock<AppDbContext>();
-
-        _repositoryManagerMock = new Mock<IRepositoryManager>();
         _mapperManagerMock = new Mock<IMapperManager>();
+        _mockJwtTokenGenerator = new Mock<IJwtTokenGenerator>();
 
-        _mockUserManager = new Mock<UserManager<ApplicationUser>>(
-            new Mock<IUserStore<ApplicationUser>>().Object,
+        _mockUserManager = new Mock<UserManager<User>>(
+            new Mock<IUserStore<User>>().Object,
             null,
             null,
             null,
@@ -37,14 +34,10 @@ public class Tests
             null
         );
 
-        _repositoryManagerMock
-            .Setup(repo => repo.UserRepository)
-            .Returns(new Mock<IUserRepository>().Object);
-
-        _authService = new Service.Implementation.AuthService(
-            _repositoryManagerMock.Object,
+        _authService = new AuthService(
             _mockUserManager.Object,
-            _mapperManagerMock.Object
+            _mapperManagerMock.Object,
+            _mockJwtTokenGenerator.Object
         );
     }
 
@@ -57,14 +50,10 @@ public class Tests
             Email = "test@example.com",
             Username = "UserName",
             Password = "Password123!",
-            Role = "User"
+            Role = "User",
         };
 
-        var user = new ApplicationUser
-        {
-            Email = "test@example.com",
-            UserName = "UserName",
-        };
+        var user = new User { Email = "test@example.com", UserName = "UserName" };
 
         _mapperManagerMock
             .Setup(m =>
@@ -74,17 +63,15 @@ public class Tests
             )
             .Returns(user);
 
-        _repositoryManagerMock
-            .Setup(r => r.UserRepository.GetByUsername(It.IsAny<string>()))
-            .ReturnsAsync(user);
-
         _mockUserManager
-            .Setup(um => um.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+            .Setup(um => um.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Success);
 
         _mockUserManager
-            .Setup(um => um.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+            .Setup(um => um.AddToRoleAsync(It.IsAny<User>(), It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Success);
+
+        _mockUserManager.Setup(um => um.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
 
         // Act
         var result = await _authService.Register(registrationRequestDto);
@@ -92,7 +79,7 @@ public class Tests
         Assert.Multiple(() =>
         {
             Assert.That(result.Success, Is.True);
-            Assert.That(result.ErrorMessage, Is.EqualTo(""));
+            Assert.That(result.Result, Is.Null);
         });
     }
 
@@ -105,14 +92,10 @@ public class Tests
             Email = "test@example.com",
             Username = "UserName",
             Password = "Password123!",
-            Role = "User"
+            Role = "User",
         };
 
-        var user = new ApplicationUser
-        {
-            Email = "test@example.com",
-            UserName = "UserName",
-        };
+        var user = new User { Email = "test@example.com", UserName = "UserName" };
 
         var identityError = new IdentityError { Description = "Error creating user." };
         var identityResult = IdentityResult.Failed(identityError);
@@ -126,7 +109,7 @@ public class Tests
             .Returns(user);
 
         _mockUserManager
-            .Setup(um => um.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+            .Setup(um => um.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
             .ReturnsAsync(identityResult);
 
         // Act
@@ -149,14 +132,10 @@ public class Tests
             Email = "test@example.com",
             Username = "UserName",
             Password = "Password123!",
-            Role = "User"
+            Role = "User",
         };
 
-        var user = new ApplicationUser
-        {
-            Email = "test@example.com",
-            UserName = "UserName",
-        };
+        var user = new User { Email = "test@example.com", UserName = "UserName" };
 
         _mapperManagerMock
             .Setup(m =>
@@ -167,7 +146,7 @@ public class Tests
             .Returns(user);
 
         _mockUserManager
-            .Setup(um => um.CreateAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+            .Setup(um => um.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
             .Throws(new System.Exception("An error occurred during user creation"));
 
         // Act
@@ -178,6 +157,75 @@ public class Tests
         {
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorMessage, Is.EqualTo("An error occurred during user creation"));
+        });
+    }
+
+    [Test]
+    public async Task Login_UserValid_ReturnsLoginResponseDto()
+    {
+        // Arrange
+        var loginRequestDto = new LoginRequestDto
+        {
+            Email = "testuser@example.com",
+            Password = "Password123!",
+        };
+
+        var user = new User
+        {
+            Email = loginRequestDto.Email,
+            NormalizedEmail = loginRequestDto.Email.ToUpper(),
+        };
+
+        _mockUserManager.Setup(r => r.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
+
+        _mockUserManager
+            .Setup(um => um.CheckPasswordAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(true);
+
+        _mockUserManager
+            .Setup(um => um.GetRolesAsync(It.IsAny<User>()))
+            .ReturnsAsync(new List<string> { "User" });
+
+        _mockJwtTokenGenerator
+            .Setup(jwt => jwt.GenerateToken(It.IsAny<User>(), It.IsAny<IList<string>>()))
+            .Returns("mock-token");
+
+        // Act
+        var result = await _authService.Login(loginRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That((result.Result as LoginResponseDto).Token, Is.EqualTo("mock-token"));
+        });
+    }
+
+    [Test]
+    public async Task Login_UserInvalid_ReturnsLoginResponseDtoWithEmptyToken()
+    {
+        // Arrange
+        var loginRequestDto = new LoginRequestDto
+        {
+            Email = "testuser@example.com",
+            Password = "Password123!",
+        };
+
+        _mockUserManager
+            .Setup(r => r.FindByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync((User)null);
+
+        _mockUserManager
+            .Setup(um => um.CheckPasswordAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _authService.Login(loginRequestDto);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
         });
     }
 }

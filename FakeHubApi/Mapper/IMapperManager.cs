@@ -5,5 +5,8 @@ namespace FakeHubApi.Mapper;
 
 public interface IMapperManager
 {
-    IBaseMapper<RegistrationRequestDto, ApplicationUser> RegistrationsRequestDtoToApplicationUserMapper { get; }
+    IBaseMapper<
+        RegistrationRequestDto,
+        User
+    > RegistrationsRequestDtoToApplicationUserMapper { get; }
 }
