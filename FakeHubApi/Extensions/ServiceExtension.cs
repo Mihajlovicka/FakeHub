@@ -22,6 +22,7 @@ public static class ServiceExtensions
 
         // Service-related scoped services
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IDockerImageService, DockerImageService>();
         services.AddScoped<ValidationFilter>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
