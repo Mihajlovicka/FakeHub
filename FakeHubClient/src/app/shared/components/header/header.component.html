@@ -54,7 +54,7 @@
 
         <div class="dropdown" [class.show]="isDropdownVisible">
           <div class="dropdown-content">
-            <a href="#" (click)="goToProfile()">
+            <a [href]="'profile/' + username">
               <i class="fa fa-user"></i>
               My Profile
             </a>

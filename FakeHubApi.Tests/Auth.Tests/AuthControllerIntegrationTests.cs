@@ -1,10 +1,12 @@
-﻿using System.Net.Http.Json;
+﻿using System.Net;
+using System.Net.Http.Json;
 using FakeHubApi.Data;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace FakeHubApi.Tests.Auth.Tests;
 
@@ -138,5 +140,87 @@ public class AuthControllerIntegrationTests
             await _db.SaveChangesAsync();
             await userManager.AddToRolesAsync(user, new[] { "USER" });
         }
+    }
+
+    [Test]
+    public async Task GetUserProfileByUsername_ValidUsername_ReturnsOk()
+    {
+        // Arrange
+        var username = "test@example.com";
+
+        // Act
+        var response = await _client.GetAsync($"/api/auth/profile/{username}");
+        response.EnsureSuccessStatusCode();
+
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var responseUserString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+            Assert.That(responseUserString, Is.Not.Empty);
+        });
+
+        var responseUserObject = JsonConvert.DeserializeObject<UserProfileResponseDto>(responseUserString);
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseUserObject, Is.Not.Null);
+            Assert.That(responseUserObject?.Username, Is.Not.Null);
+            Assert.That(responseUserObject?.Username, Is.EqualTo(username));
+        });
+    }
+
+    [Test]
+    public async Task GetUserProfileByUsername_ValidUsernameWithDifferentCase_ReturnsOk()
+    {
+        // Arrange
+        var username = "TEST@EXAMPLE.COM";
+
+        // Act
+        var response = await _client.GetAsync($"/api/auth/profile/{username}");
+        response.EnsureSuccessStatusCode();
+
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var responseUserString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseUserString, Is.Not.Empty);
+        });
+
+        var responseUserObject = JsonConvert.DeserializeObject<UserProfileResponseDto>(responseUserString);
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseUserObject, Is.Not.Null);
+            Assert.That(responseUserObject?.Username, Is.Not.Null);
+            Assert.That(responseUserObject?.Username, Is.EqualTo(username.ToLower()));
+        });
+    }
+
+    [Test]
+    public async Task GetUserProfileByUsername_NonExistentUsername_ReturnsNotFound()
+    {
+        // Arrange
+        var username = "nonexistentuser";
+
+        // Act
+        var response = await _client.GetAsync($"/api/auth/profile/{username}");
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That(responseObj?.ErrorMessage, Is.Not.Empty);
+            Assert.That(responseObj?.ErrorMessage, Is.EqualTo("User not found"));
+            Assert.That(responseObj?.Result, Is.Null);
+        });
     }
 }

@@ -224,4 +224,78 @@ public class Tests
             Assert.That(result.Result, Is.Null);
         });
     }
+
+    [Test]
+    public async Task GetUserProfileByUsernameAsync_UserFound_ReturnsUserProfile()
+    {
+        // Arrange
+        var username = "testUser";
+        var user = new User
+        {
+            UserName = username,
+            Email = "testuser@example.com"
+        };
+        var userProfileDto = new UserProfileResponseDto
+        {
+            Username = user.UserName,
+            Email = user.Email
+        };
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(username))
+            .ReturnsAsync(user);
+        _mapperManagerMock
+            .Setup(m => m.ApplicationUserToUserProfileResponseDto.Map(It.IsAny<User>()))
+            .Returns(userProfileDto);
+        // Act
+        var result = await _authService.GetUserProfileByUsernameAsync(username);
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Not.Null);
+            Assert.That(result.Result, Is.EqualTo(userProfileDto));
+            Assert.That(((UserProfileResponseDto)result.Result).Username, Is.EqualTo(user.UserName));
+            Assert.That(result.ErrorMessage, Is.EqualTo(string.Empty));
+        });
+    }
+
+    [Test]
+    public async Task GetUserProfileByUsernameAsync_UserNotFound_ReturnsErrorResponse()
+    {
+        // Arrange
+        var username = "nonExistentUser";
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(username))
+            .ReturnsAsync((User)null);
+        // Act
+        var result = await _authService.GetUserProfileByUsernameAsync(username);
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("User not found"));
+        });
+    }
+
+    [Test]
+    public async Task GetUserProfileByUsernameAsync_ExceptionThrown_ReturnsErrorResponse()
+    {
+        // Arrange
+        var username = "testUser";
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(username))
+            .ThrowsAsync(new System.Exception("An unexpected error occurred"));
+        // Act
+        var result = await _authService.GetUserProfileByUsernameAsync(username);
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("An unexpected error occurred"));
+        });
+    }
 }

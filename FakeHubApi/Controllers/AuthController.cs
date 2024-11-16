@@ -1,4 +1,5 @@
 ﻿using FakeHubApi.Model.Dto;
+using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,5 +44,20 @@ public class AuthController(IAuthService authService) : ControllerBase
             return Ok(response);
         }
         return BadRequest(response);
+    }
+
+    [HttpGet("profile/{username}")]
+    public async Task<IActionResult> GetUserProfileByUsername(string username)
+    {
+        if (string.IsNullOrEmpty(username)) return BadRequest(ResponseBase.ErrorResponse("Username is empty"));
+
+        var response = await authService.GetUserProfileByUsernameAsync(username);
+
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+
+        return NotFound(response);
     }
 }

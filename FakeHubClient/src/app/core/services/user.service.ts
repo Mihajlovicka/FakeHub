@@ -1,9 +1,9 @@
 import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
-import { Observable, tap } from "rxjs";
-import { Path } from "../constant/path.enum";
+import { catchError, Observable, tap } from "rxjs";
+import { getProfilePath, Path } from "../constant/path.enum";
 import { ServiceResponse } from "../model/service-response";
-import { RegistrationRequestDto } from "../model/user";
+import { RegistrationRequestDto, UserProfileResponseDto } from "../model/user";
 import { LoginRequestDto, LoginResponseDto } from "../model/login";
 import { jwtDecode } from "jwt-decode";
 import { StorageService } from "./local-storage.service";
@@ -14,7 +14,7 @@ import { UserRole } from "../model/user-role";
 })
 export class UserService {
   private http: HttpClient = inject(HttpClient);
-
+  
   private storageService: StorageService = inject(StorageService);
 
   register(user: RegistrationRequestDto): Observable<any | null> {
@@ -30,8 +30,17 @@ export class UserService {
     );
   }
 
+  public getUserProfileByUsername(usernameParam: string): Observable<UserProfileResponseDto | null> {
+    const profileUrl = getProfilePath(usernameParam);
+    return this.http.get<UserProfileResponseDto>(profileUrl).pipe(
+      tap((user: UserProfileResponseDto) => {
+        return user;
+      })
+    );
+  }
+
   public extractToken(token: string): void {
-    this.storageService.setItem("token", token);
+    localStorage.setItem("token", token);
     try {
       const decodedToken: any = jwtDecode(token);
       this.storageService.setItem("role", decodedToken.role);
@@ -53,6 +62,13 @@ export class UserService {
     return this.storageService.getItem("name");
   }
 
+  public getUserNameFromToken(): string | null {
+    const token = this.storageService.getItem("token") ?? "";
+    const decodedToken: any = jwtDecode(token);
+    
+    return decodedToken?.name ?? "";
+  }
+
   public isLoggedIn(): boolean {
     return this.getToken() !== null;
   }
@@ -61,5 +77,4 @@ export class UserService {
     this.storageService.removeItem("token");
     this.storageService.removeItem("role");
   }
-  
 }
