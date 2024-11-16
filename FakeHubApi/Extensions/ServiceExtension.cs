@@ -31,6 +31,10 @@ public static class ServiceExtensions
             IBaseMapper<RegistrationRequestDto, User>,
             RegistrationsRequestDtoToApplicationUser
         >();
+        services.AddScoped<
+            IBaseMapper<User, UserProfileResponseDto>,
+            ApplicationUserToUserProfileResponseDto
+        >();
         services.AddScoped<IMapperManager, MapperManager>();
 
         // Repository-related scoped services

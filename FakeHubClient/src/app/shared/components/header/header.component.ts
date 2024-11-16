@@ -12,14 +12,13 @@ import { UserService } from '../../../core/services/user.service';
 })
 export class HeaderComponent {
   private userService: UserService = inject(UserService);
+  private router: Router = inject(Router);
 
   public isLoggedIn: boolean = false;
   public isDropdownVisible = false;
   public username: string = '';
 
-  constructor(private router: Router) { }
-
-  public ngOnInit(): void {
+  ngOnInit(): void {
     this.isLoggedIn = this.userService.isLoggedIn();
     this.username = this.userService.getUserName() ?? '';
   }
@@ -36,10 +35,6 @@ export class HeaderComponent {
     } else {
       button.classList.remove('dropdown-open');
     }
-  }
-
-  public goToProfile() {
-    this.isDropdownVisible = false;
   }
 
   public goToRegistration(): void {

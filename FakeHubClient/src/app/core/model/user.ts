@@ -9,3 +9,17 @@ export class RegistrationRequestDto {
     this.password = '';
   }
 }
+
+export class UserProfileResponseDto {
+  username: string;
+  email: string;
+  role: string;
+  createdAt: Date;
+
+  constructor() {
+    this.username = '';
+    this.email = '';
+    this.role = '';
+    this.createdAt = new Date();
+  }
+}

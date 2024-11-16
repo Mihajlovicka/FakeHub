@@ -15,16 +15,14 @@ import { UserService } from '../../core/services/user.service';
 })
 export class HomeComponent implements OnInit {
   private userService: UserService = inject(UserService);
+  private dockerImageService: DockerImageService = inject(DockerImageService);
 
   public isTrustedContentVisible: boolean = true;
   public isCategoriesVisible: boolean = true;
   public isLoggedIn: boolean = false;
   public dockerImages: DockerImage[] = [];
-  private error: string | null = null;
 
-  constructor(private dockerImageService: DockerImageService) {}
-
-  public ngOnInit(): void {
+  ngOnInit(): void {
     this.isLoggedIn = this.userService.isLoggedIn();
     this.loadDockerImages();
   }
@@ -42,9 +40,6 @@ export class HomeComponent implements OnInit {
       .subscribe({
         next: (images) => {
           this.dockerImages = images;
-        },
-        error: (err) => {
-          this.error = 'Failed to load Docker images: ' + err.message;
         }
       });
   }

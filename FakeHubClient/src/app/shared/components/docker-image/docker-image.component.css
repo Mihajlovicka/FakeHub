@@ -5,9 +5,9 @@
 .link-container {
   width: 18rem;
   height: fit-content;
-  border: 1px solid var(--primary-color);
-  border-radius: 3px;
-  background-color: transparent;
+  box-shadow: 1px 1px 6px 0px lightgray;
+  border-radius: 10px;
+  background-color: #e7e7e71f;
   display: flex;
   flex-direction: column;
   padding: 10px;
@@ -45,7 +45,7 @@
 }
 
 .fa-check-circle {
-  color: #3e5c70;
+  color: rgba(13, 110, 253 ,0.8);
   font-size: 1.2rem;
 }
 
@@ -61,7 +61,7 @@
   margin-top: 10px;
   font-size: 14px;
   color: #555;
-  border-bottom: 1px solid #9fa8da;
+  border-bottom: 1px solid lightgray;
   text-align: left;
 
   line-height: 18px;
@@ -70,16 +70,19 @@
 
 .link-footer {
   width: 100%;
-  text-align: center;
+  text-align: right;
   margin-top: 10px;
   font-size: 0.9rem;
 }
 
-.likes {
-  margin-right: 15px;
+.footer-text {
+  margin-right: 5px;
   color: var(--primary-color);
+  opacity: 0.8;
+  font-size: 0.925rem;
 }
 
-.downloads {
-  color: var(--primary-color);
+span.footer-text {
+  margin-right: 15px;
+  font-family: "roboto-light";
 }

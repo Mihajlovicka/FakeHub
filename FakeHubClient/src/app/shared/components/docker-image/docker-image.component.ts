@@ -10,14 +10,20 @@ import { DockerImage } from '../../../core/model/docker-image';
   styleUrl: './docker-image.component.css'
 })
 export class DockerImageComponent {
-  @Input() dockerImage?: DockerImage;  
-  
+  @Input() dockerImage?: DockerImage;
+
   public formatNumber(value: number): string {
     if (value >= 1000000) {
-      return (value / 1000000).toFixed(1) + 'M';  
+        return this.formatLargeNumber(value, 1000000, 'M');
     } else if (value >= 1000) {
-      return (value / 1000).toFixed(1) + 'K';    
+        return this.formatLargeNumber(value, 1000, 'K');
     }
-    return value.toString();  
+    return value.toString();
   }
+
+  private formatLargeNumber (value: number, divisor: number, suffix: string): string {
+    let decNumber = (value / divisor).toFixed(1);
+    decNumber = decNumber.endsWith('.0') ? decNumber.slice(0, decNumber.length - 2) : decNumber;
+    return decNumber + suffix;
+  };
 }

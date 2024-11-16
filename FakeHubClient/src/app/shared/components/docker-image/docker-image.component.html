@@ -11,12 +11,14 @@
     </div>
 
     <div class="link-footer">
-      <i class="fa fa-star-o likes">{{
+      <i class="fa fa-star-o footer-text"> </i>
+      <span class="footer-text">{{
         formatNumber(dockerImage?.likesCount ?? 0)
-      }}</i>
-      <i class="fa fa-download downloads">{{
+      }}</span>
+      <i class="fa fa-download footer-text"></i>
+      <span class="footer-text"> {{
         formatNumber(dockerImage?.downloadsCount ?? 0)
-      }}</i>
+      }}</span>
     </div>
   </a>
 </div>

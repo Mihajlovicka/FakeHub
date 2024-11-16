@@ -58,4 +58,27 @@ public class AuthService(
         await userManager.AddToRoleAsync(user, role);
         return ResponseBase.SuccessResponse();
     }
+    
+    public async Task<ResponseBase> GetUserProfileByUsernameAsync(string username)
+    {
+        try
+        {
+            var user = await userManager.FindByNameAsync(username);
+
+            if (user == null)
+            {
+                return ResponseBase.ErrorResponse("User not found");
+            }
+
+            var responseUser = mapperManager.ApplicationUserToUserProfileResponseDto.Map(
+                user
+            );
+
+            return ResponseBase.SuccessResponse(responseUser);
+        }
+        catch (Exception ex)
+        {
+            return ResponseBase.ErrorResponse(ex.Message);
+        }
+    }
 }
