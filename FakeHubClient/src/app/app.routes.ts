@@ -9,9 +9,9 @@ import { HomeComponent } from './features/home/home.component';
 export const routes: Routes = [
   {
     path: '',
-    component: AppComponent,
-    canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
+    component: HomeComponent,
+    // canActivate: [AuthGuard],
+    // data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
   },
   {
     path: 'register',

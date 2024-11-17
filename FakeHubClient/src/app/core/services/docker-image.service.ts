@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { DockerImage } from './../model/docker-image.model';
+import { DockerImage } from './../model/docker-image';
 import { Observable } from 'rxjs';
 import { Path } from '../constant/path.enum';
 
@@ -8,7 +8,7 @@ import { Path } from '../constant/path.enum';
   providedIn: 'root'
 })
 export class DockerImageService {
-  http: HttpClient = inject(HttpClient);
+  private http: HttpClient = inject(HttpClient);
 
   getDockerImages(): Observable<DockerImage[]> {
     return this.http.get<DockerImage[]>(Path.DockerImage);
