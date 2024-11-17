@@ -2,7 +2,7 @@
   <div class="navbar-container">
     <div class="navbar-leftpart">
       <div>
-        <a class="navbar-brand" href="#">
+        <a class="navbar-brand">
           <img src="icons/fakehub-icon.png" width="30" class="logo-img" />
           FakeHub
         </a>
@@ -34,11 +34,12 @@
           class="btn-hover color-9"
           (click)="toggleDropdown($event)"
         >
-          {{ capitalizeFirstLetter("vesna") }}
+          {{ capitalizeFirstLetter(username) }}
         </button>
 
         <button
-          *ngIf="!isLoggedIn"
+          *ngIf="!isLoggedIn" 
+          (click) = goToLogin()
           class="btn-hover color-9 sign-in-btn button-font"
         >
           Sign In

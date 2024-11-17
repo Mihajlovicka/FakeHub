@@ -1,6 +1,6 @@
 import { Component, Input  } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DockerImage } from '../../../core/model/docker-image.model';
+import { DockerImage } from '../../../core/model/docker-image';
 
 @Component({
   selector: 'app-docker-image',

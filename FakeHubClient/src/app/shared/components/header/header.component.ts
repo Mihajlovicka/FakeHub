@@ -1,6 +1,7 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { UserService } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-header',
@@ -11,9 +12,16 @@ import { Router } from '@angular/router';
 })
 export class HeaderComponent {
   constructor(private router: Router) { }
+  userService: UserService = inject(UserService);
 
+  isLoggedIn: boolean = false;
   isDropdownVisible = false;
-  isLoggedIn = false;
+  username: string = '';
+
+  ngOnInit(): void {
+    this.isLoggedIn = this.userService.isLoggedIn();
+    this.username = this.userService.getUserName() ?? '';
+  }
 
   toggleDropdown(event: MouseEvent) {
     this.isDropdownVisible = !this.isDropdownVisible;
@@ -34,13 +42,17 @@ export class HeaderComponent {
     this.isDropdownVisible = false;
   }
 
-  signOut() {
-    console.log('Signing out...');
-    this.isDropdownVisible = false;
-  }
-
   goToRegistration(): void {
     this.router.navigate(['/register']);
+  }
+
+  goToLogin(): void {
+    this.router.navigate(['/login']);
+  }
+
+  signOut(): void {
+    this.userService.logout();
+    window.location.reload();
   }
 
   capitalizeFirstLetter(input: string): string {
