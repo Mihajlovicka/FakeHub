@@ -7,7 +7,8 @@ export const Path = {
   Register: authApi + 'register',
   Login: authApi + 'login',
   DockerImage: api + 'docker-images',
-  RegisterAdmin: authApi + 'register/admin'
+  RegisterAdmin: authApi + 'register/admin',
+  ChangePassword: authApi + 'change-password'
 };
 
 export function getProfilePath(username: string): string {

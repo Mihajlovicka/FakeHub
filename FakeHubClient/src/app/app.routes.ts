@@ -1,16 +1,19 @@
-import { Routes } from "@angular/router";
-import { RegisterComponent } from "./features/user/register/register.component";
-import { HomeComponent } from "./features/home/home.component";
-import { LoginComponent } from "./features/user/login/login.component";
-import { UserRole } from "./core/model/user-role";
-import { NoAuthGuard } from "./core/guard/no-auth.guard";
-import { ProfileComponent } from "./features/user/profile/profile.component";
-import { AuthGuard } from "./core/guard/auth.guard";
+import { Routes } from '@angular/router';
+import { RegisterComponent } from './features/user/register/register.component';
+import { HomeComponent } from './features/home/home.component';
+import { LoginComponent } from './features/user/login/login.component';
+import { UserRole } from './core/model/user-role';
+import { NoAuthGuard } from './core/guard/no-auth.guard';
+import { AuthGuard } from './core/guard/auth.guard';
+import { ChangePasswordComponent } from "./features/user/change-password/change-password.component";
+import { NotEnabledGuard } from "./core/guard/not-enabled.guard";
+import { ProfileComponent } from './features/user/profile/profile.component';
 
 export const routes: Routes = [
   {
-    path: "",
+    path: '',
     component: HomeComponent,
+    canActivate: [NotEnabledGuard]
   },
   {
     path: "register",
@@ -35,13 +38,13 @@ export const routes: Routes = [
     data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
   },
   {
-    path: "**",
-    redirectTo: "",
+    path: 'change-password',
+    component: ChangePasswordComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.USER] }
   },
   {
-    path: 'profile/:username',
-    component: ProfileComponent,
-    canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
-  },
+    path: '**',
+    redirectTo: ''
+  }
 ];

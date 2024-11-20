@@ -22,6 +22,7 @@ public class JwtTokenGenerator(IOptions<JwtSettings> jwtOptions) : IJwtTokenGene
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Name, user.UserName!),
+            new Claim("enabled", user.TwoFactorEnabled.ToString().ToLower())
         };
 
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));

@@ -1,14 +1,13 @@
 import { inject } from '@angular/core';
 import {
   HttpEvent,
-  HttpHandler,
   HttpRequest,
   HttpErrorResponse,
   HttpResponse,
   HttpInterceptorFn,
   HttpHandlerFn,
 } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { PopupHandlerService } from '../services/popup-handler.service';
 import { Router } from '@angular/router';

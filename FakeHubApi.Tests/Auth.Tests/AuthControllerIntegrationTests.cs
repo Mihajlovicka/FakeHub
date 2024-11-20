@@ -1,5 +1,7 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using FakeHubApi.Data;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -7,6 +9,7 @@ using FakeHubApi.Model.ServiceResponse;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace FakeHubApi.Tests.Auth.Tests;
 
@@ -16,11 +19,11 @@ public class AuthControllerIntegrationTests
     private CustomWebApplicationFactory _factory;
 
     [OneTimeSetUp]
-    public void Setup()
+    public async Task Setup()
     {
         _factory = new CustomWebApplicationFactory();
         _client = _factory.CreateClient();
-        SetupDbData().Wait();
+        await SetupDbData();
     }
 
     [OneTimeTearDown]
@@ -30,132 +33,303 @@ public class AuthControllerIntegrationTests
         _factory.Dispose();
     }
 
-    [Test]
+    [Test, Order(1)]
     public async Task Register_UserCreatedSuccessfully_ReturnsOk()
     {
-        // Arrange
         var registrationRequestDto = new RegistrationRequestDto
         {
             Email = "register@example.com",
             Username = "RegisterUserName",
-            Password = "Password123!",
+            Password = "Password123!"
         };
-        // Act
+
         var response = await _client.PostAsJsonAsync("/api/auth/register", registrationRequestDto);
 
-        // Assert
         response.EnsureSuccessStatusCode();
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
-        Assert.IsTrue(responseObj?.Success);
+        Assert.That(responseObj?.Success, Is.True);
     }
 
-    [Test]
-    public async Task Register_ErrorReturned_VaidationError()
+    [Test, Order(2)]
+    public async Task Register_ErrorReturned_ValidationError()
     {
-        // Arrange
         var registrationRequestDto = new RegistrationRequestDto
         {
             Email = "testexample",
             Username = "RegisterErrorUserName",
-            Password = "Password123!",
+            Password = "Password123!"
         };
-        // Act
+
         var response = await _client.PostAsJsonAsync("/api/auth/register", registrationRequestDto);
 
-        // Assert
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
-        Assert.IsFalse(responseObj?.Success);
+        Assert.That(responseObj?.Success, Is.False);
     }
 
-    [Test]
+    [Test, Order(3)]
     public async Task Login_ValidCredentials_ReturnsOk()
     {
-        // Arrange
         var loginRequest = new LoginRequestDto
         {
             Email = "test@example.com",
-            Password = "Password123!",
+            Password = "Password123!"
         };
-        // Act
+
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
         response.EnsureSuccessStatusCode();
         var resp = await response.Content.ReadFromJsonAsync<ResponseBase>();
-        Assert.IsTrue(resp.Success);
+        Assert.That(resp?.Success, Is.True);
     }
 
-    [Test]
+    [Test, Order(4)]
     public async Task Login_InvalidCredentials_ReturnsBadRequest()
     {
-        // Arrange
         var loginRequest = new LoginRequestDto
         {
             Email = "wrong@example.com",
-            Password = "WrongPassword!",
+            Password = "WrongPassword!"
         };
-        // Act
+
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
-        Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         var resp = await response.Content.ReadFromJsonAsync<ResponseBase>();
-        Assert.IsFalse(resp.Success);
+        Assert.That(resp?.Success, Is.False);
+    }
+    
+    [Test, Order(5)]
+    public async Task RegisterAdmin_UserIsSuperAdmin_AdminCreatedSuccessfully_ReturnsOk()
+    {
+        var adminLogin = new LoginRequestDto
+        {
+            Email = "test@example.com",
+            Password = "Password123!"
+        };
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", adminLogin);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var loginResponseJson = await loginResponse.Content.ReadAsStringAsync();
+        var loginResponseObj = JsonSerializer.Deserialize<ResponseBase>(loginResponseJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        var result = loginResponseObj?.Result is JsonElement resultJson
+            ? JsonSerializer.Deserialize<LoginResponseDto>(resultJson.GetRawText(), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            })
+            : null;
+
+        Assert.That(result?.Token, Is.Not.Null, "Auth token should not be null.");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result.Token);
+
+        var registrationRequestDto = new RegistrationRequestDto
+        {
+            Email = "newadmin@example.com",
+            Username = "NewAdmin",
+            Password = "AdminPassword123!"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/auth/register/admin", registrationRequestDto);
+
+        response.EnsureSuccessStatusCode();
+
+        var responseJson = await response.Content.ReadAsStringAsync();
+        var responseObj = JsonSerializer.Deserialize<ResponseBase>(responseJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        Assert.That(responseObj?.Success, Is.True, "Admin registration should be successful.");
+    }
+    
+    [Test, Order(6)]
+    public async Task RegisterAdmin_UserNotSuperAdmin_ReturnsForbidden()
+    {
+        var loginRequest = new LoginRequestDto
+        {
+            Email = "teest@example.com",
+            Password = "Password123!"
+        };
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var loginResponseJson = await loginResponse.Content.ReadAsStringAsync();
+        var loginResponseObj = JsonSerializer.Deserialize<ResponseBase>(loginResponseJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        var result = loginResponseObj?.Result is JsonElement resultJson
+            ? JsonSerializer.Deserialize<LoginResponseDto>(resultJson.GetRawText(), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            })
+            : null;
+
+        Assert.That(result?.Token, Is.Not.Null, "Auth token should not be null.");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result.Token);
+
+
+        var registrationRequestDto = new RegistrationRequestDto
+        {
+            Email = "newadmin@example.com",
+            Username = "NewAdmin",
+            Password = "AdminPassword123!"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/auth/register/admin", registrationRequestDto);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden), "Expected 403 Forbidden for unauthorized role.");
+    }
+
+    [Test, Order(7)]
+    public async Task ChangePassword_InvalidRequest_ReturnsBadRequest()
+    {
+        var loginRequest = new LoginRequestDto
+        {
+            Email = "test@example.com",
+            Password = "Password123!"
+        };
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var loginResponseJson = await loginResponse.Content.ReadAsStringAsync();
+        var loginResponseObj = JsonSerializer.Deserialize<ResponseBase>(loginResponseJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        var result = loginResponseObj?.Result is JsonElement resultJson
+            ? JsonSerializer.Deserialize<LoginResponseDto>(resultJson.GetRawText(), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            })
+            : null;
+
+        Assert.That(result?.Token, Is.Not.Null, "Auth token should not be null.");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result.Token);
+
+        var changePasswordRequestDto = new ChangePasswordRequestDto
+        {
+            OldPassword = "Password123!",
+            NewPassword = "NewPassword123!",
+            NewPasswordConfirm = "DifferentPassword123!"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/auth/change-password", changePasswordRequestDto);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        Assert.That(responseObj?.Success, Is.False);
+    }
+    
+    [Test, Order(8)]
+    public async Task ChangePassword_ValidRequest_PasswordChangedSuccessfully_ReturnsOk()
+    {
+        var loginRequest = new LoginRequestDto
+        {
+            Email = "test@example.com",
+            Password = "Password123!"
+        };
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var loginResponseJson = await loginResponse.Content.ReadAsStringAsync();
+        var loginResponseObj = JsonSerializer.Deserialize<ResponseBase>(loginResponseJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        var result = loginResponseObj?.Result is JsonElement resultJson
+            ? JsonSerializer.Deserialize<LoginResponseDto>(resultJson.GetRawText(), new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            })
+            : null;
+
+        Assert.That(result?.Token, Is.Not.Null, "Auth token should not be null.");
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result.Token);
+
+        var changePasswordRequestDto = new ChangePasswordRequestDto
+        {
+            OldPassword = "Password123!",
+            NewPassword = "NewPassword123!",
+            NewPasswordConfirm = "NewPassword123!"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/auth/change-password", changePasswordRequestDto);
+
+        response.EnsureSuccessStatusCode();
+
+        var responseJson = await response.Content.ReadAsStringAsync();
+        var responseObj = JsonSerializer.Deserialize<ResponseBase>(responseJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        Assert.That(responseObj?.Success, Is.True, "Password change should be successful.");
     }
 
     private async Task SetupDbData()
     {
-        using (var scope = _factory.Services.CreateScope())
+        using var scope = _factory.Services.CreateScope();
+        await using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
+
+        if (!await roleManager.RoleExistsAsync("SUPERADMIN"))
         {
-            var _db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            UserManager<User> userManager = scope.ServiceProvider.GetRequiredService<
-                UserManager<User>
-            >();
-            var roleManager = scope.ServiceProvider.GetRequiredService<
-                RoleManager<IdentityRole<int>>
-            >();
-
-            string[] roles = { "USER" };
-            int i = 1;
-            foreach (var role in roles)
-            {
-                if (!await roleManager.RoleExistsAsync(role))
-                {
-                    await roleManager.CreateAsync(new IdentityRole<int> { Id = i, Name = role });
-                    i++;
-                }
-            }
-            // Seed the database with a user
-            var user = new User
-            {
-                Id = 1,
-                Email = "test@example.com",
-                UserName = "test@example.com",
-                PasswordHash =
-                    "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
-                SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ",
-            };
-
-            await _db.Users.AddAsync(user);
-            await _db.SaveChangesAsync();
-            await userManager.AddToRolesAsync(user, new[] { "USER" });
+            await roleManager.CreateAsync(new IdentityRole<int> { Name = "SUPERADMIN" });
         }
+        
+        if (!await roleManager.RoleExistsAsync("ADMIN"))
+        {
+            await roleManager.CreateAsync(new IdentityRole<int> { Name = "ADMIN" });
+        }
+
+        var user = new User
+        {
+            Email = "test@example.com",
+            UserName = "test@example.com",
+            PasswordHash = "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
+            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
+        };
+        
+        var user2 = new User
+        {
+            Email = "teest@example.com",
+            UserName = "teest@example.com",
+            PasswordHash = "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
+            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
+        };
+
+        await db.Users.AddAsync(user);
+        await db.SaveChangesAsync();
+        await userManager.AddToRolesAsync(user, new[] { "SUPERADMIN" });
+        
+        await db.Users.AddAsync(user2);
+        await db.SaveChangesAsync();
+        await userManager.AddToRolesAsync(user2, new[] { "ADMIN" });
     }
 
     [Test]
     public async Task GetUserProfileByUsername_ValidUsername_ReturnsOk()
     {
-        // Arrange
         var username = "test@example.com";
 
-        // Act
         var response = await _client.GetAsync($"/api/auth/profile/{username}");
         response.EnsureSuccessStatusCode();
 
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
         var responseUserString = responseObj?.Result?.ToString() ?? string.Empty;
 
-        // Assert
         Assert.Multiple(() =>
         {
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
@@ -176,17 +350,14 @@ public class AuthControllerIntegrationTests
     [Test]
     public async Task GetUserProfileByUsername_ValidUsernameWithDifferentCase_ReturnsOk()
     {
-        // Arrange
         var username = "TEST@EXAMPLE.COM";
 
-        // Act
         var response = await _client.GetAsync($"/api/auth/profile/{username}");
         response.EnsureSuccessStatusCode();
 
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
         var responseUserString = responseObj?.Result?.ToString() ?? string.Empty;
 
-        // Assert
         Assert.Multiple(() =>
         {
             Assert.That(responseObj?.Success, Is.True);
@@ -206,14 +377,11 @@ public class AuthControllerIntegrationTests
     [Test]
     public async Task GetUserProfileByUsername_NonExistentUsername_ReturnsNotFound()
     {
-        // Arrange
         var username = "nonexistentuser";
 
-        // Act
         var response = await _client.GetAsync($"/api/auth/profile/{username}");
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
 
-        // Assert
         Assert.Multiple(() =>
         {
             Assert.That(responseObj?.Success, Is.False);
