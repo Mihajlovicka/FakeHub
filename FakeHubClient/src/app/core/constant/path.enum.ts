@@ -1,7 +1,10 @@
-const service = 'http://localhost:5000/api/';
+import { environment } from '../../../environments/environment';
 
-export enum Path {
-  Register = service + 'auth/register',
-  Login = service + 'auth/login',
-  DockerImage = service + 'docker-images'
-}
+const api = environment.api;
+
+export const Path = {
+  Register: api + 'auth/register',
+  Login: api + 'auth/login',
+  DockerImage: api + 'docker-images'
+};
+
