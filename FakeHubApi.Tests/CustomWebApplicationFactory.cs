@@ -15,6 +15,20 @@ internal class CustomWebApplicationFactory : WebApplicationFactory<Program>
     private string _connectionString;
     private string _databaseName;
 
+    public CustomWebApplicationFactory()
+    {
+        var baseConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Database") 
+                                   ?? "Server=localhost;Port=3306;Database=fake-hub-test;Uid=root;Pwd=admin;";
+
+        _databaseName = $"fake_hub_test_{Guid.NewGuid()}";
+        
+        var builder = new MySqlConnectionStringBuilder(baseConnectionString)
+        {
+            Database = _databaseName
+        };
+        _connectionString = builder.ConnectionString;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
 
@@ -22,31 +36,13 @@ internal class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
 
-            _databaseName = $"TestDb_{Guid.NewGuid()}";
-            var server = Environment.GetEnvironmentVariable("DB_SERVER") ?? "localhost";
-            var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "3306";
-            var user = Environment.GetEnvironmentVariable("DB_USER") ?? "root";
-            var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "admin";
-            _connectionString =
-                $"Server={server};Port={port};Database={_databaseName};Uid={user};Pwd={password};";
+            var baseConnectionString = new MySqlConnectionStringBuilder(_connectionString) { Database = "" }.ConnectionString;
 
-            using (
-                var connection = new MySqlConnection(
-                    _connectionString.Replace(_databaseName, "mysql")
-                )
-            )
-            {
-                connection.Open();
-                using (
-                    var command = new MySqlCommand(
-                        $"CREATE DATABASE `{_databaseName}`;",
-                        connection
-                    )
-                )
-                {
-                    command.ExecuteNonQuery();
-                }
-            }
+            using var connection = new MySqlConnection(baseConnectionString);
+            connection.Open();
+
+            using var command = new MySqlCommand($"CREATE DATABASE IF NOT EXISTS `{_databaseName}`;", connection);
+            command.ExecuteNonQuery();
 
             services.AddDbContext<AppDbContext>(options => options.UseMySQL(_connectionString));
 
@@ -59,23 +55,13 @@ internal class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         if (disposing)
         {
-            using (
-                var connection = new MySqlConnection(
-                    _connectionString.Replace(_databaseName, "mysql")
-                )
-            )
-            {
-                connection.Open();
-                using (
-                    var command = new MySqlCommand(
-                        $"DROP DATABASE IF EXISTS `{_databaseName}`;",
-                        connection
-                    )
-                )
-                {
-                    command.ExecuteNonQuery();
-                }
-            }
+            var baseConnectionString = new MySqlConnectionStringBuilder(_connectionString) { Database = "" }.ConnectionString;
+
+            using var connection = new MySqlConnection(baseConnectionString);
+            connection.Open();
+
+            using var command = new MySqlCommand($"DROP DATABASE IF EXISTS `{_databaseName}`;", connection);
+            command.ExecuteNonQuery();
         }
 
         base.Dispose(disposing);

@@ -1,0 +1,73 @@
+services: 
+  db:
+    image: mysql:8.4
+    restart: always
+    environment:
+      MYSQL_ROOT_USER: root
+      MYSQL_DATABASE: fake-hub
+      MYSQL_USERNAME: root
+      MYSQL_ROOT_PASSWORD: admin
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - mynet
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "--host=localhost", "--user=root", "--password=admin"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+  fakehubapi:
+    build:
+      context: ./FakeHubApi
+      dockerfile: Dockerfile
+    image: fakehubapi
+    ports:
+      - "5000:8080"
+    networks:
+      - mynet
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+    depends_on:
+      db:
+        condition: service_healthy
+
+  fakehubclient:
+    build:
+      context: ./FakeHubClient
+      dockerfile: Dockerfile
+    image: fakehubclient
+    ports:
+      - "80:80"
+    networks:
+      - mynet
+    depends_on:
+      - fakehubapi
+
+  tests:
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mynet
+    volumes:
+      - ./FakeHubApi:/FakeHubApi
+      - ./FakeHubApi.Tests:/FakeHubApi.Tests
+      - nuget_cache:/root/.nuget/packages
+    command: ["dotnet", "test","/FakeHubApi.Tests/FakeHubApi.Tests.csproj",  "--results-directory", "/tmp/testresults", "--output", "/tmp/buildoutput"]
+    environment:
+      - ConnectionStrings__Database=Server=db;Database=fake-hub;User=root;Password=admin;
+
+
+volumes:
+  db-data:
+  nuget_cache:
+  
+
+networks:
+  mynet:
+    driver: bridge
