@@ -6,6 +6,7 @@ namespace FakeHubApi.Service.Contract;
 
 public interface IAuthService
 {
-    Task<ResponseBase> Register(RegistrationRequestDto registrationRequestDto, string role="USER"); //zameniti konstantom
+    Task<ResponseBase> Register(RegistrationRequestDto registrationRequestDto, string role);
     Task<ResponseBase> Login(LoginRequestDto loginRequestDto);
+    Task<ResponseBase> ChangePassword(ChangePasswordRequestDto changePasswordRequestDto);
 }

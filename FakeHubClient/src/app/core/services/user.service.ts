@@ -8,13 +8,13 @@ import { LoginRequestDto, LoginResponseDto } from "../model/login";
 import { jwtDecode } from "jwt-decode";
 import { StorageService } from "./local-storage.service";
 import { UserRole } from "../model/user-role";
+import {ChangePasswordRequest} from "../model/change-password-request";
 
 @Injectable({
   providedIn: "root",
 })
 export class UserService {
   private http: HttpClient = inject(HttpClient);
-
   private storageService: StorageService = inject(StorageService);
 
   register(user: RegistrationRequestDto): Observable<any | null> {
@@ -52,6 +52,15 @@ export class UserService {
   public getUserName(): string | null {
     return this.storageService.getItem("name");
   }
+  
+  public isEnabled(): boolean {
+    const token = this.getToken();
+    if(token){
+      const decodedToken: any = jwtDecode(token);
+      return decodedToken.enabled === true.toString();
+    }
+    return false;
+  }
 
   public isLoggedIn(): boolean {
     return this.getToken() !== null;
@@ -61,5 +70,12 @@ export class UserService {
     this.storageService.removeItem("token");
     this.storageService.removeItem("role");
   }
-  
+
+  public changePassword(data: ChangePasswordRequest): Observable<LoginResponseDto | null> {
+    return this.http.post<LoginResponseDto>(Path.ChangePassword, data).pipe(
+        tap((result: LoginResponseDto) => {
+          this.extractToken(result.token);
+        })
+    );
+  }
 }
