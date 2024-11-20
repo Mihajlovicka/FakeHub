@@ -37,7 +37,6 @@ public class AuthControllerIntegrationTests
             Email = "register@example.com",
             Username = "RegisterUserName",
             Password = "Password123!",
-            Role = "USER",
         };
         // Act
         var response = await _client.PostAsJsonAsync("/api/auth/register", registrationRequestDto);
@@ -57,7 +56,6 @@ public class AuthControllerIntegrationTests
             Email = "testexample",
             Username = "RegisterErrorUserName",
             Password = "Password123!",
-            Role = "USER",
         };
         // Act
         var response = await _client.PostAsJsonAsync("/api/auth/register", registrationRequestDto);

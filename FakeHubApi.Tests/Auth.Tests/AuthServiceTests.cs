@@ -1,4 +1,3 @@
-using FakeHubApi.Data;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -50,7 +49,6 @@ public class Tests
             Email = "test@example.com",
             Username = "UserName",
             Password = "Password123!",
-            Role = "User",
         };
 
         var user = new User { Email = "test@example.com", UserName = "UserName" };
@@ -92,7 +90,6 @@ public class Tests
             Email = "test@example.com",
             Username = "UserName",
             Password = "Password123!",
-            Role = "User",
         };
 
         var user = new User { Email = "test@example.com", UserName = "UserName" };
@@ -132,7 +129,6 @@ public class Tests
             Email = "test@example.com",
             Username = "UserName",
             Password = "Password123!",
-            Role = "User",
         };
 
         var user = new User { Email = "test@example.com", UserName = "UserName" };

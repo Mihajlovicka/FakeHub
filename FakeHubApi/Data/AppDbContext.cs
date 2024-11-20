@@ -22,12 +22,18 @@ public class AppDbContext : IdentityDbContext<User, IdentityRole<int>, int>
                 new IdentityRole<int>
                 {
                     Id = 1,
+                    Name = Role.SUPERADMIN.ToString(),
+                    NormalizedName = Role.SUPERADMIN.ToString(),
+                },
+                new IdentityRole<int>
+                {
+                    Id = 2,
                     Name = Role.ADMIN.ToString(),
                     NormalizedName = Role.ADMIN.ToString(),
                 },
                 new IdentityRole<int>
                 {
-                    Id = 2,
+                    Id = 3,
                     Name = Role.USER.ToString(),
                     NormalizedName = Role.USER.ToString(),
                 }
