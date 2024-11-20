@@ -5,11 +5,14 @@ import { LoginComponent } from './features/user/login/login.component';
 import { UserRole } from './core/model/user-role';
 import { NoAuthGuard } from './core/guard/no-auth.guard';
 import { AuthGuard } from './core/guard/auth.guard';
+import {ChangePasswordComponent} from "./features/user/change-password/change-password.component";
+import {NotEnabledGuard} from "./core/guard/not-enabled.guard";
 
 export const routes: Routes = [
   {
     path: '',
-    component: HomeComponent
+    component: HomeComponent,
+    canActivate: [NotEnabledGuard]
   },
   {
     path: 'register',
@@ -26,6 +29,12 @@ export const routes: Routes = [
     component: RegisterComponent,
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.SUPERADMIN] }
+  },
+  {
+    path: 'change-password',
+    component: ChangePasswordComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.USER] }
   },
   {
     path: '**',

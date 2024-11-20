@@ -14,13 +14,15 @@ public class Tests
     private Mock<UserManager<User>> _mockUserManager;
     private Mock<IJwtTokenGenerator> _mockJwtTokenGenerator;
     private IAuthService _authService;
+    private Mock<IUserContextService> _userContextService;
 
     [SetUp]
     public void Setup()
     {
         _mapperManagerMock = new Mock<IMapperManager>();
         _mockJwtTokenGenerator = new Mock<IJwtTokenGenerator>();
-
+        _userContextService = new Mock<IUserContextService>();
+        
         _mockUserManager = new Mock<UserManager<User>>(
             new Mock<IUserStore<User>>().Object,
             null,
@@ -36,7 +38,8 @@ public class Tests
         _authService = new AuthService(
             _mockUserManager.Object,
             _mapperManagerMock.Object,
-            _mockJwtTokenGenerator.Object
+            _mockJwtTokenGenerator.Object,
+            _userContextService.Object
         );
     }
 
@@ -72,7 +75,7 @@ public class Tests
         _mockUserManager.Setup(um => um.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
 
         // Act
-        var result = await _authService.Register(registrationRequestDto);
+        var result = await _authService.Register(registrationRequestDto, Role.USER.ToString());
 
         Assert.Multiple(() =>
         {
@@ -110,7 +113,7 @@ public class Tests
             .ReturnsAsync(identityResult);
 
         // Act
-        var result = await _authService.Register(registrationRequestDto);
+        var result = await _authService.Register(registrationRequestDto, Role.USER.ToString());
 
         // Assert
         Assert.Multiple(() =>
@@ -146,7 +149,7 @@ public class Tests
             .Throws(new System.Exception("An error occurred during user creation"));
 
         // Act
-        var result = await _authService.Register(registrationRequestDto);
+        var result = await _authService.Register(registrationRequestDto, Role.USER.ToString());
 
         // Assert
         Assert.Multiple(() =>
@@ -192,7 +195,7 @@ public class Tests
         Assert.Multiple(() =>
         {
             Assert.That(result.Success, Is.True);
-            Assert.That((result.Result as LoginResponseDto).Token, Is.EqualTo("mock-token"));
+            Assert.That((result.Result as LoginResponseDto)?.Token, Is.EqualTo("mock-token"));
         });
     }
 
@@ -208,7 +211,7 @@ public class Tests
 
         _mockUserManager
             .Setup(r => r.FindByEmailAsync(It.IsAny<string>()))
-            .ReturnsAsync((User)null);
+            .ReturnsAsync((User)null!);
 
         _mockUserManager
             .Setup(um => um.CheckPasswordAsync(It.IsAny<User>(), It.IsAny<string>()))

@@ -12,6 +12,8 @@ import {
 import { RouterLink } from "@angular/router";
 import { UserService } from "../../../core/services/user.service";
 import { Router } from "@angular/router";
+import {StorageService} from "../../../core/services/local-storage.service";
+import {UserRole} from "../../../core/model/user-role";
 
 @Component({
   selector: "app-login",
@@ -28,15 +30,15 @@ import { Router } from "@angular/router";
   styleUrl: "./login.component.css",
 })
 export class LoginComponent {
-  service: UserService = inject(UserService);
-  router: Router = inject(Router);
+  private readonly service: UserService = inject(UserService);
+  private readonly router: Router = inject(Router);
 
-  loginForm: FormGroup = new FormGroup({
+  public loginForm: FormGroup = new FormGroup({
     email: new FormControl("", [Validators.required, Validators.email]),
     password: new FormControl("", Validators.required),
   });
 
-  onSubmit(): void {
+  public onSubmit(): void {
     if (this.loginForm.invalid) return;
 
     this.service.login(this.loginForm.value).subscribe({

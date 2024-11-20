@@ -5,11 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FakeHubApi.Data;
 
-public class AppDbContext : IdentityDbContext<User, IdentityRole<int>, int>
+public class AppDbContext(DbContextOptions<AppDbContext> options)
+    : IdentityDbContext<User, IdentityRole<int>, int>(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options) { }
-
     public virtual DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
