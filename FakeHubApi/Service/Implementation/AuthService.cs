@@ -10,7 +10,8 @@ namespace FakeHubApi.Service.Implementation;
 public class AuthService(
     UserManager<User> userManager,
     IMapperManager mapperManager,
-    IJwtTokenGenerator jwtTokenGenerator
+    IJwtTokenGenerator jwtTokenGenerator,
+    IUserContextService userContextService
 ) : IAuthService
 {
     public async Task<ResponseBase> Login(LoginRequestDto loginRequestDto)
@@ -29,11 +30,13 @@ public class AuthService(
         return ResponseBase.SuccessResponse(new LoginResponseDto { Token = token });
     }
 
-    public async Task<ResponseBase> Register(RegistrationRequestDto registrationRequestDto, string role="USER") //zameniti konstantom
+    public async Task<ResponseBase> Register(RegistrationRequestDto registrationRequestDto, string role)
     {
         var user = mapperManager.RegistrationsRequestDtoToApplicationUserMapper.Map(
             registrationRequestDto
         );
+        user.EmailConfirmed = true;
+        user.TwoFactorEnabled = true;
         try
         {
             var result = await userManager.CreateAsync(user, registrationRequestDto.Password);
@@ -80,5 +83,35 @@ public class AuthService(
         {
             return ResponseBase.ErrorResponse(ex.Message);
         }
+
+    }
+    public async Task<ResponseBase> ChangePassword(ChangePasswordRequestDto changePasswordRequestDto)
+    {
+        if (!changePasswordRequestDto.NewPassword.Equals(changePasswordRequestDto.NewPasswordConfirm))
+        {
+            return ResponseBase.ErrorResponse("New password and confirmation do not match");
+        }
+
+        var user = await userContextService.GetCurrentUserAsync();
+        user.TwoFactorEnabled = true;
+
+        var result = await userManager.ChangePasswordAsync(user, changePasswordRequestDto.OldPassword,
+            changePasswordRequestDto.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            return ResponseBase.ErrorResponse(result.Errors.FirstOrDefault()?.Description ?? "Password change failed");
+        }
+
+        var updateResult = await userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            return ResponseBase.ErrorResponse(updateResult.Errors.FirstOrDefault()?.Description ?? 
+                                              "Failed to update user settings");
+        }
+
+        var roles = await userManager.GetRolesAsync(user);
+        var token = jwtTokenGenerator.GenerateToken(user, roles);
+        return ResponseBase.SuccessResponse(new LoginResponseDto { Token = token });
     }
 }

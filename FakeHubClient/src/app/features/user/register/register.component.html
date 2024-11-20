@@ -72,14 +72,14 @@
             Register
           </button>
         </mat-card-actions>
-          @if(!isSuperAdmin()){
-              <div class="link">
-                  <p>
-                      Do you have an account?
-                      <a routerLink="/login">Login here</a>
-                  </p>
-              </div>
-          }
+    @if(!isSuperAdmin()){
+        <div class="link">
+            <p>
+            Do you have an account?
+                <a routerLink="/login">Login here</a>
+            </p>
+        </div>
+    }
       </form>
     </mat-card-content>
   </mat-card>

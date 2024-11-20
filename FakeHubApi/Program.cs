@@ -3,6 +3,8 @@ using FakeHubApi.Extensions;
 using FakeHubApi.Filters;
 using FakeHubApi.Helpers;
 using FakeHubApi.Model.Entity;
+using FakeHubApi.Service.Contract;
+using FakeHubApi.Service.Implementation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +32,7 @@ builder.Services.AddDbContext<AppDbContext>(option =>
     option.UseMySQL(connectionString);
 });
 
+// Register custom services, CORS, and Identity
 builder.Services.AddCustomCors();
 builder.Services.AddCustomServices(builder.Configuration);
 
@@ -47,12 +50,14 @@ builder
 
 builder.AddAuthenticationAndAuthorization();
 
+builder.Services.AddScoped<IUserContextService, UserContextService>();
+
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
 });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(opt =>
 {
@@ -91,7 +96,7 @@ builder.Services.AddSwaggerGen(opt =>
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminPolicy", policy => policy.RequireRole("ADMIN"))
     .AddPolicy("UserPolicy", policy => policy.RequireRole("USER"))
-    .AddPolicy("UserPolicy", policy => policy.RequireRole("SUPERADMIN"));
+    .AddPolicy("SuperAdminPolicy", policy => policy.RequireRole("SUPERADMIN"));
 
 builder.Services.AddAuthorization(options =>
 {
@@ -103,6 +108,22 @@ builder.Services.AddSingleton<IAuthorizationHandler, NoRoleHandler>();
 
 var app = builder.Build();
 
+// Seed the superadmin user and roles
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        await AppDbContextSeed.SeedSuperAdminUserAsync(services);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
+
+// Configure middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -115,4 +136,5 @@ app.UseCors(CorsExtensions.GetCorsPolicyName());
 
 app.MapControllers();
 app.ApplyPendingMigrations();
+
 app.Run();

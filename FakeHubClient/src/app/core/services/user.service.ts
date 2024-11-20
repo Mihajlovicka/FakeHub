@@ -1,6 +1,6 @@
 import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
-import { catchError, Observable, tap } from "rxjs";
+import { Observable, tap } from "rxjs";
 import { getProfilePath, Path } from "../constant/path.enum";
 import { ServiceResponse } from "../model/service-response";
 import { RegistrationRequestDto, UserProfileResponseDto } from "../model/user";
@@ -8,13 +8,13 @@ import { LoginRequestDto, LoginResponseDto } from "../model/login";
 import { jwtDecode } from "jwt-decode";
 import { StorageService } from "./local-storage.service";
 import { UserRole } from "../model/user-role";
+import { ChangePasswordRequest } from "../model/change-password-request";
 
 @Injectable({
   providedIn: "root",
 })
 export class UserService {
   private http: HttpClient = inject(HttpClient);
-  
   private storageService: StorageService = inject(StorageService);
 
   register(user: RegistrationRequestDto): Observable<any | null> {
@@ -61,6 +61,15 @@ export class UserService {
   public getUserName(): string | null {
     return this.storageService.getItem("name");
   }
+  
+  public isEnabled(): boolean {
+    const token = this.getToken();
+    if(token){
+      const decodedToken: any = jwtDecode(token);
+      return decodedToken.enabled === true.toString();
+    }
+    return false;
+  }
 
   public getUserNameFromToken(): string | null {
     const token = this.storageService.getItem("token") ?? "";
@@ -76,5 +85,13 @@ export class UserService {
   public logout(): void {
     this.storageService.removeItem("token");
     this.storageService.removeItem("role");
+  }
+
+  public changePassword(data: ChangePasswordRequest): Observable<LoginResponseDto | null> {
+    return this.http.post<LoginResponseDto>(Path.ChangePassword, data).pipe(
+        tap((result: LoginResponseDto) => {
+          this.extractToken(result.token);
+        })
+    );
   }
 }
