@@ -1,10 +1,11 @@
 import { environment } from '../../../environments/environment';
 
 const api = environment.api;
+const authApi = api + 'auth/'
 
 export const Path = {
-  Register: api + 'auth/register',
-  Login: api + 'auth/login',
-  DockerImage: api + 'docker-images'
+  Register: authApi + 'register',
+  Login: authApi + 'login',
+  DockerImage: api + 'docker-images',
+  RegisterAdmin: authApi + 'register/admin'
 };
-

@@ -1,8 +1,5 @@
 ﻿using System.Net.Http.Json;
-using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.ServiceResponse;
-using MySqlX.XDevAPI.Common;
-using Newtonsoft.Json;
 
 namespace FakeHubApi.Tests.DockerImage.Tests
 {

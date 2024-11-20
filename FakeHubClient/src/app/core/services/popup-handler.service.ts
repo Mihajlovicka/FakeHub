@@ -8,7 +8,7 @@ import { PopupComponent } from '../../shared/components/popup/popup.component';
 export class PopupHandlerService {
   constructor(private snackBar: MatSnackBar) {}
 
-  openSnackbar(message: string, type: 'success' | 'error' = 'error') {
+  public openSnackbar(message: string, type: 'success' | 'error' = 'error'): void {
     this.snackBar.openFromComponent(PopupComponent, {
       data: { message, type },
       panelClass: type,

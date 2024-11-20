@@ -13,9 +13,6 @@ namespace FakeHubApi.Model.Dto
 
         public string Password { get; set; } = string.Empty;
 
-        [EnumDataType(typeof(Role), ErrorMessage = "Invalid role.")]
-        public string Role { get; set; } = string.Empty;
-
         [Required]
         [MinLength(2)]
         [MaxLength(100)]

@@ -1,15 +1,6 @@
-﻿using FakeHubApi.Mapper;
-using FakeHubApi.Model.Dto;
-using FakeHubApi.Model.Entity;
+﻿using FakeHubApi.Model.Dto;
 using FakeHubApi.Service.Contract;
-using FakeHubApi.Service.Implementation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Moq;
-using MySqlX.XDevAPI.Common;
 using FakeHubApi.Model.ServiceResponse;
 
 namespace FakeHubApi.Tests.DockerImage.Tests
@@ -17,13 +8,11 @@ namespace FakeHubApi.Tests.DockerImage.Tests
     public class DockerImageServiceTests
     {
         private Mock<IDockerImageService> _dockerImageServiceMock;
-        private IDockerImageService _dockerImageService;
 
         [SetUp]
         public void Setup()
         {
             _dockerImageServiceMock = new Mock<IDockerImageService>();
-            _dockerImageService = new DockerImageService();
         }
 
         [Test]

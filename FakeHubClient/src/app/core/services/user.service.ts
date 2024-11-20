@@ -1,25 +1,28 @@
 import { HttpClient } from "@angular/common/http";
-import { Inject, inject, Injectable, PLATFORM_ID } from "@angular/core";
+import { inject, Injectable } from "@angular/core";
 import { Observable, tap } from "rxjs";
 import { Path } from "../constant/path.enum";
 import { ServiceResponse } from "../model/service-response";
 import { RegistrationRequestDto } from "../model/user";
 import { LoginRequestDto, LoginResponseDto } from "../model/login";
 import { jwtDecode } from "jwt-decode";
-import { isPlatformBrowser } from "@angular/common";
+import { StorageService } from "./local-storage.service";
+import { UserRole } from "../model/user-role";
 
 @Injectable({
   providedIn: "root",
 })
 export class UserService {
   private http: HttpClient = inject(HttpClient);
-  private platformId: Object = inject(PLATFORM_ID);
+
+  private storageService: StorageService = inject(StorageService);
 
   register(user: RegistrationRequestDto): Observable<any | null> {
+    if(this.getRole() === UserRole.SUPERADMIN) return this.http.post<ServiceResponse>(Path.RegisterAdmin, user);
     return this.http.post<ServiceResponse>(Path.Register, user);
   }
 
-  login(user: LoginRequestDto): Observable<LoginResponseDto | null> {
+  public login(user: LoginRequestDto): Observable<LoginResponseDto | null> {
     return this.http.post<LoginResponseDto>(Path.Login, user).pipe(
       tap((result: LoginResponseDto) => {
         this.extractToken(result.token);
@@ -27,42 +30,36 @@ export class UserService {
     );
   }
 
-  extractToken(token: string): void {
-    localStorage.setItem("token", token);
+  public extractToken(token: string): void {
+    this.storageService.setItem("token", token);
     try {
       const decodedToken: any = jwtDecode(token);
-      localStorage.setItem("role", decodedToken.role);
-      localStorage.setItem("name", decodedToken.name);
+      this.storageService.setItem("role", decodedToken.role);
+      this.storageService.setItem("name", decodedToken.name);
     } catch (error) {
       console.error("Failed to decode JWT:", error);
     }
   }
 
-  getToken(): string | null {
-    return this.getLocalStorageItem("token");
+  public getToken(): string | null {
+    return this.storageService.getItem("token");
   }
 
-  getRole(): string | null {
-    return this.getLocalStorageItem("role");
+  public getRole(): string | null {
+    return this.storageService.getItem("role");
   }
 
-  getUserName(): string | null {
-    return this.getLocalStorageItem('name');
+  public getUserName(): string | null {
+    return this.storageService.getItem("name");
   }
 
-  isLoggedIn(): boolean {
+  public isLoggedIn(): boolean {
     return this.getToken() !== null;
   }
 
-  logout(): void {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+  public logout(): void {
+    this.storageService.removeItem("token");
+    this.storageService.removeItem("role");
   }
   
-  private getLocalStorageItem(key: string): string | null {
-    if (isPlatformBrowser(this.platformId)) {
-      return localStorage.getItem(key);
-    }
-    return null; 
-  }
 }

@@ -2,7 +2,6 @@
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
-using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Identity;
 
@@ -30,7 +29,7 @@ public class AuthService(
         return ResponseBase.SuccessResponse(new LoginResponseDto { Token = token });
     }
 
-    public async Task<ResponseBase> Register(RegistrationRequestDto registrationRequestDto)
+    public async Task<ResponseBase> Register(RegistrationRequestDto registrationRequestDto, string role="USER") //zameniti konstantom
     {
         var user = mapperManager.RegistrationsRequestDtoToApplicationUserMapper.Map(
             registrationRequestDto
@@ -56,7 +55,7 @@ public class AuthService(
             return ResponseBase.ErrorResponse("User creation failed");
         }
 
-        await userManager.AddToRoleAsync(user, registrationRequestDto.Role);
+        await userManager.AddToRoleAsync(user, role);
         return ResponseBase.SuccessResponse();
     }
 }

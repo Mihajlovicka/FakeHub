@@ -1,7 +1,9 @@
 using FakeHubApi.Data;
 using FakeHubApi.Extensions;
 using FakeHubApi.Filters;
+using FakeHubApi.Helpers;
 using FakeHubApi.Model.Entity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -86,9 +88,21 @@ builder.Services.AddSwaggerGen(opt =>
     );
 });
 
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("AdminPolicy", policy => policy.RequireRole("ADMIN"))
+    .AddPolicy("UserPolicy", policy => policy.RequireRole("USER"))
+    .AddPolicy("UserPolicy", policy => policy.RequireRole("SUPERADMIN"));
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("NoRolePolicy", policy =>
+        policy.Requirements.Add(new NoRoleRequirement()));
+});
+
+builder.Services.AddSingleton<IAuthorizationHandler, NoRoleHandler>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
