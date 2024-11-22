@@ -11,19 +11,20 @@ import { UserService } from '../../../core/services/user.service';
   styleUrl: './header.component.css'
 })
 export class HeaderComponent {
+  private userService: UserService = inject(UserService);
+
+  public isLoggedIn: boolean = false;
+  public isDropdownVisible = false;
+  public username: string = '';
+
   constructor(private router: Router) { }
-  userService: UserService = inject(UserService);
 
-  isLoggedIn: boolean = false;
-  isDropdownVisible = false;
-  username: string = '';
-
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.isLoggedIn = this.userService.isLoggedIn();
     this.username = this.userService.getUserName() ?? '';
   }
 
-  toggleDropdown(event: MouseEvent) {
+  public toggleDropdown(event: MouseEvent) {
     this.isDropdownVisible = !this.isDropdownVisible;
 
     event.stopPropagation();
@@ -37,25 +38,24 @@ export class HeaderComponent {
     }
   }
 
-  goToProfile() {
-    console.log('Navigating to My Profile...');
+  public goToProfile() {
     this.isDropdownVisible = false;
   }
 
-  goToRegistration(): void {
+  public goToRegistration(): void {
     this.router.navigate(['/register']);
   }
 
-  goToLogin(): void {
+  public goToLogin(): void {
     this.router.navigate(['/login']);
   }
 
-  signOut(): void {
+  public signOut(): void {
     this.userService.logout();
     window.location.reload();
   }
 
-  capitalizeFirstLetter(input: string): string {
+  public capitalizeFirstLetter(input: string): string {
     if (!input) {
       return '';
     }
@@ -64,7 +64,7 @@ export class HeaderComponent {
   }
 
   @HostListener('document:click', ['$event'])
-  clickOutside(event: MouseEvent) {
+  public clickOutside(event: MouseEvent) {
     const dropdown = event.target as HTMLElement;
 
     if (dropdown && !dropdown.closest('.dropdown') && !dropdown.closest('.btn-hover')) {

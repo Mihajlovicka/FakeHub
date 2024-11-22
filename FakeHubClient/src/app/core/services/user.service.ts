@@ -13,8 +13,7 @@ import { isPlatformBrowser } from "@angular/common";
 })
 export class UserService {
   private http: HttpClient = inject(HttpClient);
-
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+  private platformId: Object = inject(PLATFORM_ID);
 
   register(user: RegistrationRequestDto): Observable<any | null> {
     return this.http.post<ServiceResponse>(Path.Register, user);

@@ -14,23 +14,30 @@ import { UserService } from '../../core/services/user.service';
   styleUrl: './home.component.css'
 })
 export class HomeComponent implements OnInit {
-  userService: UserService = inject(UserService);
+  private userService: UserService = inject(UserService);
 
-  isTrustedContentVisible: boolean = true;
-  isCategoriesVisible: boolean = true;
-  buttonCount: number[] = new Array(10).fill(0);
-  isLoggedIn: boolean = false;
-  dockerImages: DockerImage[] = [];
-  error: string | null = null;
+  public isTrustedContentVisible: boolean = true;
+  public isCategoriesVisible: boolean = true;
+  public isLoggedIn: boolean = false;
+  public dockerImages: DockerImage[] = [];
+  private error: string | null = null;
 
   constructor(private dockerImageService: DockerImageService) {}
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.isLoggedIn = this.userService.isLoggedIn();
     this.loadDockerImages();
   }
+  
+  public toggleTrustedContentVisibility() {
+    this.isTrustedContentVisible = !this.isTrustedContentVisible;
+  }
 
-  loadDockerImages(): void {
+  public toggleCategoriesVisibility() {
+    this.isCategoriesVisible = !this.isCategoriesVisible;
+  }
+
+  private loadDockerImages(): void {
     this.dockerImageService.getDockerImages()
       .subscribe({
         next: (images) => {
@@ -40,13 +47,5 @@ export class HomeComponent implements OnInit {
           this.error = 'Failed to load Docker images: ' + err.message;
         }
       });
-  }
-  
-  toggleTrustedContentVisibility() {
-    this.isTrustedContentVisible = !this.isTrustedContentVisible;
-  }
-
-  toggleCategoriesVisibility() {
-    this.isCategoriesVisible = !this.isCategoriesVisible;
   }
 }
