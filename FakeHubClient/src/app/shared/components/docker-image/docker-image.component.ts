@@ -12,7 +12,7 @@ import { DockerImage } from '../../../core/model/docker-image';
 export class DockerImageComponent {
   @Input() dockerImage?: DockerImage;  
   
-  formatNumber(value: number): string {
+  public formatNumber(value: number): string {
     if (value >= 1000000) {
       return (value / 1000000).toFixed(1) + 'M';  
     } else if (value >= 1000) {
@@ -20,9 +20,4 @@ export class DockerImageComponent {
     }
     return value.toString();  
   }
-  
-  onLinkClick(dockerImage: any) {
-    console.log('Link clicked!', dockerImage);
-  }
-
 }
