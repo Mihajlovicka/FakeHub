@@ -480,4 +480,204 @@ public class Tests
             Assert.That(result.ErrorMessage, Is.EqualTo("Failed to update user settings"));
         });
     }
+
+    [Test]
+    public async Task ChangeEmail_SuccessfulChange_ReturnsSuccessResponseWithToken()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "CorrectPassword123!",
+            NewEmail = "newemail@example.com"
+        };
+
+        var user = new User { Email = "email@example.com" };
+        var changeEmailToken = "mock-change-email-token";
+        var roles = new List<string> { "USER" };
+        var responseToken = "mock-response-token";
+
+        _userContextService.Setup(ucs => ucs.GetCurrentUserAsync()).ReturnsAsync(user);
+        _mockUserManager
+            .Setup(um => um.CheckPasswordAsync(user, changeEmailRequestDto.Password))
+            .ReturnsAsync(true);
+        _mockUserManager
+            .Setup(um => um.GenerateChangeEmailTokenAsync(user, changeEmailRequestDto.NewEmail))
+            .ReturnsAsync(changeEmailToken);
+        _mockUserManager
+            .Setup(um => um.ChangeEmailAsync(user, changeEmailRequestDto.NewEmail, changeEmailToken))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager
+            .Setup(um => um.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager
+            .Setup(um => um.GetRolesAsync(user))
+            .ReturnsAsync(roles);
+        _mockJwtTokenGenerator
+            .Setup(jtg => jtg.GenerateToken(user, roles))
+            .Returns(responseToken);
+
+        var result = await _authService.ChangeEmailAsync(changeEmailRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Not.Null);
+            Assert.That(((LoginResponseDto)result.Result).Token, Is.EqualTo(responseToken));
+        });
+    }
+
+    [Test]
+    public async Task ChangeEmail_UserNotFound_ReturnsErrorResponse()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "CorrectPassword123!",
+            NewEmail = "newemail@example.com"
+        };
+
+        _userContextService.Setup(ucs => ucs.GetCurrentUserAsync()).ReturnsAsync((User)null);
+
+        var result = await _authService.ChangeEmailAsync(changeEmailRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("User not found in current context"));
+        });
+    }
+
+    [Test]
+    public async Task ChangeEmail_InvalidPassword_ReturnsErrorResponse()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "InvalidPassword123!",
+            NewEmail = "newemail@example.com"
+        };
+
+        var user = new User();
+
+        _userContextService.Setup(ucs => ucs.GetCurrentUserAsync()).ReturnsAsync(user);
+        _mockUserManager.Setup(um => um.CheckPasswordAsync(user, changeEmailRequestDto.Password)).ReturnsAsync(false);
+
+        var result = await _authService.ChangeEmailAsync(changeEmailRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Password is incorrect"));
+        });
+    }
+
+    [Test]
+    public async Task ChangeEmail_SameEmail_ReturnsErrorResponse()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "CorrectPassword123!",
+            NewEmail = "currentemail@example.com"
+        };
+
+        var user = new User
+        {
+            Email = "currentemail@example.com"
+        };
+
+        _userContextService
+            .Setup(ucs => ucs.GetCurrentUserAsync())
+            .ReturnsAsync(user);
+        _mockUserManager
+            .Setup(um => um.CheckPasswordAsync(user, changeEmailRequestDto.Password))
+            .ReturnsAsync(true);
+
+        var result = await _authService.ChangeEmailAsync(changeEmailRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Email can't be the same as current"));
+        });
+    }
+
+    [Test]
+    public async Task ChangeEmail_ChangeEmailFails_ReturnsErrorResponse()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "CorrectPassword123!",
+            NewEmail = "newemail@example.com"
+        };
+        var user = new User { Email = "email@example.com" };
+        var changeEmailToken = "mock-change-email-token";
+        var emailErrorMessage = "User email change failed";
+        var emailChangeError = new IdentityError { Description = emailErrorMessage };
+        var emailChangeResult = IdentityResult.Failed(emailChangeError);
+
+        _userContextService
+            .Setup(ucs => ucs.GetCurrentUserAsync())
+            .ReturnsAsync(user);
+        _mockUserManager
+            .Setup(um => um.CheckPasswordAsync(user, changeEmailRequestDto.Password))
+            .ReturnsAsync(true);
+        _mockUserManager
+            .Setup(um => um.GenerateChangeEmailTokenAsync(user, changeEmailRequestDto.NewEmail))
+            .ReturnsAsync(changeEmailToken);
+        _mockUserManager
+            .Setup(um => um.ChangeEmailAsync(user, changeEmailRequestDto.NewEmail, changeEmailToken))
+            .ReturnsAsync(emailChangeResult);
+
+        var result = await _authService.ChangeEmailAsync(changeEmailRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo(emailErrorMessage));
+        });
+    }
+
+    [Test]
+    public async Task ChangeEmail_UpdateUserFails_ReturnsErrorResponse()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "CorrectPassword123!",
+            NewEmail = "newemail@example.com"
+        };
+        var user = new User { Email = "email@example.com" };
+        var changeEmailToken = "mock-change-email-token";
+        var updateUserErrorMessage = "Update current user failed";
+        var updateUserError = new IdentityError { Description = updateUserErrorMessage };
+        var updateUserResult = IdentityResult.Failed(updateUserError);
+
+        _userContextService
+            .Setup(ucs => ucs.GetCurrentUserAsync())
+            .ReturnsAsync(user);
+        _mockUserManager
+            .Setup(um => um.CheckPasswordAsync(user, changeEmailRequestDto.Password))
+            .ReturnsAsync(true);
+        _mockUserManager
+            .Setup(um => um.GenerateChangeEmailTokenAsync(user, changeEmailRequestDto.NewEmail))
+            .ReturnsAsync(changeEmailToken);
+        _mockUserManager
+            .Setup(um => um.ChangeEmailAsync(user, changeEmailRequestDto.NewEmail, changeEmailToken))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(um => um.UpdateAsync(user)).ReturnsAsync(updateUserResult);
+
+        var result = await _authService.ChangeEmailAsync(changeEmailRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo(updateUserErrorMessage));
+        });
+    }
 }

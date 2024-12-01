@@ -2,6 +2,7 @@ import { Component, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { UserService } from '../../../core/services/user.service';
+import { HelperService } from '../../../core/services/helper.service';
 
 @Component({
   selector: 'app-header',
@@ -11,6 +12,7 @@ import { UserService } from '../../../core/services/user.service';
   styleUrl: './header.component.css'
 })
 export class HeaderComponent {
+  public helperService: HelperService = inject(HelperService);
   private userService: UserService = inject(UserService);
   private router: Router = inject(Router);
 
@@ -48,14 +50,6 @@ export class HeaderComponent {
   public signOut(): void {
     this.userService.logout();
     window.location.reload();
-  }
-
-  public capitalizeFirstLetter(input: string): string {
-    if (!input) {
-      return '';
-    }
-
-    return input.charAt(0).toUpperCase();
   }
 
   @HostListener('document:click', ['$event'])

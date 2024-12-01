@@ -1,10 +1,8 @@
-﻿using FakeHubApi.Model.Dto;
-using FakeHubApi.Model.ServiceResponse;
+﻿using FakeHubApi.Model.ServiceResponse;
 
-namespace FakeHubApi.Service.Contract
+namespace FakeHubApi.Service.Contract;
+
+public interface IDockerImageService
 {
-    public interface IDockerImageService
-    {
-        Task<ResponseBase> GetDockerImagesAsync();
-    }
+    Task<ResponseBase> GetDockerImagesAsync();
 }

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -6,6 +7,7 @@ using FakeHubApi.Data;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
@@ -17,6 +19,7 @@ public class AuthControllerIntegrationTests
 {
     private HttpClient _client;
     private CustomWebApplicationFactory _factory;
+    private string _regularUserToken;
 
     [OneTimeSetUp]
     public async Task Setup()
@@ -24,6 +27,7 @@ public class AuthControllerIntegrationTests
         _factory = new CustomWebApplicationFactory();
         _client = _factory.CreateClient();
         await SetupDbData();
+        _regularUserToken = await GetTokenFromSuccessfulUserLogin();
     }
 
     [OneTimeTearDown]
@@ -277,49 +281,7 @@ public class AuthControllerIntegrationTests
         Assert.That(responseObj?.Success, Is.True, "Password change should be successful.");
     }
 
-    private async Task SetupDbData()
-    {
-        using var scope = _factory.Services.CreateScope();
-        await using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
-
-        if (!await roleManager.RoleExistsAsync("SUPERADMIN"))
-        {
-            await roleManager.CreateAsync(new IdentityRole<int> { Name = "SUPERADMIN" });
-        }
-        
-        if (!await roleManager.RoleExistsAsync("ADMIN"))
-        {
-            await roleManager.CreateAsync(new IdentityRole<int> { Name = "ADMIN" });
-        }
-
-        var user = new User
-        {
-            Email = "test@example.com",
-            UserName = "test@example.com",
-            PasswordHash = "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
-            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
-        };
-        
-        var user2 = new User
-        {
-            Email = "teest@example.com",
-            UserName = "teest@example.com",
-            PasswordHash = "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
-            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
-        };
-
-        await db.Users.AddAsync(user);
-        await db.SaveChangesAsync();
-        await userManager.AddToRolesAsync(user, new[] { "SUPERADMIN" });
-        
-        await db.Users.AddAsync(user2);
-        await db.SaveChangesAsync();
-        await userManager.AddToRolesAsync(user2, new[] { "ADMIN" });
-    }
-
-    [Test]
+    [Test, Order(9)]
     public async Task GetUserProfileByUsername_ValidUsername_ReturnsOk()
     {
         var username = "test@example.com";
@@ -347,7 +309,7 @@ public class AuthControllerIntegrationTests
         });
     }
 
-    [Test]
+    [Test, Order(10)]
     public async Task GetUserProfileByUsername_ValidUsernameWithDifferentCase_ReturnsOk()
     {
         var username = "TEST@EXAMPLE.COM";
@@ -374,7 +336,7 @@ public class AuthControllerIntegrationTests
         });
     }
 
-    [Test]
+    [Test, Order(11)]
     public async Task GetUserProfileByUsername_NonExistentUsername_ReturnsNotFound()
     {
         var username = "nonexistentuser";
@@ -390,5 +352,194 @@ public class AuthControllerIntegrationTests
             Assert.That(responseObj?.ErrorMessage, Is.EqualTo("User not found"));
             Assert.That(responseObj?.Result, Is.Null);
         });
+    }
+
+    [Test, Order(12)]
+    public async Task ChangeEmail_NoBearerToken_ReturnsUnauthorized()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "Password123!",
+            NewEmail = "test3_new_email@example.com"
+        };
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", null);
+        var response = await _client.PostAsJsonAsync("/api/auth/change-email", changeEmailRequestDto);
+
+        Assert.That(response.IsSuccessStatusCode, Is.False);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test, Order(13)]
+    public async Task ChangeEmail_InvalidPassword_ReturnsBadRequest()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "InvalidPassword123!",
+            NewEmail = "test3_new_email@example.com"
+        };
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+        var response = await _client.PostAsJsonAsync("/api/auth/change-email", changeEmailRequestDto);
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(responseObj?.ErrorMessage, Is.Not.Empty);
+            Assert.That(responseObj?.ErrorMessage, Is.EqualTo("Password is incorrect"));
+            Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(14)]
+    public async Task ChangeEmail_SameEmail_ReturnsBadRequest()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "Password123!",
+            NewEmail = "test3@example.com"
+        };
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+        var response = await _client.PostAsJsonAsync("/api/auth/change-email", changeEmailRequestDto);
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(responseObj?.ErrorMessage, Is.Not.Empty);
+            Assert.That(responseObj?.ErrorMessage, Is.EqualTo("Email can't be the same as current"));
+            Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(15)]
+    public async Task ChangeEmail_SuccessfulChange_ReturnsOk()
+    {
+        var changeEmailRequestDto = new ChangeEmailRequestDto
+        {
+            Password = "Password123!",
+            NewEmail = "test3_new_email@example.com"
+        };
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+        var response = await _client.PostAsJsonAsync("/api/auth/change-email", changeEmailRequestDto);
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var loginResponseDtoString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+            Assert.That(loginResponseDtoString, Is.Not.Empty);
+        });
+
+        var loginResponseDtoObject = JsonConvert.DeserializeObject<LoginResponseDto>(loginResponseDtoString);
+
+        Assert.That(loginResponseDtoObject, Is.Not.Null);
+        Assert.That(loginResponseDtoObject?.Token, Is.Not.Null);
+
+        var emailFromResponseToken = ExtractEmailFromJwt(loginResponseDtoObject.Token);
+
+        Assert.That(emailFromResponseToken, Is.EqualTo(changeEmailRequestDto.NewEmail));
+    }
+
+    private async Task SetupDbData()
+    {
+        using var scope = _factory.Services.CreateScope();
+        await using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
+
+        if (!await roleManager.RoleExistsAsync("SUPERADMIN"))
+        {
+            await roleManager.CreateAsync(new IdentityRole<int> { Name = "SUPERADMIN" });
+        }
+
+        if (!await roleManager.RoleExistsAsync("ADMIN"))
+        {
+            await roleManager.CreateAsync(new IdentityRole<int> { Name = "ADMIN" });
+        }
+
+        if (!await roleManager.RoleExistsAsync("USER"))
+        {
+            await roleManager.CreateAsync(new IdentityRole<int> { Name = "USER" });
+        }
+
+        var user = new User
+        {
+            Email = "test@example.com",
+            UserName = "test@example.com",
+            PasswordHash = "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
+            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
+        };
+        
+        var user2 = new User
+        {
+            Email = "teest@example.com",
+            UserName = "teest@example.com",
+            PasswordHash = "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
+            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
+        };
+
+        var user3 = new User
+        {
+            Email = "test3@example.com",
+            UserName = "test3@example.com",
+            PasswordHash = "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
+            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
+        };
+
+        await db.Users.AddAsync(user);
+        await db.SaveChangesAsync();
+        await userManager.AddToRolesAsync(user, new[] { "SUPERADMIN" });
+        
+        await db.Users.AddAsync(user2);
+        await db.SaveChangesAsync();
+        await userManager.AddToRolesAsync(user2, new[] { "ADMIN" });
+
+        await db.Users.AddAsync(user3);
+        await db.SaveChangesAsync();
+        await userManager.AddToRolesAsync(user3, new[] { "USER" });
+    }
+
+    private async Task<string> GetTokenFromSuccessfulUserLogin()
+    {
+        var loginRequest = new LoginRequestDto
+        {
+            Email = "test3@example.com",
+            Password = "Password123!"
+        };
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
+        loginResponse.EnsureSuccessStatusCode();
+
+
+        var responseObj = await loginResponse.Content.ReadFromJsonAsync<ResponseBase>();
+        var loginResponseDtoString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        var loginResponseDtoObject = JsonConvert.DeserializeObject<LoginResponseDto>(loginResponseDtoString);
+
+        return loginResponseDtoObject?.Token ?? "";
+    }
+
+    private string ExtractEmailFromJwt(string token)
+    {
+        var handler = new JwtSecurityTokenHandler();
+
+        if (string.IsNullOrEmpty(token) || !handler.CanReadToken(token))
+        {
+            throw new ArgumentException("Invalid JWT token.", nameof(token));
+        }
+
+        var jwtToken = handler.ReadJwtToken(token);
+        var emailClaim = jwtToken?.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+
+        return emailClaim;
     }
 }

@@ -2,47 +2,46 @@
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Service.Contract;
 
-namespace FakeHubApi.Service.Implementation
-{
-    public class DockerImageService : IDockerImageService
-    {
-        public async Task<ResponseBase> GetDockerImagesAsync()
-        {
-            try
-            {
-                List<DockerImageDto> dockerImages = [
-                    new DockerImageDto
-                    {
-                        Title = "Ubuntu",
-                        Description = "Official Ubuntu Docker Image",
-                        LikesCount = 1200,
-                        DownloadsCount = 500000,
-                        LogoIcon = "icons8-docker-64.png"
-                    },
-                    new DockerImageDto
-                    {
-                        Title = "Node.js",
-                        Description = "Official Node.js Docker Image",
-                        LikesCount = 900,
-                        DownloadsCount = 350000,
-                        LogoIcon = "icons8-docker-64.png"
-                    },
-                    new DockerImageDto
-                    {
-                        Title = "MySQL",
-                        Description = "Official MySQL Docker Image",
-                        LikesCount = 800,
-                        DownloadsCount = 300000,
-                        LogoIcon = "icons8-docker-64.png"
-                    }
-                ];
+namespace FakeHubApi.Service.Implementation;
 
-                return ResponseBase.SuccessResponse(dockerImages);
-            }
-            catch
-            {
-                return ResponseBase.ErrorResponse("An error occurred while getting Docker images");
-            }
+public class DockerImageService : IDockerImageService
+{
+    public async Task<ResponseBase> GetDockerImagesAsync()
+    {
+        try
+        {
+            List<DockerImageDto> dockerImages = [
+                new DockerImageDto
+                {
+                    Title = "Ubuntu",
+                    Description = "Official Ubuntu Docker Image",
+                    LikesCount = 1200,
+                    DownloadsCount = 500000,
+                    LogoIcon = "icons8-docker-64.png"
+                },
+                new DockerImageDto
+                {
+                    Title = "Node.js",
+                    Description = "Official Node.js Docker Image",
+                    LikesCount = 900,
+                    DownloadsCount = 350000,
+                    LogoIcon = "icons8-docker-64.png"
+                },
+                new DockerImageDto
+                {
+                    Title = "MySQL",
+                    Description = "Official MySQL Docker Image",
+                    LikesCount = 800,
+                    DownloadsCount = 300000,
+                    LogoIcon = "icons8-docker-64.png"
+                }
+            ];
+
+            return ResponseBase.SuccessResponse(dockerImages);
+        }
+        catch
+        {
+            return ResponseBase.ErrorResponse("An error occurred while getting Docker images");
         }
     }
 }

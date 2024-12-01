@@ -1,0 +1,46 @@
+<div class="centered-container">
+    <mat-card class="main-card">
+        <mat-card-header class="centered-header">
+            <mat-card-title class="title">Change Email</mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+            <form [formGroup]="changeEmailForm" class="form-container" (ngSubmit)="onSubmit()" >
+                <div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <mat-form-field class="compact-field" appearance="outline">
+                                <mat-label>New Email</mat-label>
+                                <input matInput type="email" formControlName="newEmail" />
+                                <mat-error *ngIf="changeEmailForm.get('newEmail')?.hasError('required') && changeEmailForm.get('newEmail')?.touched">
+                                    New Email is required
+                                </mat-error>
+                                <mat-error *ngIf="changeEmailForm.get('newEmail')?.hasError('email') && changeEmailForm.get('newEmail')?.touched">
+                                    Enter a valid email
+                                </mat-error>
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <mat-form-field class="compact-field" appearance="outline">
+                                <mat-label>Your Password</mat-label>
+                                <input matInput type="password" formControlName="password" />
+                                <mat-error *ngIf="changeEmailForm.get('password')?.hasError('required') && changeEmailForm.get('password')?.touched">
+                                    Password is required
+                                </mat-error>
+                            </mat-form-field>
+                        </div>
+                    </div>
+                </div>
+
+                <mat-card-actions class="button-container">
+                    <button mat-raised-button color="primary" type="submit" style="width: 100%">
+                        Change Email
+                    </button>
+                </mat-card-actions>
+            </form>
+        </mat-card-content>
+    </mat-card>
+</div>

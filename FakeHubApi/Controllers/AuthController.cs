@@ -71,4 +71,18 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return NotFound(response);
     }
+
+    [Authorize(Roles = "USER,ADMIN")]
+    [HttpPost("change-email")]
+    public async Task<IActionResult> ChangeUserEmail(ChangeEmailRequestDto changeEmailRequestDto)
+    {
+        var response = await authService.ChangeEmailAsync(changeEmailRequestDto);
+
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+
+        return BadRequest(response);
+    }
 }
