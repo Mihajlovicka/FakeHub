@@ -8,6 +8,8 @@ import { AuthGuard } from './core/guard/auth.guard';
 import { ChangePasswordComponent } from "./features/user/change-password/change-password.component";
 import { NotEnabledGuard } from "./core/guard/not-enabled.guard";
 import { ProfileComponent } from './features/user/profile/profile.component';
+import { SettingsComponent } from './features/settings/settings.component';
+import { EmailEditComponent } from './features/settings/email-edit/email-edit.component';
 
 export const routes: Routes = [
   {
@@ -42,6 +44,18 @@ export const routes: Routes = [
     component: ChangePasswordComponent,
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.USER] }
+  },
+  {
+    path: 'settings',
+    component: SettingsComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
+  },
+  {
+    path: 'settings/email-edit',
+    component: EmailEditComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
   },
   {
     path: '**',

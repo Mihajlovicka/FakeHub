@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import * as moment from 'moment';
 import { UserProfileResponseDto } from '../../../core/model/user';
 import { UserService } from '../../../core/services/user.service';
 import { HeaderComponent } from '../../../shared/components/header/header.component';
+import { HelperService } from '../../../core/services/helper.service';
 
 @Component({
   selector: 'app-profile',
@@ -14,8 +15,10 @@ import { HeaderComponent } from '../../../shared/components/header/header.compon
   styleUrl: './profile.component.css'
 })
 export class ProfileComponent implements OnInit{
+  public helperService: HelperService = inject(HelperService);
   private userService: UserService = inject(UserService);
   private route: ActivatedRoute = inject(ActivatedRoute);
+  private router: Router = inject(Router);
 
   public user: UserProfileResponseDto = new UserProfileResponseDto();
   public activeLink: number = 1;  
@@ -35,18 +38,7 @@ export class ProfileComponent implements OnInit{
     this.activeLink = linkNumber;  
   }
 
-  public formatDate(date: Date) {
-    return this.isDateValid(date) ? moment.default(date).local().format('MMMM D, YYYY'): "";
-  }
-
-  public capitalizeFirstLetter(input: string): string {
-    if (!input) {
-      return '';
-    }
-    return input.charAt(0).toUpperCase();
-  }
-
-  public isDateValid(date:Date) {
-    return new Date(date).getTime() > 0;
+  public goToSettings() {
+    this.router.navigate(['/settings']);
   }
 }

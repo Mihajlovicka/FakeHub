@@ -5,14 +5,14 @@
     <div class="avatar-container">
       <div class="avatar">
         <span class="avatar-letter">{{
-          capitalizeFirstLetter(user.username)
+          helperService.capitalizeFirstLetter(user.username)
         }}</span>
       </div>
     </div>
     <div class="info-container">
       <div class="username-container">
         <span class="username">{{ user.username }}</span>
-        <button *ngIf="isLoggedInUserProfile" class="edit-icon-btn">
+        <button *ngIf="isLoggedInUserProfile" class="edit-icon-btn" (click)="goToSettings()">
           <i class="fa-solid fa-pen icons"></i>
         </button>
       </div>
@@ -21,9 +21,9 @@
           <i class="fa-regular fa-user icons"></i>
           <span class="joined">Community User</span>
         </div>
-        <div *ngIf="isDateValid(user.createdAt)" class="date-info">
+        <div *ngIf="helperService.isDateValid(user.createdAt)" class="date-info">
           <i class="fa-regular fa-calendar icons"></i>
-          <span class="joined">Joined {{ formatDate(user.createdAt) }}</span>
+          <span class="joined">Joined {{ helperService.formatDate(user.createdAt) }}</span>
         </div>
       </div>
     </div>

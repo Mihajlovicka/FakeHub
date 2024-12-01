@@ -1,21 +1,19 @@
-﻿using FakeHubApi.Filters;
-using FakeHubApi.Service.Contract;
+﻿using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FakeHubApi.Controllers
+namespace FakeHubApi.Controllers;
+
+[Route("api/docker-images")]
+[ApiController]
+public class DockerImageController(IDockerImageService dockerImageService) : ControllerBase
 {
-    [Route("api/docker-images")]
-    [ApiController]
-    public class DockerImageController(IDockerImageService dockerImageService) : ControllerBase
+    private readonly IDockerImageService _dockerImageService = dockerImageService;
+
+    [HttpGet]
+    public async Task<IActionResult> GetDockerImages()
     {
-        private readonly IDockerImageService _dockerImageService = dockerImageService;
+        var dockerImages = await _dockerImageService.GetDockerImagesAsync();
 
-        [HttpGet]
-        public async Task<IActionResult> GetDockerImages()
-        {
-            var dockerImages = await _dockerImageService.GetDockerImagesAsync();
-
-            return Ok(dockerImages);
-        }
+        return Ok(dockerImages);
     }
 }

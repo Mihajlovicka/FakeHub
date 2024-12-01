@@ -9,6 +9,7 @@ import { jwtDecode } from "jwt-decode";
 import { StorageService } from "./local-storage.service";
 import { UserRole } from "../model/user-role";
 import { ChangePasswordRequest } from "../model/change-password-request";
+import { ChangeEmailRequest } from "../model/change-email-request";
 
 @Injectable({
   providedIn: "root",
@@ -93,5 +94,13 @@ export class UserService {
           this.extractToken(result.token);
         })
     );
+  }
+
+  public changeEmail(data: ChangeEmailRequest): Observable<LoginResponseDto | null> {
+    return this.http.post<LoginResponseDto>(Path.ChangeEmail, data).pipe(
+      tap((result: LoginResponseDto) => {
+        this.extractToken(result.token);
+      })
+    )
   }
 }

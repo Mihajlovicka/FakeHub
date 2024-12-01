@@ -1,0 +1,31 @@
+<app-header></app-header>
+<div class="user-profile">
+    <div class="user-avatar">
+        <span class="avatar-initials">{{helperService.capitalizeFirstLetter(user.username)}}</span>
+    </div>
+    <div class="profile-details">
+        <div>
+            <span class="username">{{user.username}}</span>
+        </div>
+        <div class="account-info">
+            <span class="account-joined">Joined {{ helperService.formatDate(user.createdAt) }}</span>
+        </div>
+    </div>
+</div>
+<div class="user-information">
+    <p class="section-title">General</p>
+    <div class="user-details-container">
+        <p class="info-label">Email</p>
+        <div class="user-info-edit">
+        <p>{{user.email}}</p>
+        <button class="btn-edit" (click)="goToEmailEdit()"><i class="fa-solid fa-chevron-right edit-icon"></i></button>
+        </div>
+    </div>
+    <div class="user-details-container">
+        <p class="info-label">Password</p>
+        <div class="user-info-edit">
+        <p>**********</p>
+        <button class="btn-edit" (click)="goToPasswordEdit()"><i class="fa-solid fa-chevron-right edit-icon"></i></button>
+        </div>
+    </div>
+</div>

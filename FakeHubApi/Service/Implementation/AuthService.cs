@@ -114,4 +114,43 @@ public class AuthService(
         var token = jwtTokenGenerator.GenerateToken(user, roles);
         return ResponseBase.SuccessResponse(new LoginResponseDto { Token = token });
     }
+
+    public async Task<ResponseBase> ChangeEmailAsync(ChangeEmailRequestDto changeEmailRequestDto)
+    {
+        var user = await userContextService.GetCurrentUserAsync();
+        if(user == null)
+        {
+            return ResponseBase.ErrorResponse("User not found in current context");
+        }
+
+        var isPasswordValid = await userManager.CheckPasswordAsync(user, changeEmailRequestDto.Password);
+        if(!isPasswordValid)
+        {
+            return ResponseBase.ErrorResponse("Password is incorrect");
+        }
+
+        if(user.Email.Equals(changeEmailRequestDto.NewEmail))
+        {
+            return ResponseBase.ErrorResponse("Email can't be the same as current");
+        }
+
+        var emailToken = await userManager.GenerateChangeEmailTokenAsync(user, changeEmailRequestDto.NewEmail);
+
+        var changeEmailResult = await userManager.ChangeEmailAsync(user, changeEmailRequestDto.NewEmail, emailToken);
+        if (!changeEmailResult.Succeeded)
+        {
+            return ResponseBase.ErrorResponse(changeEmailResult.Errors.FirstOrDefault()?.Description ?? "Email change failed");
+        }
+
+        var updateUserResult = await userManager.UpdateAsync(user);
+        if (!updateUserResult.Succeeded)
+        {
+            return ResponseBase.ErrorResponse(updateUserResult.Errors.FirstOrDefault()?.Description ?? "Update current user failed");
+        }
+
+        var roles = await userManager.GetRolesAsync(user);
+        var newToken = jwtTokenGenerator.GenerateToken(user, roles);
+        return ResponseBase.SuccessResponse(new LoginResponseDto { Token = newToken });
+
+    } 
 }
