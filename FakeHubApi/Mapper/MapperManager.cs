@@ -5,7 +5,8 @@ namespace FakeHubApi.Mapper;
 
 public class MapperManager(
     IBaseMapper<RegistrationRequestDto, User> registrationsRequestDtoToApplicationUserMapper,
-    IBaseMapper<User,UserProfileResponseDto> applicationUserToUserProfileResponseDto
+    IBaseMapper<User, UserProfileResponseDto> applicationUserToUserProfileResponseDto,
+    IBaseMapper<OrganizationDto, Organization> organizationDtoToOrganizationMapper
 ) : IMapperManager
 {
     public IBaseMapper<
@@ -17,7 +18,8 @@ public class MapperManager(
     public IBaseMapper<
         User,
         UserProfileResponseDto
-    > ApplicationUserToUserProfileResponseDto
-    { get; } =
-        applicationUserToUserProfileResponseDto;
+    > ApplicationUserToUserProfileResponseDto { get; } = applicationUserToUserProfileResponseDto;
+
+    public IBaseMapper<OrganizationDto, Organization> OrganizationDtoToOrganizationMapper { get; } =
+        organizationDtoToOrganizationMapper;
 }
