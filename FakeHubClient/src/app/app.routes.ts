@@ -10,6 +10,7 @@ import { NotEnabledGuard } from "./core/guard/not-enabled.guard";
 import { ProfileComponent } from './features/user/profile/profile.component';
 import { SettingsComponent } from './features/settings/settings.component';
 import { EmailEditComponent } from './features/settings/email-edit/email-edit.component';
+import { AddOrganizationComponent } from './features/organization/add-organization/add-organization.component';
 
 export const routes: Routes = [
   {
@@ -56,6 +57,12 @@ export const routes: Routes = [
     component: EmailEditComponent,
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
+  },
+  {
+    path: 'organization/add',
+    component: AddOrganizationComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.USER] },
   },
   {
     path: '**',

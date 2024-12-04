@@ -3,4 +3,5 @@
 public interface IRepositoryManager
 {
     public IUserRepository UserRepository { get; }
+    public IOrganizationRepository OrganizationRepository { get; }
 }

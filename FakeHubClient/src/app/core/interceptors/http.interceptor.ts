@@ -21,7 +21,6 @@ export const HttpResponseInterceptor: HttpInterceptorFn = (
   return next(request).pipe(
     map((event: HttpEvent<any>) => {
       if (event instanceof HttpResponse) {
-        popupHandler.openSnackbar('Success!', 'success');
         return event.clone({ body: event.body.result });
       }
       return event;

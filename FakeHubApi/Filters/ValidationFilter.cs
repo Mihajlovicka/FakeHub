@@ -21,7 +21,7 @@ public class ValidationFilter : IActionFilter
             var response = new ResponseBase()
             {
                 Success = false,
-                ErrorMessage = string.Join(", \n", errorMessages),
+                ErrorMessage = string.Join(" \n", errorMessages),
             };
             context.Result = new BadRequestObjectResult(response);
         }
