@@ -1,0 +1,76 @@
+<div class="centered-container">
+  <mat-card class="main-card">
+    <mat-card-header class="centered-header">
+      <mat-card-title class="title"
+        >Edit Organization {{ organizationForm.get("name")?.value }}
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form
+        [formGroup]="organizationForm"
+        (ngSubmit)="onSubmit()"
+        class="form-container"
+      >
+        <!-- Description -->
+        <div class="row">
+          <mat-form-field class="compact-field" appearance="outline">
+            <mat-label>Description</mat-label>
+            <textarea
+              matInput
+              formControlName="description"
+              rows="4"
+            ></textarea>
+            @if(organizationForm.get('description')?.hasError('maxlength')){
+            <mat-error> Description cannot exceed 500 characters. </mat-error>}
+          </mat-form-field>
+        </div>
+
+        <!-- Image Upload -->
+        <div class="form-group-upload">
+          <div class="form-group upload">
+            <label for="org-image">Upload Logo</label>
+            <input
+              id="org-image"
+              type="file"
+              (change)="onFileChange($event)"
+              accept="image/*"
+              class="form-input"
+            />
+          </div>
+          <!-- Image Preview -->
+          @if(organizationForm.get('imageBase64')?.value){
+          <div class="image-preview-container">
+            <img
+              [src]="organizationForm.get('imageBase64')?.value"
+              alt="Organization Logo"
+              class="image-preview"
+            />
+          </div>
+          }
+        </div>
+
+        <!-- Submit Button -->
+        <mat-card-actions>
+          <button
+            mat-raised-button
+            style="width: 50%"
+            (click)="cancel()"
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            mat-raised-button
+            color="primary"
+            [disabled]="organizationForm.invalid"
+            style="width: 50%"
+            type="submit"
+          >
+            Edit Organization
+          </button>
+        </mat-card-actions>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

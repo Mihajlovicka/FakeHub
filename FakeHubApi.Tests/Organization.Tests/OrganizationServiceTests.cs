@@ -4,7 +4,6 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
-using Microsoft.AspNetCore.Identity;
 using Moq;
 
 namespace FakeHubApi.Tests.Organization.Tests;
@@ -16,12 +15,15 @@ public class OrganizationServiceTests
     private Mock<IRepositoryManager> _repositoryManagerMock;
     private Mock<IUserContextService> _userContextServiceMock;
 
+    private Mock<ICrudRepository<Model.Entity.Organization>> _organizationRepositoryMock;
+
     [SetUp]
     public void Setup()
     {
         _mapperManagerMock = new Mock<IMapperManager>();
         _repositoryManagerMock = new Mock<IRepositoryManager>();
         _userContextServiceMock = new Mock<IUserContextService>();
+        _organizationRepositoryMock = new Mock<ICrudRepository<Model.Entity.Organization>>();
 
         _organizationService = new OrganizationService(
             _mapperManagerMock.Object,
@@ -106,6 +108,115 @@ public class OrganizationServiceTests
         {
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorMessage, Is.EqualTo("Organization name is not unique."));
+        });
+    }
+
+    [Test]
+    public async Task EditOgranization()
+    {
+        var user = new User { Id = 1, UserName = "Test User" };
+        var name = "Test Organization";
+        var organizationDto = new UpdateOrganizationDto
+        {
+            Description = "Test Description Edit",
+            ImageBase64 = "Test Image Base64",
+        };
+
+        var organization = new Model.Entity.Organization
+        {
+            Name = name,
+            Description = "Test Description",
+            ImageBase64 = "Test Image Base64",
+            OwnerId = user.Id,
+        };
+
+        _userContextServiceMock.Setup(m => m.GetCurrentUserAsync()).ReturnsAsync(user);
+
+        _organizationRepositoryMock
+            .Setup(um => um.UpdateAsync(It.IsAny<Model.Entity.Organization>()))
+            .Returns(() => null);
+
+        _repositoryManagerMock
+            .Setup(um => um.OrganizationRepository.GetByName(It.IsAny<string>()))
+            .ReturnsAsync(organization);
+
+        var result = await _organizationService.Update(name, organizationDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task EditOgranization_UserWithoutPermition()
+    {
+        var user = new User { Id = 1, UserName = "Test User" };
+        var name = "Test Organization";
+        var organizationDto = new UpdateOrganizationDto
+        {
+            Description = "Test Description Edit",
+            ImageBase64 = "Test Image Base64",
+        };
+
+        var organization = new Model.Entity.Organization
+        {
+            Name = name,
+            Description = "Test Description",
+            ImageBase64 = "Test Image Base64",
+            OwnerId = 2,
+        };
+
+        _userContextServiceMock.Setup(m => m.GetCurrentUserAsync()).ReturnsAsync(user);
+
+        _organizationRepositoryMock
+            .Setup(um => um.UpdateAsync(It.IsAny<Model.Entity.Organization>()))
+            .Returns(() => null);
+
+        _repositoryManagerMock
+            .Setup(um => um.OrganizationRepository.GetByName(It.IsAny<string>()))
+            .ReturnsAsync(organization);
+
+        var result = await _organizationService.Update(name, organizationDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(
+                result.ErrorMessage,
+                Is.EqualTo("You are not authorized to update this organization.")
+            );
+        });
+    }
+
+    [Test]
+    public async Task EditOgranization_NotExists()
+    {
+        var user = new User { Id = 1, UserName = "Test User" };
+        var name = "Test Organization";
+        var organizationDto = new UpdateOrganizationDto
+        {
+            Description = "Test Description Edit",
+            ImageBase64 = "Test Image Base64",
+        };
+
+        _userContextServiceMock.Setup(m => m.GetCurrentUserAsync()).ReturnsAsync(user);
+
+        _organizationRepositoryMock
+            .Setup(um => um.UpdateAsync(It.IsAny<Model.Entity.Organization>()))
+            .Returns(() => null);
+
+        _repositoryManagerMock
+            .Setup(um => um.OrganizationRepository.GetByName(It.IsAny<string>()))
+            .ReturnsAsync((Model.Entity.Organization)null);
+
+        var result = await _organizationService.Update(name, organizationDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Organization not found."));
         });
     }
 }

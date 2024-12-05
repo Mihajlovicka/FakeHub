@@ -22,4 +22,29 @@ public class OrganizationController(IOrganizationService organizationService) : 
         }
         return BadRequest(response);
     }
+
+    [HttpGet("{name}")]
+    public async Task<IActionResult> Get([FromRoute] string name)
+    {
+        var response = await organizationService.GetByName(name);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpPut("{name}")]
+    public async Task<IActionResult> Update(
+        [FromRoute] string name,
+        [FromBody] UpdateOrganizationDto model
+    )
+    {
+        var response = await organizationService.Update(name, model);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }
