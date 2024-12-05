@@ -12,6 +12,17 @@ export class OrganizationService {
   private http: HttpClient = inject(HttpClient);
 
   public addOrganization(user: Organization): Observable<any | null> {
-    return this.http.post<ServiceResponse>(Path.AddOrganization, user);
+    return this.http.post<ServiceResponse>(Path.Organization, user);
+  }
+
+  public getOrganization(name: string): Observable<Organization> {
+    return this.http.get<Organization>(`${Path.Organization}/${name}`);
+  }
+
+  public editOrganization(organization: Organization): Observable<any | null> {
+    return this.http.put<ServiceResponse>(
+      `${Path.Organization}/${organization.name}`,
+      organization
+    );
   }
 }

@@ -18,13 +18,18 @@ public class OrganizationControllerIntegrationTests
     private HttpClient _client;
     private CustomWebApplicationFactory _factory;
 
+    private const string imageBase64 =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wQAAwAC/1EpeEkAAAAASUVORK5CYII=";
+
     [OneTimeSetUp]
     public async Task Setup()
     {
         _factory = new CustomWebApplicationFactory();
         _client = _factory.CreateClient();
         await AddUser();
-        var token = await GetTokenFromSuccessfulUserLogin();
+        var token = await GetTokenFromSuccessfulUserLogin(
+            new LoginRequestDto { Email = "test@example.com", Password = "Password123!" }
+        );
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
             token
@@ -45,8 +50,7 @@ public class OrganizationControllerIntegrationTests
         {
             Name = "Test Organization",
             Description = "Test Description",
-            ImageBase64 =
-                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wQAAwAC/1EpeEkAAAAASUVORK5CYII=",
+            ImageBase64 = imageBase64,
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization", organizationDto);
@@ -67,8 +71,7 @@ public class OrganizationControllerIntegrationTests
         {
             Name = "Test Organization",
             Description = "Test Description",
-            ImageBase64 =
-                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wQAAwAC/1EpeEkAAAAASUVORK5CYII=",
+            ImageBase64 = imageBase64,
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization", organizationDto);
@@ -104,6 +107,94 @@ public class OrganizationControllerIntegrationTests
         });
     }
 
+    [Test, Order(4)]
+    public async Task EditOrganization()
+    {
+        var name = "Test Organization";
+        var organizationDto = new UpdateOrganizationDto
+        {
+            Description = "Test Description",
+            ImageBase64 = imageBase64,
+        };
+
+        var response = await _client.PutAsJsonAsync($"/api/organization/{name}", organizationDto);
+
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        response.EnsureSuccessStatusCode();
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(5)]
+    public async Task EditOrganization_UserWihoutPermition()
+    {
+        var name = "Test Organization";
+        var organizationDto = new UpdateOrganizationDto
+        {
+            Description = "Test Description",
+            ImageBase64 = imageBase64,
+        };
+
+        var token = await GetTokenFromSuccessfulUserLogin(
+            new LoginRequestDto { Email = "testtest@example.com", Password = "Password123!" }
+        );
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            token
+        );
+
+        var response = await _client.PutAsJsonAsync($"/api/organization/{name}", organizationDto);
+
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(
+                responseObj?.ErrorMessage,
+                Is.EqualTo("You are not authorized to update this organization.")
+            );
+        });
+    }
+
+    [Test, Order(6)]
+    public async Task GetByName()
+    {
+        var name = "Test Organization";
+
+        var response = await _client.GetFromJsonAsync<ResponseBase>($"/api/organization/{name}");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response?.Success, Is.True);
+            var jsonString = response?.Result?.ToString() ?? string.Empty;
+            var responseOrganization = JsonConvert.DeserializeObject<OrganizationDto>(jsonString);
+
+            Assert.That(responseOrganization, Is.Not.Null);
+            Assert.That(responseOrganization?.Name, Is.EqualTo(name));
+            Assert.That(responseOrganization?.Description, Is.EqualTo("Test Description"));
+            Assert.That(responseOrganization?.ImageBase64, Is.EqualTo(imageBase64));
+        });
+    }
+
+    [Test, Order(7)]
+    public async Task GetByName_NoOrganization()
+    {
+        var name = "Test Organization 1";
+
+        var response = await _client.GetAsync($"/api/organization/{name}");
+
+        var responseBody = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBody?.Success, Is.False);
+            Assert.That(responseBody?.ErrorMessage, Is.EqualTo("Organization not found."));
+        });
+    }
+
     private async Task AddUser()
     {
         using var scope = _factory.Services.CreateScope();
@@ -120,6 +211,7 @@ public class OrganizationControllerIntegrationTests
 
         var user = new User
         {
+            Id = 1,
             Email = "test@example.com",
             UserName = "test@example.com",
             PasswordHash =
@@ -127,19 +219,25 @@ public class OrganizationControllerIntegrationTests
             SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ",
         };
 
-        await db.Users.AddAsync(user);
-        await db.SaveChangesAsync();
-        await userManager.AddToRolesAsync(user, new[] { "USER" });
-    }
-
-    private async Task<string> GetTokenFromSuccessfulUserLogin()
-    {
-        var loginRequest = new LoginRequestDto
+        var user2 = new User
         {
-            Email = "test@example.com",
-            Password = "Password123!",
+            Id = 2,
+            Email = "testtest@example.com",
+            UserName = "testest@example.com",
+            PasswordHash =
+                "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
+            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ",
         };
 
+        await db.Users.AddAsync(user);
+        await db.Users.AddAsync(user2);
+        await db.SaveChangesAsync();
+        await userManager.AddToRolesAsync(user, new[] { "USER" });
+        await userManager.AddToRolesAsync(user2, new[] { "USER" });
+    }
+
+    private async Task<string> GetTokenFromSuccessfulUserLogin(LoginRequestDto loginRequest)
+    {
         var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
         loginResponse.EnsureSuccessStatusCode();
 

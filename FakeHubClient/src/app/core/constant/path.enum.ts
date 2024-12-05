@@ -10,7 +10,7 @@ export const Path = {
   RegisterAdmin: authApi + 'register/admin',
   ChangePassword: authApi + 'change-password',
   ChangeEmail: authApi + 'change-email',
-  AddOrganization: api + "organization",
+  Organization: api + "organization",
 };
 
 export function getProfilePath(username: string): string {

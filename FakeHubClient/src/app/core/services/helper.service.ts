@@ -19,4 +19,14 @@ export class HelperService {
     }
     return input.charAt(0).toUpperCase();
   }
+
+   public readImageBase64(file: File): Promise<string> {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e: any) => {
+          resolve(e.target.result);
+        };
+        reader.readAsDataURL(file);
+    });
+  }
 }

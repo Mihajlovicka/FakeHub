@@ -11,6 +11,7 @@ import { ProfileComponent } from './features/user/profile/profile.component';
 import { SettingsComponent } from './features/settings/settings.component';
 import { EmailEditComponent } from './features/settings/email-edit/email-edit.component';
 import { AddOrganizationComponent } from './features/organization/add-organization/add-organization.component';
+import { EditOrganizationComponent } from './features/organization/edit-organization/edit-organization.component';
 
 export const routes: Routes = [
   {
@@ -59,10 +60,19 @@ export const routes: Routes = [
     data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
   },
   {
-    path: 'organization/add',
-    component: AddOrganizationComponent,
+    path: "organization",
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.USER] },
+    children: [
+      {
+        path: "add",
+        component: AddOrganizationComponent,
+      },
+      {
+        path: "edit/:id",
+        component: EditOrganizationComponent,
+      },
+    ],
   },
   {
     path: '**',

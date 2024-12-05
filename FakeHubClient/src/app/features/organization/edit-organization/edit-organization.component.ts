@@ -1,20 +1,21 @@
 import { Component, inject } from "@angular/core";
 import {
-  FormControl,
-  FormGroup,
-  FormsModule,
   ReactiveFormsModule,
+  FormsModule,
+  FormGroup,
+  FormControl,
   Validators,
 } from "@angular/forms";
-import { Router } from "@angular/router";
-import { OrganizationService } from "../../../core/services/organization.service";
-import { MatInputModule } from "@angular/material/input";
-import { MatCardModule } from "@angular/material/card";
 import { MatButtonModule } from "@angular/material/button";
+import { MatCardModule } from "@angular/material/card";
+import { MatInputModule } from "@angular/material/input";
+import { ActivatedRoute, Router } from "@angular/router";
+import { OrganizationService } from "../../../core/services/organization.service";
+import { Organization } from "../../../core/model/organization";
 import { HelperService } from "../../../core/services/helper.service";
 
 @Component({
-  selector: "app-add-organization",
+  selector: "app-edit-organization",
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -24,16 +25,17 @@ import { HelperService } from "../../../core/services/helper.service";
     MatCardModule,
     FormsModule,
   ],
-  templateUrl: "./add-organization.component.html",
-  styleUrl: "./add-organization.component.css",
+  templateUrl: "./edit-organization.component.html",
+  styleUrl: "./edit-organization.component.css",
 })
-export class AddOrganizationComponent {
+export class EditOrganizationComponent {
   private readonly service: OrganizationService = inject(OrganizationService);
   private readonly router: Router = inject(Router);
+  private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly helperService: HelperService = inject(HelperService);
 
   public organizationForm: FormGroup = new FormGroup({
-    name: new FormControl("", [Validators.required, Validators.maxLength(100)]),
+    name: new FormControl(""),
     description: new FormControl("", [Validators.maxLength(500)]),
     imageBase64: new FormControl(""),
   });
@@ -53,12 +55,25 @@ export class AddOrganizationComponent {
   public onSubmit(): void {
     if (this.organizationForm.invalid) return;
 
-    this.service.addOrganization(this.organizationForm.value).subscribe({
+    this.service.editOrganization(this.organizationForm.value).subscribe({
       next: () => {
-        this.router.navigate([
-          "/organization/view" + this.organizationForm.value.name,
-        ]);
+        this.router.navigate(["/organizations"]);
       },
     });
+  }
+
+  public cancel(): void {
+    this.router.navigate(["/organization"]);
+  }
+
+  ngOnInit(): void {
+    const id = this.activatedRoute.snapshot.paramMap.get("id");
+    if (id) {
+      this.service.getOrganization(id).subscribe({
+        next: (organization: Organization) => {
+          this.organizationForm.patchValue(organization);
+        },
+      });
+    }
   }
 }

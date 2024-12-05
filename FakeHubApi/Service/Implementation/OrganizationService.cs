@@ -25,4 +25,34 @@ public class OrganizationService(
         await repositoryManager.OrganizationRepository.AddAsync(organization);
         return ResponseBase.SuccessResponse();
     }
+
+    public async Task<ResponseBase> Update(string name, UpdateOrganizationDto model)
+    {
+        var user = await userContext.GetCurrentUserAsync();
+
+        var existingOrganization = await repositoryManager.OrganizationRepository.GetByName(name);
+        if (existingOrganization == null)
+            return ResponseBase.ErrorResponse("Organization not found.");
+
+        if (existingOrganization.OwnerId != user.Id)
+            return ResponseBase.ErrorResponse(
+                "You are not authorized to update this organization."
+            );
+
+        existingOrganization.Description = model.Description;
+        existingOrganization.ImageBase64 = model.ImageBase64;
+        await repositoryManager.OrganizationRepository.UpdateAsync(existingOrganization);
+        return ResponseBase.SuccessResponse();
+    }
+
+    public async Task<ResponseBase> GetByName(string name)
+    {
+        var organization = await repositoryManager.OrganizationRepository.GetByName(name);
+        if (organization == null)
+            return ResponseBase.ErrorResponse("Organization not found.");
+
+        return ResponseBase.SuccessResponse(
+            mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap(organization)
+        );
+    }
 }
