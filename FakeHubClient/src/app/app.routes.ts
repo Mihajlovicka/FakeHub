@@ -12,6 +12,7 @@ import { SettingsComponent } from './features/settings/settings.component';
 import { EmailEditComponent } from './features/settings/email-edit/email-edit.component';
 import { AddOrganizationComponent } from './features/organization/add-organization/add-organization.component';
 import { EditOrganizationComponent } from './features/organization/edit-organization/edit-organization.component';
+import { OrganizationsComponent } from './features/organization/organizations/organizations.component';
 
 export const routes: Routes = [
   {
@@ -58,6 +59,12 @@ export const routes: Routes = [
     component: EmailEditComponent,
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
+  },
+  {
+    path: 'organizations',
+    canActivate: [AuthGuard],
+    component: OrganizationsComponent,
+    data: { requiredRole: [UserRole.USER] }
   },
   {
     path: "organization",

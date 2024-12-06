@@ -22,6 +22,7 @@ public class OrganizationDtoToOgranization : BaseMapper<OrganizationDto, Organiz
             Name = source.Name,
             Description = source.Description,
             ImageBase64 = source.ImageBase64,
+            Owner = source.Owner?.UserName,
         };
     }
 }

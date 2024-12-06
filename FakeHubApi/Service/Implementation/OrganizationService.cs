@@ -55,4 +55,13 @@ public class OrganizationService(
             mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap(organization)
         );
     }
+
+    public async Task<ResponseBase> GetByUser()
+    {
+        var user = await userContext.GetCurrentUserAsync();
+        var organizations = await repositoryManager.OrganizationRepository.GetByUser(user.Id);
+        return ResponseBase.SuccessResponse(
+            organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap)
+        );
+    }
 }

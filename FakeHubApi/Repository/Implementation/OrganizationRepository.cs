@@ -11,4 +11,7 @@ public class OrganizationRepository(AppDbContext context)
 {
     public Task<Organization?> GetByName(string name) =>
         _context.Organizations.FirstOrDefaultAsync(x => x.Name == name);
+
+    public Task<List<Organization>> GetByUser(int userId) =>
+        _context.Organizations.Where(x => x.OwnerId == userId).ToListAsync();
 }

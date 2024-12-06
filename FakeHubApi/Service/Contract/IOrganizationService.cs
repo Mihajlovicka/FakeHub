@@ -8,4 +8,5 @@ public interface IOrganizationService
     Task<ResponseBase> Add(OrganizationDto model);
     Task<ResponseBase> Update(string name, UpdateOrganizationDto model);
     Task<ResponseBase> GetByName(string name);
+    Task<ResponseBase> GetByUser();
 }

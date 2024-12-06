@@ -1,0 +1,29 @@
+<h1 class="title">Organizations</h1>
+<div class="content-container">
+  <div class="orgs-container">
+    @for (org of organizations; track org.name) {
+    <div class="container">
+      <a class="link-container">
+        <div class="image-container">
+          <img [src]="org.imageBase64" alt="{{ org.name }}" class="logo" />
+        </div>
+        <div class="details-container">
+          <div class="link-header">
+            <span class="ellipsis">{{ org.owner + "/" + org.name }}</span>
+          </div>
+          <div class="multi-line-ellipsis">
+            {{ org.description.substring(0, 50)
+            }}{{ org.description.length > 50 ? "..." : "" }}
+          </div>
+          <div class="link-footer">
+            <span class="footer-text">Owner: {{ org.owner }}</span>
+            <span class="footer-text">Active: {{ true ? "Yes" : "No" }}</span>
+          </div>
+        </div>
+      </a>
+    </div>
+    } @empty {
+    <div class="no-organizations">There are no organizations</div>
+    }
+  </div>
+</div>
