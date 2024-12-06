@@ -25,4 +25,8 @@ export class OrganizationService {
       organization
     );
   }
+
+  public getByUser(): Observable<Organization[]> {
+    return this.http.get<Organization[]>(Path.OrganizationByUser);
+  }
 }

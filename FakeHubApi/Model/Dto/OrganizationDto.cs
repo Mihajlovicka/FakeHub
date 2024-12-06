@@ -14,4 +14,6 @@ public class OrganizationDto
 
     [Base64ImageValidation]
     public string ImageBase64 { get; set; }
+
+    public string? Owner { get; set; } = null;
 }

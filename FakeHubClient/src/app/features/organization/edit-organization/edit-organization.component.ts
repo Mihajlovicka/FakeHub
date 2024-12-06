@@ -63,7 +63,7 @@ export class EditOrganizationComponent {
   }
 
   public cancel(): void {
-    this.router.navigate(["/organization"]);
+    this.router.navigate(["/organizations"]);
   }
 
   ngOnInit(): void {
