@@ -1,7 +1,8 @@
 <h1 class="title">Organizations</h1>
 <div class="content-container">
   <div class="orgs-container">
-    @for (org of organizations; track org.name) {
+    @for (org of (this.organizationService.searchResultsSignal() ||
+    organizations); track org.name) {
     <div class="container">
       <a class="link-container" [routerLink]="['/organization/view', org.name]">
         <div class="image-container">

@@ -60,4 +60,15 @@ public class OrganizationController(IOrganizationService organizationService) : 
         }
         return BadRequest(response);
     }
+
+    [HttpGet("")]
+    public async Task<IActionResult> Search([FromQuery] string query)
+    {
+        var response = await organizationService.Search(query);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

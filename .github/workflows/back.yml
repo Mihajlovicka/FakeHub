@@ -1,6 +1,9 @@
 name: CI - Test API
 
 on:
+  push:
+    branches-ignore:
+      - '*'
   # pull_request:
   #   branches:
   #     - develop
