@@ -1,5 +1,4 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { HeaderComponent } from "../../shared/components/header/header.component";
 import { CommonModule } from '@angular/common';
 import { DockerImageComponent } from "../../shared/components/docker-image/docker-image.component";
 import { DockerImage } from '../../core/model/docker-image';
@@ -9,7 +8,7 @@ import { UserService } from '../../core/services/user.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [HeaderComponent, CommonModule, DockerImageComponent],
+  imports: [CommonModule, DockerImageComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })

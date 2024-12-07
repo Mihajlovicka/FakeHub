@@ -10,6 +10,7 @@ import { StorageService } from "./local-storage.service";
 import { UserRole } from "../model/user-role";
 import { ChangePasswordRequest } from "../model/change-password-request";
 import { ChangeEmailRequest } from "../model/change-email-request";
+import { ChangeUserBadgeRequest } from "../model/change-badge-to-user-request";
 
 @Injectable({
   providedIn: "root",
@@ -103,4 +104,13 @@ export class UserService {
       })
     )
   }
+
+  public changeUserBadge(data: ChangeUserBadgeRequest): Observable<UserProfileResponseDto | null> {
+    return this.http.post<UserProfileResponseDto>(Path.ChangeUserBadge, data).pipe(
+      tap((user: UserProfileResponseDto) => {
+        return user;
+      })
+    )
+  }
+
 }

@@ -680,4 +680,121 @@ public class Tests
             Assert.That(result.ErrorMessage, Is.EqualTo(updateUserErrorMessage));
         });
     }
+
+    [Test]
+    public async Task ChangeUserBadgeAsync_UserNotFound_ReturnsErrorResponse()
+    {
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "nonexistentUser"
+        };
+
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(changeUserBadgeRequestDto.Username))
+            .ReturnsAsync((User)null);
+
+        var result = await _authService.ChangeUserBadgeAsync(changeUserBadgeRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("User not found"));
+        });
+
+    }
+
+    [Test]
+    public async Task ChangeUserBadgeAsync_InvalidBadge_ReturnsErrorResponse()
+    {
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = (Badge)15,
+            Username = "validUser"
+        };
+
+        var user = new User();
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(changeUserBadgeRequestDto.Username))
+            .ReturnsAsync(user);
+
+        var result = await _authService.ChangeUserBadgeAsync(changeUserBadgeRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Invalid badge value"));
+        });
+    }
+
+    [Test]
+    public async Task ChangeUserBadgeAsync_FailedUpdateUserBadge_ReturnsErrorResponse()
+    {
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "validUser"
+        };
+        var user = new User();
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(changeUserBadgeRequestDto.Username))
+            .ReturnsAsync(user);
+
+        var identityError = new IdentityError { Description = "Failed to update badge" };
+        _mockUserManager
+            .Setup(um => um.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Failed(identityError));
+
+        var result = await _authService.ChangeUserBadgeAsync(changeUserBadgeRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Failed to update badge"));
+        });
+    }
+
+    [Test]
+    public async Task ChangeUserBadgeAsync_SuccessfulUpdate_ReturnsSuccessResponse()
+    {
+        var user = new User();
+        var userProfileResponseDto = new UserProfileResponseDto();
+        
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "validUser"
+        };
+
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(changeUserBadgeRequestDto.Username))
+            .ReturnsAsync(user);
+
+        _mockUserManager
+            .Setup(um => um.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _mapperManagerMock
+            .Setup(m => m.ApplicationUserToUserProfileResponseDto
+            .Map(user))
+            .Returns(userProfileResponseDto);
+
+        var result = await _authService.ChangeUserBadgeAsync(changeUserBadgeRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Not.Null);
+            Assert.That(result.ErrorMessage, Is.Empty);
+            Assert.AreEqual(userProfileResponseDto, result.Result);
+        });
+    }
+
+
+
 }

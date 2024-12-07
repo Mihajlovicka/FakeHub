@@ -13,6 +13,7 @@ export const Path = {
   ChangeEmail: authApi + 'change-email',
   Organization: organizationApi,
   OrganizationByUser: organizationApi + "/user",
+  ChangeUserBadge: authApi + 'change-user-badge'
 };
 
 export function getProfilePath(username: string): string {
