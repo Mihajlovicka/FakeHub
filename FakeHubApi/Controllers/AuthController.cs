@@ -85,4 +85,18 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return BadRequest(response);
     }
+
+    [Authorize(Roles = "ADMIN")]
+    [HttpPost("change-user-badge")]
+    public async Task<IActionResult> ChangeUserBadge(ChangeUserBadgeRequestDto changeUserBadgeRequestDto)
+    {
+        var response = await authService.ChangeUserBadgeAsync(changeUserBadgeRequestDto);
+
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+
+        return BadRequest(response);
+    }
 }

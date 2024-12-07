@@ -152,5 +152,42 @@ public class AuthService(
         var newToken = jwtTokenGenerator.GenerateToken(user, roles);
         return ResponseBase.SuccessResponse(new LoginResponseDto { Token = newToken });
 
-    } 
+    }
+
+    public async Task<ResponseBase> ChangeUserBadgeAsync(ChangeUserBadgeRequestDto changeUserBadgeRequestDto)
+    {
+        try
+        {
+            var user = await userManager.FindByNameAsync(changeUserBadgeRequestDto.Username);
+            if (user == null)
+            {
+                return ResponseBase.ErrorResponse("User not found");
+            }
+
+            if (!Enum.IsDefined(typeof(Badge), changeUserBadgeRequestDto.Badge))
+            {
+                return ResponseBase.ErrorResponse("Invalid badge value");
+            }
+
+            user.Badge = changeUserBadgeRequestDto.Badge;
+
+            var result = await userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+            {
+                return ResponseBase.ErrorResponse("Failed to update badge");
+            }
+
+            var userProfieResponseDto = mapperManager.ApplicationUserToUserProfileResponseDto.Map(
+                user
+            );
+
+            return ResponseBase.SuccessResponse(userProfieResponseDto);
+
+        }
+        catch (Exception ex)
+        {
+            return ResponseBase.ErrorResponse(ex.Message);
+        }
+    }
 }

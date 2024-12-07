@@ -11,7 +11,8 @@ public class ApplicationUserToUserProfileResponseDto : BaseMapper<User, UserProf
         {
             Username = source?.UserName,
             Email = source?.Email,
-            CreatedAt = source?.CreatedAt
+            CreatedAt = source?.CreatedAt,
+            Badge = source.Badge
         };
     }
 }

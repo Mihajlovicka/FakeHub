@@ -43,7 +43,7 @@ export class LoginComponent {
 
     this.service.login(this.loginForm.value).subscribe({
       next: () => {
-        this.router.navigate(["/"]);
+        window.location.reload();
       },
     });
   }

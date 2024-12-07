@@ -14,6 +14,9 @@
         <button *ngIf="isLoggedInUserProfile" class="edit-icon-btn" (click)="goToSettings()">
           <i class="fa-solid fa-pen icons"></i>
         </button>
+        <div [ngClass]="{ 'editable-badge': isAdmin, 'badge-btn': true }" (click)="openDialog()">
+          <app-user-badge [userBadge]="user.badge" [showNone]="isAdmin && !isLoggedInUserProfile"></app-user-badge>
+        </div>
       </div>
       <div class="community-info">
         <div class="community">

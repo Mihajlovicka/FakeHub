@@ -12,4 +12,5 @@ public interface IAuthService
     Task<ResponseBase> GetUserProfileByUsernameAsync(string username);
     Task<ResponseBase> ChangePassword(ChangePasswordRequestDto changePasswordRequestDto);
     Task<ResponseBase> ChangeEmailAsync(ChangeEmailRequestDto changeEmailRequestDto);
+    Task<ResponseBase> ChangeUserBadgeAsync(ChangeUserBadgeRequestDto changeUserBadgeRequestDto);
 }

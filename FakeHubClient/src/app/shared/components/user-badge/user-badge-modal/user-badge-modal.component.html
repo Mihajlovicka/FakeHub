@@ -1,0 +1,12 @@
+<h2 mat-dialog-title>User Badge</h2>
+<mat-dialog-content>
+  <mat-radio-group aria-label="Select an option" [(ngModel)]="selectedBadge">
+    <mat-radio-button [value]="UserBadge.None">None</mat-radio-button>
+    <mat-radio-button [value]="UserBadge.VerifiedPublisher">Verrified User</mat-radio-button>
+    <mat-radio-button [value]="UserBadge.SponsoredOSS">Sponsored OSS</mat-radio-button>
+  </mat-radio-group>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-button (click)="onNoClick()">Close</button>
+  <button mat-button [mat-dialog-close]="selectedBadge" (click)="onSaveClick()" cdkFocusInitial>Save</button>
+</mat-dialog-actions>

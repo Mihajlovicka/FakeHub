@@ -20,6 +20,7 @@ public class AuthControllerIntegrationTests
     private HttpClient _client;
     private CustomWebApplicationFactory _factory;
     private string _regularUserToken;
+    private string _adminToken;
 
     [OneTimeSetUp]
     public async Task Setup()
@@ -27,7 +28,7 @@ public class AuthControllerIntegrationTests
         _factory = new CustomWebApplicationFactory();
         _client = _factory.CreateClient();
         await SetupDbData();
-        _regularUserToken = await GetTokenFromSuccessfulUserLogin();
+        InitializeTokens();
     }
 
     [OneTimeTearDown]
@@ -449,6 +450,77 @@ public class AuthControllerIntegrationTests
         Assert.That(emailFromResponseToken, Is.EqualTo(changeEmailRequestDto.NewEmail));
     }
 
+    [Test, Order(16)]
+    public async Task ChangeUserBadge_Unauthorized_ReturnsForbidden()
+    {
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "test3@example.com"
+        };
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+        var response = await _client.PostAsJsonAsync("/api/auth/change-user-badge", changeUserBadgeRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.IsSuccessStatusCode, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        });
+    }
+
+    [Test, Order(17)]
+    public async Task ChangeUserBadge_NonExistentUser_ReturnsBadRequest()
+    {
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "test333@example.com"
+        };
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+        var response = await _client.PostAsJsonAsync("/api/auth/change-user-badge", changeUserBadgeRequestDto);
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(responseObj?.ErrorMessage, Is.Not.Empty);
+            Assert.That(responseObj?.ErrorMessage, Is.EqualTo("User not found"));
+            Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(18)]
+    public async Task ChangeUserBadge_SuccessfulChange_ReturnsOk()
+    {
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "test3@example.com"
+        };
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+        var response = await _client.PostAsJsonAsync("/api/auth/change-user-badge", changeUserBadgeRequestDto);
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var changeUserBadgeResponseDtoString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+            Assert.That(changeUserBadgeResponseDtoString, Is.Not.Empty);
+        });
+
+        var changeUserBadgeResponseDtoObject = JsonConvert.DeserializeObject<UserProfileResponseDto>(changeUserBadgeResponseDtoString);
+
+        Assert.That(changeUserBadgeResponseDtoObject, Is.Not.Null);
+        Assert.That(changeUserBadgeResponseDtoObject?.Badge, Is.EqualTo(changeUserBadgeRequestDto.Badge));
+    }
+
     private async Task SetupDbData()
     {
         using var scope = _factory.Services.CreateScope();
@@ -508,15 +580,10 @@ public class AuthControllerIntegrationTests
         await userManager.AddToRolesAsync(user3, new[] { "USER" });
     }
 
-    private async Task<string> GetTokenFromSuccessfulUserLogin()
+    private async Task<string> GetTokenFromSuccessfulUserLogin(LoginRequestDto loginRequestDto)
     {
-        var loginRequest = new LoginRequestDto
-        {
-            Email = "test3@example.com",
-            Password = "Password123!"
-        };
 
-        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequestDto);
         loginResponse.EnsureSuccessStatusCode();
 
 
@@ -541,5 +608,22 @@ public class AuthControllerIntegrationTests
         var emailClaim = jwtToken?.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
 
         return emailClaim;
+    }
+
+    private async void InitializeTokens()
+    {
+        var regularUser = new LoginRequestDto
+        {
+            Email = "test3@example.com",
+            Password = "Password123!"
+        };
+        _regularUserToken = await GetTokenFromSuccessfulUserLogin(regularUser);
+
+        var adminUser = new LoginRequestDto
+        {
+            Email = "teest@example.com",
+            Password = "Password123!"
+        };
+        _adminToken = await GetTokenFromSuccessfulUserLogin(adminUser);
     }
 }
