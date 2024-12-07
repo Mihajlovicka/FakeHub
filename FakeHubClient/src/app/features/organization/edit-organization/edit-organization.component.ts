@@ -57,19 +57,25 @@ export class EditOrganizationComponent {
 
     this.service.editOrganization(this.organizationForm.value).subscribe({
       next: () => {
-        this.router.navigate(["/organizations"]);
+        this.router.navigate([
+          "/organization/view",
+          this.organizationForm.value.name,
+        ]);
       },
     });
   }
 
   public cancel(): void {
-    this.router.navigate(["/organizations"]);
+    this.router.navigate([
+      "/organization/view",
+      this.organizationForm.value.name,
+    ]);
   }
 
   ngOnInit(): void {
-    const id = this.activatedRoute.snapshot.paramMap.get("id");
-    if (id) {
-      this.service.getOrganization(id).subscribe({
+    const name = this.activatedRoute.snapshot.paramMap.get("name");
+    if (name) {
+      this.service.getOrganization(name).subscribe({
         next: (organization: Organization) => {
           this.organizationForm.patchValue(organization);
         },

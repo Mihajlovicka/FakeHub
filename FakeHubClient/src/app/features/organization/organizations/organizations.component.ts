@@ -1,12 +1,12 @@
 import { Component, inject } from "@angular/core";
 import { Organization } from "../../../core/model/organization";
-import { Router } from "@angular/router";
+import { Router, RouterLink } from "@angular/router";
 import { OrganizationService } from "../../../core/services/organization.service";
 
 @Component({
   selector: "app-organizations",
   standalone: true,
-  imports: [],
+  imports: [RouterLink],
   templateUrl: "./organizations.component.html",
   styleUrl: "./organizations.component.css",
 })
