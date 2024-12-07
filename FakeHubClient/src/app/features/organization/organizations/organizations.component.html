@@ -3,7 +3,7 @@
   <div class="orgs-container">
     @for (org of organizations; track org.name) {
     <div class="container">
-      <a class="link-container">
+      <a class="link-container" [routerLink]="['/organization/view', org.name]">
         <div class="image-container">
           <img [src]="org.imageBase64" alt="{{ org.name }}" class="logo" />
         </div>

@@ -10,8 +10,8 @@ public class OrganizationRepository(AppDbContext context)
         IOrganizationRepository
 {
     public Task<Organization?> GetByName(string name) =>
-        _context.Organizations.FirstOrDefaultAsync(x => x.Name == name);
+        _context.Organizations.Include(x => x.Owner).FirstOrDefaultAsync(x => x.Name == name);
 
     public Task<List<Organization>> GetByUser(int userId) =>
-        _context.Organizations.Where(x => x.OwnerId == userId).ToListAsync();
+        _context.Organizations.Where(x => x.OwnerId == userId).Include(x => x.Owner).ToListAsync();
 }

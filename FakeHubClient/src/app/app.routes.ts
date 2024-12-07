@@ -13,6 +13,7 @@ import { EmailEditComponent } from './features/settings/email-edit/email-edit.co
 import { AddOrganizationComponent } from './features/organization/add-organization/add-organization.component';
 import { EditOrganizationComponent } from './features/organization/edit-organization/edit-organization.component';
 import { OrganizationsComponent } from './features/organization/organizations/organizations.component';
+import { ViewOrganizationComponent } from './features/organization/view-organization/view-organization.component';
 
 export const routes: Routes = [
   {
@@ -72,11 +73,15 @@ export const routes: Routes = [
     data: { requiredRole: [UserRole.USER] },
     children: [
       {
+        path: "view/:name",
+        component: ViewOrganizationComponent,
+      },
+      {
         path: "add",
         component: AddOrganizationComponent,
       },
       {
-        path: "edit/:id",
+        path: "edit/:name",
         component: EditOrganizationComponent,
       },
     ],

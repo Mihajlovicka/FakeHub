@@ -56,7 +56,8 @@ export class AddOrganizationComponent {
     this.service.addOrganization(this.organizationForm.value).subscribe({
       next: () => {
         this.router.navigate([
-          "/organization/view" + this.organizationForm.value.name,
+          "/organization/view",
+          this.organizationForm.value.name,
         ]);
       },
     });
