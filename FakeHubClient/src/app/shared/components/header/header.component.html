@@ -10,18 +10,19 @@
       <div *ngIf="isLoggedIn" class="navbar-links">
         <a class="nav-link text-white mx-2" href="#">Explore</a>
         <a class="nav-link text-white mx-2" href="#">Repositories</a>
-        <a class="nav-link text-white mx-2" routerLink="/organizations">Organizations</a>
+        <a class="nav-link text-white mx-2" (click)="goToOrganizations()">Organizations</a>
       </div>
     </div>
     <div class="navbar-rightpart">
       <div class="search">
-        <form action="#">
+        <form (submit)="search(); $event.preventDefault()">
           <input
             type="text"
             placeholder="Search.."
             name="search"
             class="search-input"
             autocomplete="off"
+            [(ngModel)]="searchQuery"
           />
           <button type="submit" class="search-button">
             <img src="icons/search.png" width="25rem" height="25rem" />

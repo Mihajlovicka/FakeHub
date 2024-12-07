@@ -14,4 +14,12 @@ public class OrganizationRepository(AppDbContext context)
 
     public Task<List<Organization>> GetByUser(int userId) =>
         _context.Organizations.Where(x => x.OwnerId == userId).Include(x => x.Owner).ToListAsync();
+
+    public Task<List<Organization>> Search(string query, int userId) =>
+        _context
+            .Organizations.Where(x =>
+                EF.Functions.Like(x.Name, $"%{query}%") && x.OwnerId == userId
+            )
+            .Include(x => x.Owner)
+            .ToListAsync();
 }

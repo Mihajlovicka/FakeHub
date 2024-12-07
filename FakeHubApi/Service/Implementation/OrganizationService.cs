@@ -64,4 +64,13 @@ public class OrganizationService(
             organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap)
         );
     }
+
+    public async Task<ResponseBase> Search(string name)
+    {
+        var user = await userContext.GetCurrentUserAsync();
+        var organizations = await repositoryManager.OrganizationRepository.Search(name, user.Id);
+        return ResponseBase.SuccessResponse(
+            organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap)
+        );
+    }
 }

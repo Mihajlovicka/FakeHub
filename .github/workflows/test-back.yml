@@ -4,8 +4,7 @@ on:
   pull_request:
     branches:
       - develop
-      - main
-
+      - master
 
 jobs:
   build-and-test-api:
@@ -16,8 +15,8 @@ jobs:
         ports:
           - 3306:3306
         env:
-            MYSQL_ROOT_PASSWORD: admin
-            MYSQL_DATABASE: fake-hub-test
+          MYSQL_ROOT_PASSWORD: admin
+          MYSQL_DATABASE: fake-hub-test
         options: >-
           --health-cmd="mysqladmin ping --silent"
           --health-interval=10s
@@ -31,7 +30,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -46,11 +45,11 @@ jobs:
           until mysqladmin ping -h127.0.0.1 -uroot -proot --silent; do
           sleep 5
           done
-          
+
       - name: Restore dependencies
         working-directory: ./FakeHubApi
         run: dotnet restore
-      
+
       - name: Build API
         working-directory: ./FakeHubApi
         run: dotnet build -c Release

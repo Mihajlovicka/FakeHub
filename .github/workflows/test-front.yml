@@ -1,10 +1,9 @@
 name: CI - Test Client
 
 on:
-  # pull_request:
-  #   branches:
-  #     - develop
-  #     - main
+  push:
+    branches-ignore:
+      - '*'
 
 
 jobs:

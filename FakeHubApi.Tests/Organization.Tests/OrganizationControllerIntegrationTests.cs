@@ -1,7 +1,5 @@
-﻿using System.Net;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using FakeHubApi.Data;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -9,7 +7,6 @@ using FakeHubApi.Model.ServiceResponse;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace FakeHubApi.Tests.Organization.Tests;
 
@@ -61,6 +58,44 @@ public class OrganizationControllerIntegrationTests
         {
             Assert.That(responseObj?.Success, Is.True);
             Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(2)]
+    public async Task SearchOrganization()
+    {
+        var query = "Organization";
+
+        var response = await _client.GetFromJsonAsync<ResponseBase>(
+            $"/api/organization?query={query}"
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response?.Success, Is.True);
+            var jsonString = response?.Result?.ToString() ?? string.Empty;
+            var responseOrganization = JsonConvert.DeserializeObject<List<OrganizationDto>>(
+                jsonString
+            );
+
+            Assert.That(responseOrganization, Is.Not.Null);
+            Assert.That(responseOrganization?.Count, Is.EqualTo(1));
+        });
+
+        query = "Not Found";
+
+        response = await _client.GetFromJsonAsync<ResponseBase>($"/api/organization?query={query}");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response?.Success, Is.True);
+            var jsonString = response?.Result?.ToString() ?? string.Empty;
+            var responseOrganization = JsonConvert.DeserializeObject<List<OrganizationDto>>(
+                jsonString
+            );
+
+            Assert.That(responseOrganization, Is.Not.Null);
+            Assert.That(responseOrganization?.Count, Is.EqualTo(0));
         });
     }
 

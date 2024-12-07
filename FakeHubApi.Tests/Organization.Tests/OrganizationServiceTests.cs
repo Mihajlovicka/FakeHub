@@ -5,6 +5,7 @@ using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
 using Moq;
+using Newtonsoft.Json;
 
 namespace FakeHubApi.Tests.Organization.Tests;
 
@@ -217,6 +218,88 @@ public class OrganizationServiceTests
         {
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorMessage, Is.EqualTo("Organization not found."));
+        });
+    }
+
+    [Test]
+    public async Task SearchOgranization()
+    {
+        var query = "Test";
+
+        var user = new User { Id = 1, UserName = "Test User" };
+
+        var organization = new Model.Entity.Organization
+        {
+            Name = "Test Organization",
+            Description = "Test Description",
+            ImageBase64 = "Test Image Base64",
+            OwnerId = user.Id,
+        };
+
+        var organizationDto = new OrganizationDto
+        {
+            Name = "Test Organization",
+            Description = "Test Description",
+            ImageBase64 = "Test Image Base64",
+            Owner = user.UserName,
+        };
+
+        _userContextServiceMock.Setup(m => m.GetCurrentUserAsync()).ReturnsAsync(user);
+
+        _mapperManagerMock
+            .Setup(m =>
+                m.OrganizationDtoToOrganizationMapper.ReverseMap(
+                    It.IsAny<Model.Entity.Organization>()
+                )
+            )
+            .Returns(organizationDto);
+
+        _repositoryManagerMock
+            .Setup(um => um.OrganizationRepository.Search(It.IsAny<string>(), It.IsAny<int>()))
+            .ReturnsAsync(new List<Model.Entity.Organization> { organization });
+
+        var result = await _organizationService.Search(query);
+
+        var responseOrganizations = result.Result as IEnumerable<OrganizationDto>;
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseOrganizations, Is.Not.Null);
+
+            var organizationDtoResult = responseOrganizations?.FirstOrDefault();
+            Assert.That(organizationDtoResult, Is.Not.Null);
+
+            Assert.That(organizationDtoResult?.Name, Is.EqualTo(organization.Name));
+            Assert.That(organizationDtoResult?.Description, Is.EqualTo(organization.Description));
+            Assert.That(organizationDtoResult?.Owner, Is.EqualTo(user.UserName));
+        });
+    }
+
+    [Test]
+    public async Task SearchOgranization_Empty()
+    {
+        var wrongquery = "Wrong";
+
+        var user = new User { Id = 1, UserName = "Test User" };
+
+        _userContextServiceMock.Setup(m => m.GetCurrentUserAsync()).ReturnsAsync(user);
+
+        _mapperManagerMock
+            .Setup(m =>
+                m.OrganizationDtoToOrganizationMapper.ReverseMap(
+                    It.IsAny<Model.Entity.Organization>()
+                )
+            )
+            .Returns(new OrganizationDto());
+        _repositoryManagerMock
+            .Setup(um => um.OrganizationRepository.Search(It.IsAny<string>(), It.IsAny<int>()))
+            .ReturnsAsync(new List<Model.Entity.Organization>());
+
+        var result = await _organizationService.Search(wrongquery);
+
+        var responseOrganizations = result.Result as IEnumerable<OrganizationDto>;
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseOrganizations, Is.Empty);
         });
     }
 }
