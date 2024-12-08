@@ -32,9 +32,7 @@ export class RegisterComponent {
   private readonly service: UserService = inject(UserService);
   private readonly router: Router = inject(Router);
 
-  public isSuperAdmin(): boolean {
-    return this.service.getRole() === UserRole.SUPERADMIN;
-  }
+  public isSuperAdmin: boolean = this.service.isSuperAdminLoggedIn();
 
   public registerForm: FormGroup = new FormGroup({
     username: new FormControl("", Validators.required),
@@ -47,7 +45,7 @@ export class RegisterComponent {
 
     this.service.register(this.registerForm.value).subscribe({
       next: () => {
-        if(this.isSuperAdmin()) this.router.navigate(["/"]);
+        if(this.service.isSuperAdminLoggedIn()) this.router.navigate(["/"]);
         else this.router.navigate(["/login"]);
       },
     });

@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Authorization;
@@ -62,7 +58,7 @@ public class OrganizationController(IOrganizationService organizationService) : 
     }
 
     [HttpGet("")]
-    public async Task<IActionResult> Search([FromQuery] string query)
+    public async Task<IActionResult> Search([FromQuery] string? query)
     {
         var response = await organizationService.Search(query);
         if (response.Success)

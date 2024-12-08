@@ -9,11 +9,6 @@ import { UserBadgeModalComponent } from '../../../shared/components/user-badge/u
 import { MatDialog } from '@angular/material/dialog';
 import { ChangeUserBadgeRequest } from '../../../core/model/change-badge-to-user-request';
 
-export interface DialogData {
-  animal: string;
-  name: string;
-}
-
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -22,8 +17,7 @@ export interface DialogData {
   styleUrl: './profile.component.css'
 })
 export class ProfileComponent implements OnInit{
-
-  public helperService: HelperService = inject(HelperService);
+  private helperService: HelperService = inject(HelperService);
   private userService: UserService = inject(UserService);
   private route: ActivatedRoute = inject(ActivatedRoute);
   private router: Router = inject(Router);
@@ -33,14 +27,25 @@ export class ProfileComponent implements OnInit{
   public activeLink: number = 1;  
   public isLoggedInUserProfile: boolean = false;
   public isAdmin: boolean = false;
+  public isSuperAdmin: boolean = false;
+  public isUser: boolean = false;
+  public isJoinedDateValid = false;
+  public formatedDateString = "";
+  public capitalizedLetterAvatar = "";
 
-  ngOnInit(): void {
-    var usernameParam = this.route.snapshot.paramMap.get('username') ?? "";
-    this.isAdmin = this.userService.getRole() == "ADMIN";
+  public ngOnInit(): void {
+    const usernameParam = this.route.snapshot.paramMap.get('username') ?? "";
+    this.isAdmin = this.userService.isAdminLoggedIn();
+    this.isSuperAdmin = this.userService.isSuperAdminLoggedIn();
+    this.isUser = this.userService.isUserLoggedIn();
+
     this.isLoggedInUserProfile = this.userService.getUserNameFromToken() == usernameParam;
 
     this.userService.getUserProfileByUsername(usernameParam).subscribe(user => {
       this.user = user ?? new UserProfileResponseDto();
+      this.isJoinedDateValid = this.helperService.isDateValid(this.user.createdAt);
+      this.formatedDateString = this.isJoinedDateValid ? this.helperService.formatDate(this.user.createdAt) : '';
+      this.capitalizedLetterAvatar = this.helperService.capitalizeFirstLetter(user?.username ?? "");
     });
   }
 

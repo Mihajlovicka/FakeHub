@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DockerImage } from './../model/docker-image';
 import { Observable, tap } from 'rxjs';
-import { Path } from '../constant/path.enum';
+import { Path } from '../constant/path';
 
 @Injectable({
   providedIn: 'root'

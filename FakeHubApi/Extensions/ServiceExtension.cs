@@ -24,6 +24,7 @@ public static class ServiceExtensions
 
         // Service-related scoped services
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IDockerImageService, DockerImageService>();
         services.AddScoped<ValidationFilter>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -33,11 +34,11 @@ public static class ServiceExtensions
         // Mapper-related scoped services
         services.AddScoped<
             IBaseMapper<RegistrationRequestDto, User>,
-            RegistrationsRequestDtoToApplicationUser
+            RegistrationsRequestDtoToUser
         >();
         services.AddScoped<
-            IBaseMapper<User, UserProfileResponseDto>,
-            ApplicationUserToUserProfileResponseDto
+            IBaseMapper<User, UserDto>,
+            UserToUserDto
         >();
         services.AddScoped<IBaseMapper<TeamDto, Team>, TeamDtoToTeam>();
         services.AddScoped<

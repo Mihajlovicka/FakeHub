@@ -1,4 +1,3 @@
-import { Component, inject } from "@angular/core";
 import {
   Router,
   ActivatedRoute,
@@ -6,6 +5,7 @@ import {
   Routes,
   RouterLinkActive,
 } from "@angular/router";
+import {Component, inject, OnDestroy, OnInit} from "@angular/core";
 import { Organization } from "../../../core/model/organization";
 import { OrganizationService } from "../../../core/services/organization.service";
 import { UserService } from "../../../core/services/user.service";
@@ -15,6 +15,7 @@ import { MatMenuModule } from "@angular/material/menu";
 import { MatButtonModule } from "@angular/material/button";
 import { MatTabsModule } from "@angular/material/tabs";
 import { TeamsComponent } from "../../team/teams/teams.component";
+import {Subscription} from "rxjs";
 
 @Component({
   selector: "app-view-organization",
@@ -31,11 +32,14 @@ import { TeamsComponent } from "../../team/teams/teams.component";
   templateUrl: "./view-organization.component.html",
   styleUrl: "./view-organization.component.css",
 })
-export class ViewOrganizationComponent {
+export class ViewOrganizationComponent implements OnInit, OnDestroy {
   private readonly service: OrganizationService = inject(OrganizationService);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly userService: UserService = inject(UserService);
   private readonly router: Router = inject(Router);
+
+  public activeLink: number = 1;
+  private searchSubscription: Subscription | null = null;
 
   public organization: Organization = {
     name: "",
@@ -61,11 +65,17 @@ export class ViewOrganizationComponent {
   public ngOnInit(): void {
     const name = this.activatedRoute.snapshot.paramMap.get("name");
     if (name) {
-      this.service.getOrganization(name).subscribe({
+      this.searchSubscription = this.service.getOrganization(name).subscribe({
         next: (organization: Organization) => {
           this.organization = organization;
         },
       });
+    }
+  }
+
+  public ngOnDestroy() {
+    if (this.searchSubscription) {
+      this.searchSubscription.unsubscribe();
     }
   }
 }
