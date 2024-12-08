@@ -5,15 +5,14 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
 
 namespace FakeHubApi.Tests;
 
 internal class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private string _connectionString;
-    private string _databaseName;
+    private readonly string _connectionString;
+    private readonly string _databaseName;
 
     public CustomWebApplicationFactory()
     {
@@ -67,7 +66,7 @@ internal class CustomWebApplicationFactory : WebApplicationFactory<Program>
         base.Dispose(disposing);
     }
 
-    public AppDbContext CreateDbContext(IServiceCollection services)
+    private static AppDbContext CreateDbContext(IServiceCollection services)
     {
         var serviceProvider = services.BuildServiceProvider();
         var scope = serviceProvider.CreateScope();

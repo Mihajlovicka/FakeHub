@@ -17,6 +17,7 @@ import { ViewOrganizationComponent } from './features/organization/view-organiza
 import { AddTeamComponent } from './features/team/add-team/add-team.component';
 import { ViewTeamComponent } from './features/team/view-team/view-team.component';
 import { EditTeamComponent } from './features/team/edit-team/edit-team.component';
+import {UsersListViewComponent} from "./features/user/users-list-view/users-list-view.component";
 
 export const routes: Routes = [
   {
@@ -44,7 +45,7 @@ export const routes: Routes = [
     path: 'profile/:username',
     component: ProfileComponent,
     canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN,UserRole.SUPERADMIN] },
   },
   {
     path: 'change-password',
@@ -56,13 +57,13 @@ export const routes: Routes = [
     path: 'settings',
     component: SettingsComponent,
     canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] },
   },
   {
     path: 'settings/email-edit',
     component: EmailEditComponent,
     canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER, UserRole.ADMIN] },
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] },
   },
   {
     path: 'organizations',
@@ -103,8 +104,20 @@ export const routes: Routes = [
             component: EditTeamComponent,
           },
         ],
-      },
-    ],
+      }
+    ]
+  },
+  {
+    path: 'users',
+    component: UsersListViewComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.ADMIN, UserRole.SUPERADMIN]}
+  },
+  {
+    path: 'users/admins',
+    component: UsersListViewComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.SUPERADMIN]}
   },
   {
     path: '**',

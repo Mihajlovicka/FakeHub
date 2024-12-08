@@ -1,12 +1,14 @@
-<h1 class="title">Organizations</h1>
 <div class="content-container">
+    <div class="header-container">
+        <h1 class="title">Organizations</h1>
+        <button class="add-button" (click)="addOrganization()">+</button>
+    </div>
   <div class="orgs-container">
-    @for (org of (this.organizationService.searchResultsSignal() ||
-    organizations); track org.name) {
+    @for (org of organizations; track org.name) {
     <div class="container">
       <a class="link-container" [routerLink]="['/organization/view', org.name]">
         <div class="image-container">
-          <img [src]="org.imageBase64" alt="{{ org.name }}" class="logo" />
+          <img [src]="org.imageBase64 || 'icons/no-photo-avatar.png'" alt="{{ org.name }}" class="logo" />
         </div>
         <div class="details-container">
           <div class="link-header">
@@ -24,7 +26,10 @@
       </a>
     </div>
     } @empty {
-    <div class="no-organizations">There are no organizations</div>
-    }
+      <div class="no-organizations">
+    <p>There are no organizations</p>
+  </div>
+
+      }
   </div>
 </div>

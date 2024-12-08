@@ -9,9 +9,9 @@ public interface IMapperManager
     IBaseMapper<
         RegistrationRequestDto,
         User
-    > RegistrationsRequestDtoToApplicationUserMapper { get; }
+    > RegistrationsRequestDtoToUserMapper { get; }
 
-    IBaseMapper<User, UserProfileResponseDto> ApplicationUserToUserProfileResponseDto { get; }
+    IBaseMapper<User, UserDto> UserToUserDto { get; }
 
     IBaseMapper<OrganizationDto, Organization> OrganizationDtoToOrganizationMapper { get; }
 

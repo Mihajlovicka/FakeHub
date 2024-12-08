@@ -1,13 +1,13 @@
 <div class="user-profile">
     <div class="user-avatar">
-        <span class="avatar-initials">{{helperService.capitalizeFirstLetter(user.username)}}</span>
+        <span class="avatar-initials">{{ profileLabel }}</span>
     </div>
     <div class="profile-details">
         <div>
             <span class="username">{{user.username}}</span>
         </div>
-        <div class="account-info">
-            <span class="account-joined">Joined {{ helperService.formatDate(user.createdAt) }}</span>
+        <div *ngIf="((isAdmin || isSuperAdmin) && !isLoggedInUserProfile) || isUser" class="account-info">
+            <span class="account-joined">Joined {{ formatedDate }}</span>
         </div>
     </div>
 </div>

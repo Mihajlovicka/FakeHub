@@ -5,7 +5,6 @@ using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
 using Moq;
-using Mysqlx.Crud;
 
 namespace FakeHubApi.Tests.Team.Tests;
 

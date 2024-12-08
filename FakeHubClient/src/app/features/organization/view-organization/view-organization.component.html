@@ -1,7 +1,7 @@
 <div class="profile-container">
   <div class="avatar-container">
     <div class="avatar">
-      <img class="image" src="{{ organization.imageBase64 }}" alt="avatar" />
+      <img class="image" [src]="organization.imageBase64 || 'icons/no-photo-avatar.png'" alt="avatar" />
     </div>
   </div>
   <div class="info-container">

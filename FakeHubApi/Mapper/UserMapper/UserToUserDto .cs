@@ -3,11 +3,11 @@ using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Mapper.UserMapper;
 
-public class ApplicationUserToUserProfileResponseDto : BaseMapper<User, UserProfileResponseDto>
+public class UserToUserDto : BaseMapper<User, UserDto>
 {
-    public override UserProfileResponseDto Map(User source)
+    public override UserDto Map(User source)
     {
-        return new()
+        return new UserDto()
         {
             Username = source?.UserName,
             Email = source?.Email,

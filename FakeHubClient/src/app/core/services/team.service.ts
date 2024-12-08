@@ -1,10 +1,10 @@
 import { HttpClient } from "@angular/common/http";
-import { inject, Injectable, signal, WritableSignal } from "@angular/core";
+import { inject, Injectable } from "@angular/core";
 import { Observable } from "rxjs";
-import { Path } from "../constant/path.enum";
 import { ServiceResponse } from "../model/service-response";
 import { Organization } from "../model/organization";
 import { Team } from "../model/team";
+import { Path } from "../constant/path";
 
 @Injectable({
   providedIn: "root",

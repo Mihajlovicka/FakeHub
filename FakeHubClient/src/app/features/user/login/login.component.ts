@@ -12,8 +12,6 @@ import {
 import { RouterLink } from "@angular/router";
 import { UserService } from "../../../core/services/user.service";
 import { Router } from "@angular/router";
-import {StorageService} from "../../../core/services/local-storage.service";
-import {UserRole} from "../../../core/model/user-role";
 
 @Component({
   selector: "app-login",
