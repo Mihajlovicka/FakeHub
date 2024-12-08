@@ -48,7 +48,7 @@ public class OrganizationServiceTests
     }
 
     [Test]
-    public async Task AddOgranization()
+    public async Task AddOrganization()
     {
         var organizationDto = new OrganizationDto
         {
@@ -89,7 +89,7 @@ public class OrganizationServiceTests
     }
 
     [Test]
-    public async Task AddOgranization_NameNotUnique()
+    public async Task AddOrganization_NameNotUnique()
     {
         var organizationDto = new OrganizationDto
         {
@@ -127,10 +127,10 @@ public class OrganizationServiceTests
     }
 
     [Test]
-    public async Task EditOgranization()
+    public async Task EditOrganization()
     {
         var user = new User { Id = 1, UserName = "Test User" };
-        var name = "Test Organization";
+        const string name = "Test Organization";
         var organizationDto = new UpdateOrganizationDto
         {
             Description = "Test Description Edit",
@@ -165,10 +165,10 @@ public class OrganizationServiceTests
     }
 
     [Test]
-    public async Task EditOgranization_UserWithoutPermition()
+    public async Task EditOrganization_UserWithoutPermission()
     {
         var user = new User { Id = 1, UserName = "Test User" };
-        var name = "Test Organization";
+        const string name = "Test Organization";
         var organizationDto = new UpdateOrganizationDto
         {
             Description = "Test Description Edit",
@@ -206,7 +206,7 @@ public class OrganizationServiceTests
     }
 
     [Test]
-    public async Task EditOgranization_NotExists()
+    public async Task EditOrganization_NotExists()
     {
         var user = new User { Id = 1, UserName = "Test User" };
         var name = "Test Organization";
@@ -236,7 +236,7 @@ public class OrganizationServiceTests
     }
 
     [Test]
-    public async Task SearchOgranization()
+    public async Task SearchOrganization()
     {
         var query = "Test";
 
@@ -289,9 +289,9 @@ public class OrganizationServiceTests
     }
 
     [Test]
-    public async Task SearchOgranization_Empty()
+    public async Task SearchOrganization_Empty()
     {
-        var wrongquery = "Wrong";
+        const string wrongQuery = "Wrong";
 
         var user = new User { Id = 1, UserName = "Test User" };
 
@@ -308,7 +308,7 @@ public class OrganizationServiceTests
             .Setup(um => um.OrganizationRepository.Search(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<Model.Entity.Organization>());
 
-        var result = await _organizationService.Search(wrongquery);
+        var result = await _organizationService.Search(wrongQuery);
 
         var responseOrganizations = result.Result as IEnumerable<OrganizationDto>;
         Assert.Multiple(() =>
@@ -320,7 +320,7 @@ public class OrganizationServiceTests
     [Test]
     public async Task AddUser_EmptyUsernamesList_ReturnsErrorResponse()
     {
-        var orgName = "organizationName";
+        const string orgName = "organizationName";
         var emptyUsernames = new List<string>();
 
         var result = await _organizationService.AddUser(orgName, emptyUsernames);
@@ -338,7 +338,7 @@ public class OrganizationServiceTests
     public async Task AddUser_OrganizationNotFound_ReturnsErrorResponse()
     {
         var usernames = new List<string> { "user1", "user2" };
-        var orgName = "nonExistentOrganization";
+        const string orgName = "nonExistentOrganization";
 
         _repositoryManagerMock
             .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
@@ -358,18 +358,18 @@ public class OrganizationServiceTests
     [Test]
     public async Task AddUser_NoEligibleUsers_ReturnsErrorResponse()
     {
-        var orgName = "organizationName";
+        const string orgName = "organizationName";
         var usernames = new List<string> { "user1", "user2", "ownerUser" };
 
         var organization = new Model.Entity.Organization
         {
             Name = orgName,
             Owner = new User { UserName = "ownerUser" },
-            Users = new List<User>
-        {
-            new User { UserName = "user1" },
-            new User { UserName = "user2" }
-        }
+            Users =
+            [
+                new User { UserName = "user1" },
+                new User { UserName = "user2" }
+            ]
         };
 
         _repositoryManagerMock
@@ -394,14 +394,14 @@ public class OrganizationServiceTests
     [Test]
     public async Task AddUser_ValidUsersAddedSuccessfully_ReturnsSuccessResponse()
     {
-        var orgName = "organizationName";
+        const string orgName = "organizationName";
         var usernames = new List<string> { "user1", "user2" };
 
         var organization = new Model.Entity.Organization
         {
             Name = orgName,
             Owner = new User { UserName = "ownerUser" },
-            Users = new List<User>()
+            Users = []
         };
 
         _repositoryManagerMock
@@ -410,8 +410,8 @@ public class OrganizationServiceTests
 
         var responseUsers = new List<User>
     {
-        new User { UserName = "user1" },
-        new User { UserName = "user2" }
+        new() { UserName = "user1" },
+        new() { UserName = "user2" }
     };
 
         _userManagerMock
@@ -419,7 +419,7 @@ public class OrganizationServiceTests
             .Returns(responseUsers.AsQueryable());
 
         _mapperManagerMock
-            .Setup(m => m.UserToUserDto.Map(It.IsAny<User>()))
+            .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
             .Returns((User user) => new UserDto { Username = user.UserName });
 
         var result = await _organizationService.AddUser(orgName, usernames);
@@ -438,7 +438,7 @@ public class OrganizationServiceTests
 
             var responseUsers = result.Result as List<UserDto>;
             Assert.That(responseUsers.Select(r => r.Username), Is.EquivalentTo(usernames));
-            Assert.That(responseUsers.Count, Is.EqualTo(2));
+            Assert.That(responseUsers, Has.Count.EqualTo(2));
         });
     }
 }

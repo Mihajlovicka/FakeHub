@@ -43,7 +43,7 @@ public static class ServiceExtensions
         services.AddScoped<IBaseMapper<TeamDto, Team>, TeamDtoToTeam>();
         services.AddScoped<
             IBaseMapper<OrganizationDto, Organization>,
-            OrganizationDtoToOgranization
+            OrganizationDtoToOrganization
         >();
         services.AddScoped<IMapperManager, MapperManager>();
 

@@ -7,5 +7,5 @@ export interface Organization {
   imageBase64: string;
   owner?: string;
   teams?: Team[];
-  users: UserProfileResponseDto[];
+  users?: UserProfileResponseDto[];
 }

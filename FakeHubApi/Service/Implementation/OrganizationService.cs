@@ -114,7 +114,7 @@ public class OrganizationService(
             foreach (var user in usersToAdd)
             {
                 organization.Users.Add(user);
-                var responseUser = mapperManager.UserToUserDto.Map(
+                var responseUser = mapperManager.UserToUserDtoMapper.Map(
                 user
             );
                 responseUsers.Add(responseUser);

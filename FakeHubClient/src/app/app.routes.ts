@@ -17,7 +17,7 @@ import { ViewOrganizationComponent } from './features/organization/view-organiza
 import { AddTeamComponent } from './features/team/add-team/add-team.component';
 import { ViewTeamComponent } from './features/team/view-team/view-team.component';
 import { EditTeamComponent } from './features/team/edit-team/edit-team.component';
-import {UsersListViewComponent} from "./features/user/users-list-view/users-list-view.component";
+import { UsersListViewComponent } from "./features/user/users-list-view/users-list-view.component";
 
 export const routes: Routes = [
   {
@@ -45,7 +45,7 @@ export const routes: Routes = [
     path: 'profile/:username',
     component: ProfileComponent,
     canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER, UserRole.ADMIN,UserRole.SUPERADMIN] },
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] },
   },
   {
     path: 'change-password',
@@ -92,6 +92,32 @@ export const routes: Routes = [
         path: "team",
         children: [
           {
+            path: "add/:organizationName",  // Ensure you are using this path structure for AddTeam
+            component: AddTeamComponent,
+          },
+          {
+            path: "view/:organizationName/:teamName",
+            component: ViewTeamComponent,
+          },
+          {
+            path: "edit/:organizationName/:teamName",
+            component: EditTeamComponent,
+          },
+        ],
+      }
+    ]
+  },
+  {
+    path: "team",
+    children: [
+      {
+        path: "add/:organizationName",
+        component: AddTeamComponent,
+      },
+      {
+        path: "team",
+        children: [
+          {
             path: "add/:organizationName",
             component: AddTeamComponent,
           },
@@ -118,6 +144,18 @@ export const routes: Routes = [
     component: UsersListViewComponent,
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.SUPERADMIN]}
+  },
+  {
+    path: 'users',
+    component: UsersListViewComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.ADMIN, UserRole.SUPERADMIN] }
+  },
+  {
+    path: 'users/admins',
+    component: UsersListViewComponent,
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.SUPERADMIN] }
   },
   {
     path: '**',

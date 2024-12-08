@@ -66,7 +66,7 @@ public class UserServiceTests
             .Setup(um => um.FindByNameAsync(username))
             .ReturnsAsync(user);
         _mapperManagerMock
-            .Setup(m => m.UserToUserDto.Map(It.IsAny<User>()))
+            .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
             .Returns(userProfileDto);
 
         var result = await _userService.GetUserProfileByUsernameAsync(username);
@@ -548,7 +548,7 @@ public class UserServiceTests
             .ReturnsAsync(IdentityResult.Success);
 
         _mapperManagerMock
-            .Setup(m => m.UserToUserDto
+            .Setup(m => m.UserToUserDtoMapper
             .Map(user))
             .Returns(userProfileResponseDto);
 

@@ -17,13 +17,21 @@ public class OrganizationRepository(AppDbContext context)
             .FirstOrDefaultAsync(x => x.Name == name);
 
     public Task<List<Organization>> GetByUser(int userId) =>
-        _context.Organizations.Where(x => x.OwnerId == userId).Include(x => x.Owner).ToListAsync();
+        _context
+            .Organizations
+            .Where(x => x.OwnerId == userId || x.Users.Any(u => u.Id == userId))
+            .Include(x => x.Owner)
+            .Include(x => x.Users)
+            .ToListAsync();
 
     public Task<List<Organization>> Search(string query, int userId) =>
         _context
-            .Organizations.Where(x =>
-                EF.Functions.Like(x.Name, $"%{query}%") && x.OwnerId == userId
+            .Organizations
+            .Where(x =>
+                EF.Functions.Like(x.Name, $"%{query}%") &&
+                (x.OwnerId == userId || x.Users.Any(u => u.Id == userId))
             )
             .Include(x => x.Owner)
+            .Include(x => x.Users)
             .ToListAsync();
 }

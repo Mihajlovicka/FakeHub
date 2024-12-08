@@ -17,6 +17,7 @@ import { TeamsComponent } from "../../team/teams/teams.component";
 import { BehaviorSubject, firstValueFrom, lastValueFrom, Subscription, take } from "rxjs";
 import { UserProfileResponseDto } from "../../../core/model/user";
 import { AddMemberToOrganizationModalComponent } from "../add-member-to-organization-modal/add-member-to-organization-modal.component";
+import {ViewOrganizationsMembersComponent} from "../view-organizations-members/view-organizations-members.component";
 
 @Component({
   selector: "app-view-organization",
@@ -29,6 +30,7 @@ import { AddMemberToOrganizationModalComponent } from "../add-member-to-organiza
     RouterModule,
     MatTabsModule,
     TeamsComponent,
+    ViewOrganizationsMembersComponent,
   ],
   templateUrl: "./view-organization.component.html",
   styleUrl: "./view-organization.component.css",
@@ -40,16 +42,13 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   private readonly router: Router = inject(Router);
   private readonly dialog = inject(MatDialog);
 
-  public activeLink: number = 1;
   private searchSubscription: Subscription | null = null;
 
   public users$ = new BehaviorSubject<UserProfileResponseDto[]>([]);
   public organization: Organization = {
     name: "",
     description: "",
-    imageBase64: "",
-    teams: [],
-    users: [],
+    imageBase64: ""
   };
 
   public isOwner(): boolean {
@@ -68,7 +67,7 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   }
 
   public addMemberToOrganizationDialog(): void {
-    var usersSnapshot = this.users$.getValue();
+    const usersSnapshot = this.users$.getValue();
     const dialogRef = this.dialog.open(AddMemberToOrganizationModalComponent, {
       data: {
         users: this.users$,
@@ -115,7 +114,7 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
       .addMember(this.organization.name, { usernames: usernames })
       .subscribe((response) => {
         if (response) {
-          this.organization.users.push(...response);
+          this.organization.users?.push(...response);
           this.filterUsers([...this.users$.getValue()]);
         }
       });

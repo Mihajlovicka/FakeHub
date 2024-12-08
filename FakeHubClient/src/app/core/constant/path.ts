@@ -4,7 +4,7 @@ const api = environment.api;
 const authApi = api + 'auth/';
 const organizationApi = api + 'organization/';
 const usersApi = api + 'users/';
-const teamApi = organizationApi + '/team';
+const teamApi = organizationApi + 'team/';
 
 export const Path = {
   Register: authApi + 'register',

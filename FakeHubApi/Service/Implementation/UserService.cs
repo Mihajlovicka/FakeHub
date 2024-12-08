@@ -29,7 +29,7 @@ public class UserService(
                 return ResponseBase.ErrorResponse("User not found");
             }
 
-            var responseUser = mapperManager.UserToUserDto.Map(
+            var responseUser = mapperManager.UserToUserDtoMapper.Map(
                 user
             );
 
@@ -136,7 +136,7 @@ public class UserService(
                 return ResponseBase.ErrorResponse("Failed to update badge");
             }
 
-            var userProfileResponseDto = mapperManager.UserToUserDto.Map(
+            var userProfileResponseDto = mapperManager.UserToUserDtoMapper.Map(
                 user
             );
 
@@ -157,7 +157,7 @@ public class UserService(
         
         var result = await repositoryManager.UserRepository.GetUsersByQueries(queriesUsername, queriesEmail, role);
 
-        return ResponseBase.SuccessResponse(result.Select(mapperManager.UserToUserDto.Map));
+        return ResponseBase.SuccessResponse(result.Select(mapperManager.UserToUserDtoMapper.Map));
     }
 
     private static List<string> ParseEmailQuery(string query)
