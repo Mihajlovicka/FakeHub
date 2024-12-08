@@ -1,5 +1,4 @@
-﻿using FakeHubApi.Mapper.UserMapper;
-using FakeHubApi.Model.Dto;
+﻿using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Mapper;
@@ -11,7 +10,7 @@ public interface IMapperManager
         User
     > RegistrationsRequestDtoToUserMapper { get; }
 
-    IBaseMapper<User, UserDto> UserToUserDto { get; }
+    IBaseMapper<User, UserDto> UserToUserDtoMapper { get; }
 
     IBaseMapper<OrganizationDto, Organization> OrganizationDtoToOrganizationMapper { get; }
 

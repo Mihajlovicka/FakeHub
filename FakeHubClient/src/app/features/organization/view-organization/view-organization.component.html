@@ -24,8 +24,11 @@
         <button mat-menu-item (click)="edit()">
           <span>Edit</span>
         </button>
-        <button mat-menu-item (click)="addTeam()">
+        <button *ngIf=isOwner() mat-menu-item (click)="addTeam()">
           <span>Add Team</span>
+        </button>
+        <button mat-menu-item (click)="addMemberToOrganizationDialog()">
+          <span>Add Member</span>
         </button>
       </mat-menu>
       }
@@ -48,17 +51,7 @@
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
   <mat-tab label="Members">
     <ng-template matTabContent>
-      <div class="members-container">
-        @if(isOwner()){
-        <button
-          (click)="addMemberToOrganizationDialog()"
-          mat-flat-button
-          class="add-member-btn"
-        >
-          +
-        </button>
-        }
-      </div>
+        <app-view-organizations-members [users]="organization.users || []"></app-view-organizations-members>
     </ng-template>
   </mat-tab>
   <mat-tab label="Teams">

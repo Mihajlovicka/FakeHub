@@ -185,9 +185,3 @@ input:focus {
   margin: 2.5rem;
 }
 
-.add-member-btn {
-  background: var(--primary-color) !important;
-  color: white !important;
-  text-align: center !important;
-  font-size: 1.3rem !important;
-}

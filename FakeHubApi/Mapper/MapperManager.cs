@@ -19,7 +19,7 @@ public class MapperManager(
     public IBaseMapper<
         User,
         UserDto
-    > UserToUserDto { get; } = userToUserDto;
+    > UserToUserDtoMapper { get; } = userToUserDto;
 
     public IBaseMapper<OrganizationDto, Organization> OrganizationDtoToOrganizationMapper { get; } =
         organizationDtoToOrganizationMapper;
