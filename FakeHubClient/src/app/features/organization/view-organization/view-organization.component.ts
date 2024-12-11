@@ -7,11 +7,18 @@ import { CommonModule } from "@angular/common";
 import { MatIconModule } from "@angular/material/icon";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatButtonModule } from "@angular/material/button";
+import { TeamsComponent } from "../../team/teams/teams.component";
 
 @Component({
   selector: "app-view-organization",
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatMenuModule, MatButtonModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatMenuModule,
+    MatButtonModule,
+    TeamsComponent,
+  ],
   templateUrl: "./view-organization.component.html",
   styleUrl: "./view-organization.component.css",
 })
@@ -27,6 +34,7 @@ export class ViewOrganizationComponent {
     name: "",
     description: "",
     imageBase64: "",
+    teams: [],
   };
 
   public isOwner(): boolean {

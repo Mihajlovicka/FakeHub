@@ -1,0 +1,24 @@
+<div class="teams-content-container">
+  <div class="teams-container">
+    @for (team of teams; track team.name) {
+    <div class="team-container">
+      <div class="team-details-container">
+        <div class="link-header">
+          <span class="ellipsis">{{ team.name }}</span>
+        </div>
+        <div class="multi-line-ellipsis">
+          {{ team.description.substring(0, 50)
+          }}{{ team.description.length > 50 ? "..." : "" }}
+        </div>
+        <div class="link-footer">
+          <span class="footer-text"
+            >Created at: {{ team.createdAt | date : "mediumDate" }}</span
+          >
+        </div>
+      </div>
+    </div>
+    } @empty {
+    <div class="no-teams">There are no teams</div>
+    }
+  </div>
+</div>

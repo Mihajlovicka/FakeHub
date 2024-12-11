@@ -1,5 +1,6 @@
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
+using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
@@ -15,17 +16,31 @@ public class TeamService(
 {
     public async Task<ResponseBase> Add(TeamDto model)
     {
-        var user = await userContextService.GetCurrentUserAsync();
         var team = mapperManager.TeamDtoToTeamMapper.Map(model);
         var organization = await organizationService.GetOrganization(model.OrganizationName);
+
+        var response = ResponseBase.SuccessResponse();
+        var (success, errorMessage) = await ValidateNewTeam(model, organization);
+        if (!success)
+            response = ResponseBase.ErrorResponse(errorMessage);
+        else
+        {
+            team.Organization = organization!;
+            await repositoryManager.TeamRepository.AddAsync(team);
+        }
+        return response;
+    }
+
+    private async Task<(bool, string)> ValidateNewTeam(TeamDto model, Organization? organization)
+    {
+        var response = (true, string.Empty);
+        var user = await userContextService.GetCurrentUserAsync();
         if (organization == null)
-            return ResponseBase.ErrorResponse("Organization not found");
-        if (organization.OwnerId != user.Id)
-            return ResponseBase.ErrorResponse("You are not the owner of this organization.");
-        if (organization.Teams.Any(x => x.Name == team.Name))
-            return ResponseBase.ErrorResponse("Team name is not unique.");
-        team.Organization = organization;
-        await repositoryManager.TeamRepository.AddAsync(team);
-        return ResponseBase.SuccessResponse();
+            response = (false, "Organization not found");
+        if (organization!.OwnerId != user.Id)
+            response = (false, "You are not the owner of this organization.");
+        if (organization.Teams.Any(x => x.Name == model.Name))
+            response = (false, "Team name is not unique.");
+        return response;
     }
 }

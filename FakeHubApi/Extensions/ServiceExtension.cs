@@ -39,11 +39,11 @@ public static class ServiceExtensions
             IBaseMapper<User, UserProfileResponseDto>,
             ApplicationUserToUserProfileResponseDto
         >();
+        services.AddScoped<IBaseMapper<TeamDto, Team>, TeamDtoToTeam>();
         services.AddScoped<
             IBaseMapper<OrganizationDto, Organization>,
             OrganizationDtoToOgranization
         >();
-        services.AddScoped<IBaseMapper<TeamDto, Team>, TeamDtoToTeam>();
         services.AddScoped<IMapperManager, MapperManager>();
 
         // Repository-related scoped services

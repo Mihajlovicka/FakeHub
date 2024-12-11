@@ -5,7 +5,6 @@ using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
 using Moq;
-using Newtonsoft.Json;
 
 namespace FakeHubApi.Tests.Organization.Tests;
 
