@@ -1,0 +1,9 @@
+using FakeHubApi.Model.Dto;
+using FakeHubApi.Model.ServiceResponse;
+
+namespace FakeHubApi.Service.Contract;
+
+public interface ITeamService
+{
+    Task<ResponseBase> Add(TeamDto model);
+}

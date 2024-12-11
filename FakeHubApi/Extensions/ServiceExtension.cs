@@ -1,6 +1,7 @@
 using FakeHubApi.Filters;
 using FakeHubApi.Mapper;
 using FakeHubApi.Mapper.OrganizationMapper;
+using FakeHubApi.Mapper.TeamMapper;
 using FakeHubApi.Mapper.UserMapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -27,6 +28,7 @@ public static class ServiceExtensions
         services.AddScoped<ValidationFilter>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddScoped<ITeamService, TeamService>();
 
         // Mapper-related scoped services
         services.AddScoped<
@@ -41,11 +43,13 @@ public static class ServiceExtensions
             IBaseMapper<OrganizationDto, Organization>,
             OrganizationDtoToOgranization
         >();
+        services.AddScoped<IBaseMapper<TeamDto, Team>, TeamDtoToTeam>();
         services.AddScoped<IMapperManager, MapperManager>();
 
         // Repository-related scoped services
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();
+        services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<IRepositoryManager, RepositoryManager>();
 
         return services;

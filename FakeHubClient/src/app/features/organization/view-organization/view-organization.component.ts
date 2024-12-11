@@ -1,14 +1,17 @@
-import { Component, inject } from "@angular/core";
+import { Component, HostListener, inject } from "@angular/core";
 import { Router, ActivatedRoute } from "@angular/router";
 import { Organization } from "../../../core/model/organization";
 import { OrganizationService } from "../../../core/services/organization.service";
 import { UserService } from "../../../core/services/user.service";
 import { CommonModule } from "@angular/common";
+import { MatIconModule } from "@angular/material/icon";
+import { MatMenuModule } from "@angular/material/menu";
+import { MatButtonModule } from "@angular/material/button";
 
 @Component({
   selector: "app-view-organization",
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatIconModule, MatMenuModule, MatButtonModule],
   templateUrl: "./view-organization.component.html",
   styleUrl: "./view-organization.component.css",
 })
@@ -35,6 +38,10 @@ export class ViewOrganizationComponent {
 
   public edit(): void {
     this.router.navigate(["/organization/edit", this.organization.name]);
+  }
+
+  public addTeam(): void {
+    this.router.navigate(["/team", this.organization.name, "add"]);
   }
 
   public setActiveLink(linkNumber: number): void {

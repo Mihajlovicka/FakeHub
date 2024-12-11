@@ -14,6 +14,7 @@ import { AddOrganizationComponent } from './features/organization/add-organizati
 import { EditOrganizationComponent } from './features/organization/edit-organization/edit-organization.component';
 import { OrganizationsComponent } from './features/organization/organizations/organizations.component';
 import { ViewOrganizationComponent } from './features/organization/view-organization/view-organization.component';
+import { AddTeamComponent } from './features/team/add-team/add-team.component';
 
 export const routes: Routes = [
   {
@@ -83,6 +84,17 @@ export const routes: Routes = [
       {
         path: "edit/:name",
         component: EditOrganizationComponent,
+      },
+    ],
+  },
+  {
+    path: "team/:organizationName",
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.USER] },
+    children: [
+      {
+        path: "add",
+        component: AddTeamComponent,
       },
     ],
   },

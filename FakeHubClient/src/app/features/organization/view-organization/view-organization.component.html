@@ -7,9 +7,24 @@
   <div class="info-container">
     <div class="username-container">
       <span class="username">{{ organization.name }}</span>
-      @if(isOwner()){<button class="edit-icon-btn" (click)="edit()">
-        <i class="fa-solid fa-pen icons"></i></button
-      >}
+      @if(isOwner()){
+
+      <button
+        mat-icon-button
+        [matMenuTriggerFor]="menu"
+        aria-label="Example icon-button with a menu"
+      >
+        <mat-icon>edit</mat-icon>
+      </button>
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="edit()">
+          <span>Edit</span>
+        </button>
+        <button mat-menu-item (click)="addTeam()">
+          <span>Add Team</span>
+        </button>
+      </mat-menu>
+      }
     </div>
     @if(!isOwner()){
     <div class="community-info">
