@@ -14,4 +14,6 @@ public interface IMapperManager
     IBaseMapper<User, UserProfileResponseDto> ApplicationUserToUserProfileResponseDto { get; }
 
     IBaseMapper<OrganizationDto, Organization> OrganizationDtoToOrganizationMapper { get; }
+
+    IBaseMapper<TeamDto, Team> TeamDtoToTeamMapper { get; }
 }

@@ -3,6 +3,7 @@ import { environment } from '../../../environments/environment';
 const api = environment.api;
 const authApi = api + 'auth/'
 const organizationApi = api + 'organization'
+const teamApi = organizationApi + '/team'
 
 export const Path = {
   Register: authApi + 'register',
@@ -13,7 +14,8 @@ export const Path = {
   ChangeEmail: authApi + 'change-email',
   Organization: organizationApi,
   OrganizationByUser: organizationApi + "/user",
-  ChangeUserBadge: authApi + 'change-user-badge'
+  ChangeUserBadge: authApi + 'change-user-badge',
+  Team: teamApi,
 };
 
 export function getProfilePath(username: string): string {

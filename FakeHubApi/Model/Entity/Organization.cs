@@ -15,5 +15,7 @@ public class Organization
 
     [ForeignKey("Owner")]
     public int OwnerId { get; set; }
-    public User Owner { get; set; }
+    public User Owner { get; set; } = new();
+
+    public List<Team> Teams { get; set; } = new();
 }

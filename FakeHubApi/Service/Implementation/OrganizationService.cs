@@ -18,7 +18,7 @@ public class OrganizationService(
         var user = await userContext.GetCurrentUserAsync();
 
         Organization organization = mapperManager.OrganizationDtoToOrganizationMapper.Map(model);
-        if (await repositoryManager.OrganizationRepository.GetByName(organization.Name) != null)
+        if (await GetOrganization(organization.Name) != null)
             return ResponseBase.ErrorResponse("Organization name is not unique.");
 
         organization.Owner = user;
@@ -30,7 +30,7 @@ public class OrganizationService(
     {
         var user = await userContext.GetCurrentUserAsync();
 
-        var existingOrganization = await repositoryManager.OrganizationRepository.GetByName(name);
+        var existingOrganization = await GetOrganization(name);
         if (existingOrganization == null)
             return ResponseBase.ErrorResponse("Organization not found.");
 
@@ -47,7 +47,7 @@ public class OrganizationService(
 
     public async Task<ResponseBase> GetByName(string name)
     {
-        var organization = await repositoryManager.OrganizationRepository.GetByName(name);
+        var organization = await GetOrganization(name);
         if (organization == null)
             return ResponseBase.ErrorResponse("Organization not found.");
 
@@ -72,5 +72,10 @@ public class OrganizationService(
         return ResponseBase.SuccessResponse(
             organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap)
         );
+    }
+
+    public async Task<Organization?> GetOrganization(string name)
+    {
+        return await repositoryManager.OrganizationRepository.GetByName(name);
     }
 }

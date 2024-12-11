@@ -44,6 +44,7 @@
 .edit-icon-btn {
   border: none;
   background: none;
+  position: relative;
 }
 
 .community-info {
