@@ -13,4 +13,6 @@ public class TeamDto
 
     [Required]
     public string OrganizationName { get; set; }
+
+    public DateTime CreatedAt { get; set; }
 }

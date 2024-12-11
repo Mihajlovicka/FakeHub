@@ -69,7 +69,7 @@
 
 <div
   class="content"
-  [ngClass]="{ 'content-center': activeLink === 2 || activeLink === 3 }"
+  [ngClass]="{ 'content-center': activeLink === 3 }"
 >
   @if(activeLink === 1){
   <div class="search-container">
@@ -78,7 +78,7 @@
   </div>
   } @if(activeLink === 2){
   <div>
-    <h2>Teams</h2>
+    <app-teams [teams]="organization.teams"></app-teams>
   </div>
   } @if(activeLink === 3){
   <div>

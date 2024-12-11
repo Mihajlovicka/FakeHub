@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FakeHubApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241210210050_AddTeam")]
+    [Migration("20241211195422_AddTeam")]
     partial class AddTeam
     {
         /// <inheritdoc />
@@ -58,6 +58,9 @@ namespace FakeHubApi.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Description")
                         .IsRequired()

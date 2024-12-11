@@ -76,13 +76,6 @@
   color: #666;
 }
 
-.links-container {
-  display: flex;
-  gap: 1.3rem;
-  margin-top: 3rem;
-  padding-left: 2rem;
-}
-
 .link {
   font-size: 0.9rem;
   color: black;
@@ -98,18 +91,6 @@
 .link.active {
   font-weight: bold;
   border-bottom: 2px solid var(--primary-color);
-}
-
-.content {
-  display: flex;
-  margin-left: 2rem;
-  align-items: center;
-  height: 100px;
-}
-
-.content-center {
-  justify-content: center;
-  margin-top: 2rem;
 }
 
 .content h2 {
@@ -171,4 +152,25 @@ input:focus {
   font-size: 1.5rem;
   color: #333;
   font-weight: medium;
+}
+
+.links-container {
+  display: flex;
+  gap: 1.3rem;
+  margin-top: 3rem;
+  padding-left: 2rem;
+  flex-wrap: wrap;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  margin-left: 2rem;
+  align-items: left;
+  width: 100%;
+}
+
+.content-center {
+  justify-content: center;
+  margin-top: 2rem;
 }

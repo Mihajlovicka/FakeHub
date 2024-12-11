@@ -16,4 +16,6 @@ public class OrganizationDto
     public string ImageBase64 { get; set; }
 
     public string? Owner { get; set; } = null;
+
+    public List<TeamDto> Teams { get; set; } = new();
 }

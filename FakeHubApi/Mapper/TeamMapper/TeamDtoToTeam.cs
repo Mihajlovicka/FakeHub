@@ -9,4 +9,14 @@ public class TeamDtoToTeam : BaseMapper<TeamDto, Team>
     {
         return new() { Name = source.Name, Description = source.Description };
     }
+
+    public override TeamDto ReverseMap(Team source)
+    {
+        return new()
+        {
+            Name = source.Name,
+            Description = source.Description,
+            CreatedAt = source.CreatedAt,
+        };
+    }
 }
