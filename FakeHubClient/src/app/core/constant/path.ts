@@ -29,3 +29,7 @@ export function getProfilePath(username: string): string {
 export function addMemberToOrganizationPath(name: string): string {
   return organizationApi + name + '/add-user';
 }
+
+export function DeleteOrganizationMember(organizationName: string, username: string): string {
+  return organizationApi + organizationName + '/delete-user/' + username;
+}

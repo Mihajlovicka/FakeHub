@@ -1,7 +1,7 @@
 import { HttpClient } from "@angular/common/http";
-import { inject, Injectable, signal, WritableSignal } from "@angular/core";
+import { inject, Injectable } from "@angular/core";
 import { BehaviorSubject, Observable } from "rxjs";
-import { addMemberToOrganizationPath, Path } from "../constant/path";
+import { addMemberToOrganizationPath, DeleteOrganizationMember, Path } from "../constant/path";
 import { ServiceResponse } from "../model/service-response";
 import { Organization } from "../model/organization";
 import { AddMemberToOrganizationRequest } from "../model/add-member-to-organization-request";
@@ -48,5 +48,9 @@ export class OrganizationService {
   public addMember(organizationName: string, data: AddMemberToOrganizationRequest): Observable<UserProfileResponseDto[] | null> {
     const addMemberUrl = addMemberToOrganizationPath(organizationName);
     return this.http.post<UserProfileResponseDto[]>(addMemberUrl, data);
+  }
+
+  public deleteMember(organizationName: string, username: string): Observable<UserProfileResponseDto | null> {
+    return this.http.delete<UserProfileResponseDto>(DeleteOrganizationMember(organizationName, username));
   }
 }

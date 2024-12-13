@@ -43,6 +43,17 @@ public class OrganizationController(IOrganizationService organizationService) : 
         return BadRequest(response);
     }
 
+    [HttpDelete("{name}/delete-user/{username}")]
+    public async Task<IActionResult> DeleteUser([FromRoute] string name, [FromRoute] string username)
+    {
+        var response = await organizationService.DeleteUser(name, username);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
     [HttpPut("{name}")]
     public async Task<IActionResult> Update(
         [FromRoute] string name,
