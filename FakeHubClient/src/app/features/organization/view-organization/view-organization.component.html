@@ -1,7 +1,11 @@
 <div class="profile-container">
   <div class="avatar-container">
     <div class="avatar">
-      <img class="image" [src]="organization.imageBase64 || 'icons/no-photo-avatar.png'" alt="avatar" />
+      <img
+        class="image"
+        [src]="organization.imageBase64 || 'icons/no-photo-avatar.png'"
+        alt="avatar"
+      />
     </div>
   </div>
   <div class="info-container">
@@ -41,10 +45,21 @@
     </div>
   </div>
 </div>
-
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
   <mat-tab label="Members">
-    <ng-template matTabContent> Members </ng-template>
+    <ng-template matTabContent>
+      <div class="members-container">
+        @if(isOwner()){
+        <button
+          (click)="addMemberToOrganizationDialog()"
+          mat-flat-button
+          class="add-member-btn"
+        >
+          +
+        </button>
+        }
+      </div>
+    </ng-template>
   </mat-tab>
   <mat-tab label="Teams">
     <ng-template matTabContent>

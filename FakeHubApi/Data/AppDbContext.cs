@@ -38,5 +38,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                     NormalizedName = Role.USER.ToString(),
                 }
             );
+
+        modelBuilder
+            .Entity<Organization>()
+            .HasOne(o => o.Owner)
+            .WithMany(u => u.OwnedOrganizations)
+            .HasForeignKey(o => o.OwnerId);
+
+        modelBuilder
+            .Entity<User>()
+            .HasMany(u => u.Organizations)
+            .WithMany(o => o.Users)
+            .UsingEntity<Dictionary<string, object>>(
+                "UserOrganization",
+                j => j.HasOne<Organization>().WithMany().HasForeignKey("OrganizationId"),
+                j => j.HasOne<User>().WithMany().HasForeignKey("UserId")
+            );
     }
 }

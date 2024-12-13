@@ -18,4 +18,6 @@ public class OrganizationDto
     public string? Owner { get; set; } = null;
 
     public List<TeamDto> Teams { get; set; } = new();
+
+    public List<UserDto> Users { get; set; } = new();
 }

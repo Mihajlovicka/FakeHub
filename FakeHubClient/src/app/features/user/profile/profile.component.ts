@@ -21,8 +21,9 @@ export class ProfileComponent implements OnInit{
   private userService: UserService = inject(UserService);
   private route: ActivatedRoute = inject(ActivatedRoute);
   private router: Router = inject(Router);
-  readonly dialog = inject(MatDialog);
+  private readonly dialog = inject(MatDialog);
 
+  public showAddMemberButton: boolean = true;
   public user: UserProfileResponseDto = new UserProfileResponseDto();
   public activeLink: number = 1;  
   public isLoggedInUserProfile: boolean = false;
@@ -57,7 +58,7 @@ export class ProfileComponent implements OnInit{
     this.router.navigate(['/settings']);
   }
 
-  public openDialog(): void {
+  public openBadgeDialog(): void {
     if(this.isAdmin) {
       const dialogRef = this.dialog.open(UserBadgeModalComponent, {
         data: {currentBadge: this.user?.badge ?? UserBadge.None},

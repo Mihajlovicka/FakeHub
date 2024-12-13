@@ -1,23 +1,24 @@
 <div
   *ngIf="showNone && !isVerifiedUserBadge && !isSponsoredOssBadge"
   class="container none"
+  [ngClass]="iconSize"
 >
   <div class="relative-container">
     <mat-icon>control_point_duplicate</mat-icon>
-    <span class="tooltip">Add badge</span>
+    <span *ngIf="showNone" class="tooltip">Add badge</span>
   </div>
 </div>
-<div *ngIf="isVerifiedUserBadge" class="container verified-publisher">
+<div *ngIf="isVerifiedUserBadge" class="container verified-publisher" [ngClass]="iconSize">
   <div class="relative-container">
     <mat-icon>check_circle</mat-icon>
-    <span class="tooltip">Edit badge</span>
+    <span *ngIf="showNone" class="tooltip">Edit badge</span>
   </div>
-  <span class="title">Verified Publisher</span>
+  <span *ngIf="showInfo" class="title">Verified Publisher</span>
 </div>
-<div *ngIf="isSponsoredOssBadge" class="container sponsored-oss">
+<div *ngIf="isSponsoredOssBadge" class="container sponsored-oss" [ngClass]="iconSize">
   <div class="relative-container">
     <mat-icon>donut_large</mat-icon>
-    <span class="tooltip">Edit badge</span>
+    <span *ngIf="showNone" class="tooltip">Edit badge</span>
   </div>
-  <span class="title">Sponsored OSS</span>
+  <span *ngIf="showInfo" class="title">Sponsored OSS</span>
 </div>

@@ -4,10 +4,12 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Identity;
 
 namespace FakeHubApi.Service.Implementation;
 
 public class OrganizationService(
+    UserManager<User> userManager,
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
     IUserContextService userContext
@@ -83,5 +85,48 @@ public class OrganizationService(
     {
         var user = await userContext.GetCurrentUserAsync();
         return organization?.OwnerId == user.Id;
+    }
+    
+    public async Task<ResponseBase> AddUser(string name, List<string> usernames)
+    {
+        if (usernames == null || usernames.Count == 0)
+            return ResponseBase.ErrorResponse("No usernames provided");
+
+        try
+        {
+            var organization = await repositoryManager.OrganizationRepository.GetByName(name);
+            if (organization == null)
+                return ResponseBase.ErrorResponse("Organization not found");
+
+            var organizationUsernames = organization.Users.Select(x => x.UserName).ToHashSet();
+
+            var usersToAdd = userManager.Users
+                .Where(u => usernames.Contains(u.UserName) &&
+                            !string.Equals(u.UserName, organization.Owner.UserName) &&
+                            !organizationUsernames.Contains(u.UserName))
+                .ToList();
+
+            if (!usersToAdd.Any())
+                return ResponseBase.ErrorResponse("No eligible users found");
+
+            var responseUsers = new List<UserDto>();
+
+            foreach (var user in usersToAdd)
+            {
+                organization.Users.Add(user);
+                var responseUser = mapperManager.UserToUserDto.Map(
+                user
+            );
+                responseUsers.Add(responseUser);
+            }
+
+            await repositoryManager.OrganizationRepository.UpdateAsync(organization);
+
+            return ResponseBase.SuccessResponse(responseUsers);
+        }
+        catch (Exception ex)
+        {
+            return ResponseBase.ErrorResponse(ex.Message);
+        }
     }
 }

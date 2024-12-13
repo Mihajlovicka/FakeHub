@@ -13,6 +13,7 @@ export const Path = {
   RegisterAdmin: authApi + 'register/admin',
   ChangePassword: usersApi + 'change-password',
   ChangeEmail: usersApi + 'change-email',
+  GetAllUsers: usersApi + 'all',
   Organization: organizationApi,
   ChangeUserBadge: usersApi + 'change-user-badge',
   OrganizationByUser: organizationApi + "user",
@@ -23,4 +24,8 @@ export const Path = {
 
 export function getProfilePath(username: string): string {
   return usersApi + username;
+}
+
+export function addMemberToOrganizationPath(name: string): string {
+  return organizationApi + name + '/add-user';
 }

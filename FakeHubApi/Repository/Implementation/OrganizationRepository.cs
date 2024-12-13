@@ -13,6 +13,7 @@ public class OrganizationRepository(AppDbContext context)
         _context
             .Organizations.Include(x => x.Owner)
             .Include(x => x.Teams)
+            .Include(x => x.Users)
             .FirstOrDefaultAsync(x => x.Name == name);
 
     public Task<List<Organization>> GetByUser(int userId) =>

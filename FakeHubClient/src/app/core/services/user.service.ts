@@ -142,4 +142,8 @@ export class UserService {
   public isAdminLoggedIn(): boolean {
     return this.getRole() === UserRole.ADMIN;
   }
+  
+  public getAllUsers():Observable<UserProfileResponseDto[] | null> {
+    return this.http.get<UserProfileResponseDto[]>(Path.GetAllUsers);
+  } 
 }

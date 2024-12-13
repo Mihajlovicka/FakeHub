@@ -4,6 +4,7 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
+using Microsoft.AspNetCore.Identity;
 using Moq;
 
 namespace FakeHubApi.Tests.Organization.Tests;
@@ -14,6 +15,7 @@ public class OrganizationServiceTests
     private IOrganizationService _organizationService;
     private Mock<IRepositoryManager> _repositoryManagerMock;
     private Mock<IUserContextService> _userContextServiceMock;
+    private Mock<UserManager<User>> _userManagerMock;
 
     private Mock<ICrudRepository<Model.Entity.Organization>> _organizationRepositoryMock;
 
@@ -25,7 +27,20 @@ public class OrganizationServiceTests
         _userContextServiceMock = new Mock<IUserContextService>();
         _organizationRepositoryMock = new Mock<ICrudRepository<Model.Entity.Organization>>();
 
+        _userManagerMock = new Mock<UserManager<User>>(
+           new Mock<IUserStore<User>>().Object,
+           null,
+           null,
+           null,
+           null,
+           null,
+           null,
+           null,
+           null
+       );
+
         _organizationService = new OrganizationService(
+            _userManagerMock.Object,
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
             _userContextServiceMock.Object
@@ -299,6 +314,131 @@ public class OrganizationServiceTests
         Assert.Multiple(() =>
         {
             Assert.That(responseOrganizations, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task AddUser_EmptyUsernamesList_ReturnsErrorResponse()
+    {
+        var orgName = "organizationName";
+        var emptyUsernames = new List<string>();
+
+        var result = await _organizationService.AddUser(orgName, emptyUsernames);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("No usernames provided"));
+        });
+    }
+
+    [Test]
+    public async Task AddUser_OrganizationNotFound_ReturnsErrorResponse()
+    {
+        var usernames = new List<string> { "user1", "user2" };
+        var orgName = "nonExistentOrganization";
+
+        _repositoryManagerMock
+            .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
+            .ReturnsAsync((Model.Entity.Organization)null);
+
+        var result = await _organizationService.AddUser(orgName, usernames);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Organization not found"));
+        });
+    }
+
+    [Test]
+    public async Task AddUser_NoEligibleUsers_ReturnsErrorResponse()
+    {
+        var orgName = "organizationName";
+        var usernames = new List<string> { "user1", "user2", "ownerUser" };
+
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Owner = new User { UserName = "ownerUser" },
+            Users = new List<User>
+        {
+            new User { UserName = "user1" },
+            new User { UserName = "user2" }
+        }
+        };
+
+        _repositoryManagerMock
+            .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
+            .ReturnsAsync(organization);
+
+        _userManagerMock
+            .Setup(um => um.Users)
+            .Returns(organization.Users.AsQueryable());
+
+        var result = await _organizationService.AddUser(orgName, usernames);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("No eligible users found"));
+        });
+    }
+
+    [Test]
+    public async Task AddUser_ValidUsersAddedSuccessfully_ReturnsSuccessResponse()
+    {
+        var orgName = "organizationName";
+        var usernames = new List<string> { "user1", "user2" };
+
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Owner = new User { UserName = "ownerUser" },
+            Users = new List<User>()
+        };
+
+        _repositoryManagerMock
+            .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
+            .ReturnsAsync(organization);
+
+        var responseUsers = new List<User>
+    {
+        new User { UserName = "user1" },
+        new User { UserName = "user2" }
+    };
+
+        _userManagerMock
+            .Setup(um => um.Users)
+            .Returns(responseUsers.AsQueryable());
+
+        _mapperManagerMock
+            .Setup(m => m.UserToUserDto.Map(It.IsAny<User>()))
+            .Returns((User user) => new UserDto { Username = user.UserName });
+
+        var result = await _organizationService.AddUser(orgName, usernames);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Not.Null);
+            Assert.That(result.Result, Has.Count.EqualTo(2));
+
+            Assert.That(organization.Users.Count, Is.EqualTo(2));
+            Assert.That(organization.Users.Select(u => u.UserName), Is.EquivalentTo(usernames));
+
+            _repositoryManagerMock
+                .Verify(rm => rm.OrganizationRepository.UpdateAsync(organization), Times.Once);
+
+            var responseUsers = result.Result as List<UserDto>;
+            Assert.That(responseUsers.Select(r => r.Username), Is.EquivalentTo(usernames));
+            Assert.That(responseUsers.Count, Is.EqualTo(2));
         });
     }
 }

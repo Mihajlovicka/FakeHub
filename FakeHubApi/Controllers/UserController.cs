@@ -1,6 +1,7 @@
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Service.Contract;
+using FakeHubApi.Service.Implementation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -72,7 +73,7 @@ public class UserController(IUserService userService) : ControllerBase
         return BadRequest(response);
     }
 
-    [Authorize(Roles = "ADMIN,SUPERADMIN")]
+    [Authorize(Roles = "ADMIN,SUPERADMIN,USER")]
     [HttpGet]
     public async Task<IActionResult> GetUsersByQuery([FromQuery] string? query)
     {
