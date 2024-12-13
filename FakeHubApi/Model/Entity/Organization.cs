@@ -12,10 +12,9 @@ public class Organization
     public string Description { get; set; } = string.Empty;
     public string ImageBase64 { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
-
     [ForeignKey("Owner")]
     public int OwnerId { get; set; }
     public User Owner { get; set; } = new();
-
     public List<Team> Teams { get; set; } = new();
+    public List<User> Users { get; set; } = new();
 }

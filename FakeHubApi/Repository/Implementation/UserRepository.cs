@@ -55,4 +55,19 @@ public class UserRepository(AppDbContext context) : CrudRepository<User>(context
 
         return users;
     }
+    public async Task<User> GetByUsername(string username) =>
+        await _context.Users.FirstOrDefaultAsync(x => x.UserName == username);
+
+    public Task<List<Organization>> GetOwnedOrganizationsByUsername(string username) =>
+         _context.Users
+            .Where(x => x.UserName == username)
+            .SelectMany(u => u.OwnedOrganizations)
+            .ToListAsync();
+
+    public Task<List<Organization>> GetAllOrganizationsByUsername(string username) =>
+         _context.Users
+            .Where(x => x.UserName == username)
+            .SelectMany(u => u.Organizations
+                .Concat(u.OwnedOrganizations))
+            .ToListAsync();
 }

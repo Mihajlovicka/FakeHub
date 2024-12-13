@@ -1,10 +1,13 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FakeHubApi.Data;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
@@ -23,7 +26,7 @@ public class OrganizationControllerIntegrationTests
     {
         _factory = new CustomWebApplicationFactory();
         _client = _factory.CreateClient();
-        await AddUser();
+        await SetupDbData();
         var token = await GetTokenFromSuccessfulUserLogin(
             new LoginRequestDto { Email = "test@example.com", Password = "Password123!" }
         );
@@ -230,7 +233,78 @@ public class OrganizationControllerIntegrationTests
         });
     }
 
-    private async Task AddUser()
+    [Test, Order(8)]
+    public async Task AddUser_AddingOwnerUser_ReturnsBadRequest()
+    {
+        var organizationName = "Organization1";
+        var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
+        {
+            Usernames = new List<string> { "owner@example.com" }
+        };
+
+        var response = await _client.PostAsJsonAsync($"/api/organization/{organizationName}/add-user", addUserToOrganizationRequestDto);
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(responseObj?.ErrorMessage, Is.EqualTo("No eligible users found"));
+            Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(9)]
+    public async Task AddUser_ValidRequest_ReturnsOk()
+    {
+        var organizationName = "Organization1";
+        var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
+        {
+            Usernames = new List<string> { "test@example.com" }
+        };
+
+        var response = await _client.PostAsJsonAsync($"/api/organization/{organizationName}/add-user", addUserToOrganizationRequestDto);
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.ErrorMessage, Is.Empty);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+        });
+    }
+
+    [Test, Order(10)]
+    public async Task AddUser_ListWithInvalidUsers_ReturnsOk()
+    {
+        var organizationName = "Organization1";
+        var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
+        {
+            Usernames = new List<string> { "owner@example.com", "test@example.com", "testest@example.com" },
+        };
+
+        var response = await _client.PostAsJsonAsync($"/api/organization/{organizationName}/add-user", addUserToOrganizationRequestDto);
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var responseObjString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.ErrorMessage, Is.Empty);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+        });
+
+        var responseObjStringObject = JsonConvert.DeserializeObject<UserDto[]>(responseObjString);
+
+        Assert.That(responseObjStringObject.Length, Is.EqualTo(1));
+    }
+
+
+    private async Task SetupDbData()
     {
         using var scope = _factory.Services.CreateScope();
         await using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -238,6 +312,13 @@ public class OrganizationControllerIntegrationTests
         var roleManager = scope.ServiceProvider.GetRequiredService<
             RoleManager<IdentityRole<int>>
         >();
+
+        await AddUser(db, userManager, roleManager);
+        await AddOrganizationsToDB(db, userManager);
+    }
+
+    private async Task AddUser(AppDbContext db, UserManager<User> userManager, RoleManager<IdentityRole<int>> roleManager)
+    {
 
         if (!await roleManager.RoleExistsAsync("USER"))
         {
@@ -269,6 +350,33 @@ public class OrganizationControllerIntegrationTests
         await db.SaveChangesAsync();
         await userManager.AddToRolesAsync(user, new[] { "USER" });
         await userManager.AddToRolesAsync(user2, new[] { "USER" });
+    }
+
+    private async Task AddOrganizationsToDB(AppDbContext db, UserManager<User> userManager)
+    {
+        var owner = new User
+        {
+            Id = 3,
+            Email = "owner@example.com",
+            UserName = "owner",
+            PasswordHash =
+                "AQAAAAIAAYagAAAAEBQ7++M6z5N+Tly9yfor8HhJxhg52bNmZAIANR+cR6og/UgoUz8GhnlZQr2NFAP48g==",
+            SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ",
+        };
+        var organization1 = new Model.Entity.Organization
+        {
+            Id = 1,
+            Name = "Organization1",
+            Description = "Organization1 description",
+            IsActive = true,
+            OwnerId = owner.Id,
+            Owner = owner
+        };
+
+        await db.Users.AddAsync(owner);
+        await db.Organizations.AddAsync(organization1);
+        await db.SaveChangesAsync();
+        await userManager.AddToRolesAsync(owner, new[] { "USER" });
     }
 
     private async Task<string> GetTokenFromSuccessfulUserLogin(LoginRequestDto loginRequest)

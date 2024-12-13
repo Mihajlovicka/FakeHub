@@ -192,5 +192,4 @@ public class UserService(
             .Select(part => part.Trim())
             .ToList();
     }
-
 }

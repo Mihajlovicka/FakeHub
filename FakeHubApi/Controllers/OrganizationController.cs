@@ -32,6 +32,17 @@ public class OrganizationController(IOrganizationService organizationService) : 
         return BadRequest(response);
     }
 
+    [HttpPost("{name}/add-user")]
+    public async Task<IActionResult> AddUser([FromRoute] string name, [FromBody] AddUserToOrganizationRequestDto model)
+    {
+        var response = await organizationService.AddUser(name, model.Usernames);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
     [HttpPut("{name}")]
     public async Task<IActionResult> Update(
         [FromRoute] string name,

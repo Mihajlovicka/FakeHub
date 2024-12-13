@@ -2,6 +2,7 @@
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Repository.Implementation;
 using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Identity;
 

@@ -4,7 +4,7 @@ using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Mapper.OrganizationMapper;
 
-public class OrganizationDtoToOgranization(IBaseMapper<TeamDto, Team> teamDtoToTeamMapper)
+public class OrganizationDtoToOgranization(IBaseMapper<TeamDto, Team> teamDtoToTeamMapper, IBaseMapper<User, UserDto> UserToUserDto)
     : BaseMapper<OrganizationDto, Organization>
 {
     public override Organization Map(OrganizationDto source)
@@ -26,6 +26,7 @@ public class OrganizationDtoToOgranization(IBaseMapper<TeamDto, Team> teamDtoToT
             ImageBase64 = source.ImageBase64,
             Owner = source.Owner?.UserName,
             Teams = source.Teams.Select(teamDtoToTeamMapper.ReverseMap).ToList(),
+            Users = source.Users.Select(UserToUserDto.Map).ToList(),
         };
     }
 }
