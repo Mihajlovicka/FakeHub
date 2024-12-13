@@ -129,4 +129,40 @@ public class OrganizationService(
             return ResponseBase.ErrorResponse(ex.Message);
         }
     }
+
+    public async Task<ResponseBase> DeleteUser(string name, string username)
+    {
+        try
+        {
+            var user = await userManager.FindByNameAsync(username);
+            var organization = await repositoryManager.OrganizationRepository.GetByName(name);
+
+            if (user == null)
+            {
+                return ResponseBase.ErrorResponse("User not found");
+            }
+
+            if (organization == null)
+            {
+                return ResponseBase.ErrorResponse("Organization not found");
+            }
+
+            if (organization.Users.FirstOrDefault(u => u.UserName == username) == null)
+            {
+                return ResponseBase.ErrorResponse("User not in organization");
+            }
+
+            organization.Users.Remove(user);
+            await repositoryManager.OrganizationRepository.UpdateAsync(organization);
+
+            var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
+
+            return ResponseBase.SuccessResponse(responseUser);
+        }
+        catch (Exception ex)
+        {
+            return ResponseBase.ErrorResponse(ex.Message);
+        }
+
+    }
 }

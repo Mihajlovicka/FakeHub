@@ -234,7 +234,7 @@ public class OrganizationControllerIntegrationTests
     [Test, Order(8)]
     public async Task AddUser_AddingOwnerUser_ReturnsBadRequest()
     {
-        var organizationName = "Organization1";
+        const string organizationName = "Organization1";
         var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
         {
             Usernames = new List<string> { "owner@example.com" }
@@ -255,7 +255,7 @@ public class OrganizationControllerIntegrationTests
     [Test, Order(9)]
     public async Task AddUser_ValidRequest_ReturnsOk()
     {
-        var organizationName = "Organization1";
+        const string organizationName = "Organization1";
         var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
         {
             Usernames = new List<string> { "test@example.com" }
@@ -277,7 +277,7 @@ public class OrganizationControllerIntegrationTests
     [Test, Order(10)]
     public async Task AddUser_ListWithInvalidUsers_ReturnsOk()
     {
-        var organizationName = "Organization1";
+        const string organizationName = "Organization1";
         var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
         {
             Usernames = new List<string> { "owner@example.com", "test@example.com", "testest@example.com" },
@@ -301,6 +301,47 @@ public class OrganizationControllerIntegrationTests
         Assert.That(responseObjStringObject.Length, Is.EqualTo(1));
     }
 
+    [Test, Order(11)]
+    public async Task DeleteUser_UserNotInOrganization_ReturnsBadRequest()
+    {
+        const string organizationName = "Organization2";
+        const string username = "testest@example.com";
+
+        var response = await _client.DeleteAsync($"/api/organization/{organizationName}/delete-user/{username}");
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(responseObj?.ErrorMessage, Is.EqualTo("User not in organization"));
+            Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(12)]
+    public async Task DeleteUser_ValidRequest_ReturnsOk()
+    {
+        const string organizationName = "Organization1";
+        const string username = "testest@example.com";
+
+        var response = await _client.DeleteAsync($"/api/organization/{organizationName}/delete-user/{username}");
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var responseObjString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.ErrorMessage, Is.Empty);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+        });
+
+        var responseObjStringObject = JsonConvert.DeserializeObject<UserDto>(responseObjString);
+
+        Assert.That(responseObjStringObject.Username, Is.EqualTo(username));
+    }
 
     private async Task SetupDbData()
     {
@@ -370,9 +411,19 @@ public class OrganizationControllerIntegrationTests
             OwnerId = owner.Id,
             Owner = owner
         };
+        var organization2 = new Model.Entity.Organization
+        {
+            Id = 2,
+            Name = "Organization2",
+            Description = "Organization2 description",
+            IsActive = true,
+            OwnerId = owner.Id,
+            Owner = owner
+        };
 
         await db.Users.AddAsync(owner);
         await db.Organizations.AddAsync(organization1);
+        await db.Organizations.AddAsync(organization2);
         await db.SaveChangesAsync();
         await userManager.AddToRolesAsync(owner, new[] { "USER" });
     }

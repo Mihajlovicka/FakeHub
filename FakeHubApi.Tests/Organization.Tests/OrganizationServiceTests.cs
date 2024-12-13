@@ -441,4 +441,125 @@ public class OrganizationServiceTests
             Assert.That(responseUsers, Has.Count.EqualTo(2));
         });
     }
+
+    [Test]
+    public async Task DeleteUser_UserNotFound_ReturnsErrorResponse()
+    {
+        const string username = "nonexistentUser";
+        const string orgName = "organizationName";
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName
+        };
+
+        _userManagerMock
+            .Setup(um => um.FindByNameAsync(username))
+            .ReturnsAsync((User)null);
+
+        _repositoryManagerMock
+            .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
+            .ReturnsAsync(organization);
+
+        var result = await _organizationService.DeleteUser(orgName, username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("User not found"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteUser_OrganizationNotFound_ReturnsErrorResponse()
+    {
+        const string username = "user";
+        const string orgName = "nonExistentOrganization";
+
+        var user = new User { UserName = username };
+
+        _userManagerMock
+            .Setup(um => um.FindByNameAsync(username))
+            .ReturnsAsync(user);
+
+        _repositoryManagerMock
+            .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
+            .ReturnsAsync((Model.Entity.Organization)null);
+
+        var result = await _organizationService.DeleteUser(orgName, username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Organization not found"));
+        });
+     }
+
+    [Test]
+    public async Task DeleteUser_UserNotInOrganization_ReturnsErrorResponse()
+    {
+        const string username = "user";
+        const string orgName = "organizationName";
+        var user = new User { UserName = username };
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Users = []
+        };
+
+        _userManagerMock
+           .Setup(um => um.FindByNameAsync(username))
+           .ReturnsAsync(user);
+
+        _repositoryManagerMock
+            .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
+            .ReturnsAsync(organization);
+
+        var result = await _organizationService.DeleteUser(orgName, username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("User not in organization"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteUser_ValidRequest_ReturnsSuccessResponse()
+    {
+        const string username = "user";
+        const string orgName = "organizationName";
+        var user = new User { UserName = username };
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Users = new List<User> { user }
+        };
+        var responseUser = new UserDto { Username = username };
+
+        _userManagerMock
+          .Setup(um => um.FindByNameAsync(username))
+          .ReturnsAsync(user);
+
+        _repositoryManagerMock
+            .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
+            .ReturnsAsync(organization);
+
+        _mapperManagerMock.Setup(m => m.UserToUserDtoMapper.Map(user)).Returns(responseUser);
+
+        var result = await _organizationService.DeleteUser(orgName, username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Not.Null);
+            Assert.That(result.ErrorMessage, Is.Empty);
+            Assert.That((UserDto)result.Result, Is.EqualTo(responseUser));
+        });
+    }
 }

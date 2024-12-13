@@ -109,6 +109,16 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     );
   }
 
+  public OnUserDeleted(deletedUser: UserProfileResponseDto): void {
+    if(deletedUser == null) return;
+
+    const deletedUserIndex = this.organization.users?.findIndex(u => u.username == deletedUser.username) ?? -1;
+    if(deletedUserIndex >= 0) {
+      this.organization.users?.splice(deletedUserIndex, 1);
+      this.filterUsers([...this.users$.getValue(), deletedUser]);
+    }
+  }
+
   private addMember(usernames: string[]): void {
     this.service
       .addMember(this.organization.name, { usernames: usernames })
