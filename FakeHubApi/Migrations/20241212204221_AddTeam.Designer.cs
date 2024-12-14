@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FakeHubApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241211195422_AddTeam")]
+    [Migration("20241212204221_AddTeam")]
     partial class AddTeam
     {
         /// <inheritdoc />
@@ -77,7 +77,7 @@ namespace FakeHubApi.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("Team");
+                    b.ToTable("Teams");
                 });
 
             modelBuilder.Entity("FakeHubApi.Model.Entity.User", b =>

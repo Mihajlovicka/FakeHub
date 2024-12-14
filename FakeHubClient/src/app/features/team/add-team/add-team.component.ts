@@ -44,7 +44,6 @@ export class AddTeamComponent {
 
   public onSubmit(): void {
     if (this.teamForm.invalid) return;
-    //add organization name to the team object
     this.teamForm.value.organizationName = this.organizationName;
     this.service.addTeam(this.teamForm.value).subscribe({
       next: () => {
@@ -53,7 +52,7 @@ export class AddTeamComponent {
     });
   }
 
-  cancel(): void {
+  public cancel(): void {
     this.router.navigate(["/organization/view", this.organizationName]);
   }
 

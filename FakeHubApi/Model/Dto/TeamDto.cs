@@ -15,4 +15,6 @@ public class TeamDto
     public string OrganizationName { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public string? Owner { get; set; }
 }

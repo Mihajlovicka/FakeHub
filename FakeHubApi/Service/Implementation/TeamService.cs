@@ -31,6 +31,16 @@ public class TeamService(
         return response;
     }
 
+    public async Task<ResponseBase> Get(string organizationName, string teamName)
+    {
+        var team = await repositoryManager.TeamRepository.GetTeam(organizationName, teamName);
+        if (team == null)
+            return ResponseBase.ErrorResponse("Team not found.");
+        var teamDto = mapperManager.TeamDtoToTeamMapper.ReverseMap(team);
+        teamDto.Owner = team.Organization.Owner.UserName!;
+        return ResponseBase.SuccessResponse(teamDto);
+    }
+
     private async Task<(bool, string)> ValidateNewTeam(TeamDto model, Organization? organization)
     {
         var response = (true, string.Empty);

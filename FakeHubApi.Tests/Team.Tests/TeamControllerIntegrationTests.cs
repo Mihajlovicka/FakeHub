@@ -111,6 +111,53 @@ public class TeamControllerIntegrationTests
         });
     }
 
+    [Test, Order(4)]
+    public async Task GetTeam()
+    {
+        var token = await GetTokenFromSuccessfulUserLogin(
+            new LoginRequestDto { Email = "test@example.com", Password = "Password123!" }
+        );
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            token
+        );
+        var teamName = "Test Team";
+        var organizationName = "Test Team Organization";
+
+        var response = await _client.GetFromJsonAsync<ResponseBase>(
+            $"/api/organization/team/{organizationName}/{teamName}"
+        );
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response?.Success, Is.True);
+            var jsonString = response?.Result?.ToString() ?? string.Empty;
+            var responseOrganization = JsonConvert.DeserializeObject<TeamDto>(jsonString);
+
+            Assert.That(responseOrganization, Is.Not.Null);
+            Assert.That(responseOrganization?.Name, Is.EqualTo(teamName));
+        });
+    }
+
+    [Test, Order(5)]
+    public async Task GetTeam_NoTeam()
+    {
+        var teamName = "Test Team 5";
+        var organizationName = "Test Team Organization";
+
+        var response = await _client.GetAsync(
+            $"/api/organization/team/{organizationName}/{teamName}"
+        );
+
+        var responseBody = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBody?.Success, Is.False);
+            Assert.That(responseBody?.ErrorMessage, Is.EqualTo("Team not found."));
+        });
+    }
+
     private async Task SetupData()
     {
         using var scope = _factory.Services.CreateScope();

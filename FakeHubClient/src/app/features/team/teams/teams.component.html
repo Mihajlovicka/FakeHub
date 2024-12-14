@@ -2,7 +2,7 @@
   <div class="teams-container">
     @for (team of teams; track team.name) {
     <div class="team-container">
-      <div class="team-details-container">
+      <div class="team-details-container" (click)="goToTeam(team.name)">
         <div class="link-header">
           <span class="ellipsis">{{ team.name }}</span>
         </div>

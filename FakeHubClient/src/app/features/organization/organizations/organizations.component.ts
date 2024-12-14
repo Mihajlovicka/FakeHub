@@ -18,7 +18,6 @@ export class OrganizationsComponent implements OnInit {
 
   ngOnInit(): void {
     const signal = this.organizationService.searchResultsSignal();
-    console.log(signal);
     if (signal) {
       this.organizations = signal;
     } else {
