@@ -5,5 +5,5 @@ export interface Organization {
   description: string;
   imageBase64: string;
   owner?: string;
-  teams: Team[];
+  teams?: Team[];
 }

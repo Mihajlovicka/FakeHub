@@ -20,4 +20,18 @@ public class TeamController(ITeamService teamService) : ControllerBase
         }
         return BadRequest(response);
     }
+
+    [HttpGet("{organizationName}/{teamName}")]
+    public async Task<IActionResult> Get(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName
+    )
+    {
+        var response = await teamService.Get(organizationName, teamName);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

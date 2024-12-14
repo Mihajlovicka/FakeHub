@@ -74,7 +74,7 @@ namespace FakeHubApi.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("Team");
+                    b.ToTable("Teams");
                 });
 
             modelBuilder.Entity("FakeHubApi.Model.Entity.User", b =>

@@ -6,14 +6,16 @@ using MySql.EntityFrameworkCore.Metadata;
 
 namespace FakeHubApi.Migrations
 {
+    /// <inheritdoc />
     public partial class AddTeam : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Add Team table
+            // Add Teams table
             migrationBuilder
                 .CreateTable(
-                    name: "Team",
+                    name: "Teams",
                     columns: table => new
                     {
                         Id = table
@@ -29,9 +31,9 @@ namespace FakeHubApi.Migrations
                     },
                     constraints: table =>
                     {
-                        table.PrimaryKey("PK_Team", x => x.Id);
+                        table.PrimaryKey("PK_Teams", x => x.Id);
                         table.ForeignKey(
-                            name: "FK_Team_Organizations_OrganizationId",
+                            name: "FK_Teams_Organizations_OrganizationId",
                             column: x => x.OrganizationId,
                             principalTable: "Organizations",
                             principalColumn: "Id",
@@ -41,18 +43,19 @@ namespace FakeHubApi.Migrations
                 )
                 .Annotation("MySQL:Charset", "utf8mb4");
 
-            // Create index for the OrganizationId in Team
+            // Create index for the OrganizationId in Teams
             migrationBuilder.CreateIndex(
-                name: "IX_Team_OrganizationId",
-                table: "Team",
+                name: "IX_Teams_OrganizationId",
+                table: "Teams",
                 column: "OrganizationId"
             );
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Drop Team table
-            migrationBuilder.DropTable(name: "Team");
+            // Drop Teams table
+            migrationBuilder.DropTable(name: "Teams");
         }
     }
 }

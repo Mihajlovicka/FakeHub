@@ -1,12 +1,7 @@
 <div class="profile-container">
-  <div class="avatar-container">
-    <div class="avatar">
-      <img class="image" src="{{ organization.imageBase64 }}" alt="avatar" />
-    </div>
-  </div>
   <div class="info-container">
     <div class="username-container">
-      <span class="username">{{ organization.name }}</span>
+      <span class="username">{{ team.name }}</span>
       @if(isOwner()){
 
       <button
@@ -20,23 +15,25 @@
         <button mat-menu-item (click)="edit()">
           <span>Edit</span>
         </button>
-        <button mat-menu-item (click)="addTeam()">
-          <span>Add Team</span>
-        </button>
       </mat-menu>
       }
     </div>
-    @if(!isOwner()){
+    <div class="community-info">
+      <div class="community">
+        <span class="joined">{{ team.description }}</span>
+      </div>
+    </div>
     <div class="community-info">
       <div class="community">
         <i class="fa-regular fa-user icons"></i>
-        <span class="joined">Owner: {{ organization.owner }}</span>
+        <span class="joined">Owner: {{ team.owner }}</span>
       </div>
     </div>
-    }
     <div class="community-info">
       <div class="community">
-        <span class="joined">{{ organization.description }}</span>
+        <span class="joined"
+          >Created At: {{ team.createdAt | date : "mediumDate" }}</span
+        >
       </div>
     </div>
   </div>
@@ -45,10 +42,5 @@
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
   <mat-tab label="Members">
     <ng-template matTabContent> Members </ng-template>
-  </mat-tab>
-  <mat-tab label="Teams">
-    <ng-template matTabContent>
-      <app-teams [teams]="organization.teams || []"></app-teams>
-    </ng-template>
   </mat-tab>
 </mat-tab-group>

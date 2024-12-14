@@ -1,5 +1,11 @@
-import { Component, HostListener, inject } from "@angular/core";
-import { Router, ActivatedRoute } from "@angular/router";
+import { Component, inject } from "@angular/core";
+import {
+  Router,
+  ActivatedRoute,
+  RouterModule,
+  Routes,
+  RouterLinkActive,
+} from "@angular/router";
 import { Organization } from "../../../core/model/organization";
 import { OrganizationService } from "../../../core/services/organization.service";
 import { UserService } from "../../../core/services/user.service";
@@ -7,6 +13,7 @@ import { CommonModule } from "@angular/common";
 import { MatIconModule } from "@angular/material/icon";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatButtonModule } from "@angular/material/button";
+import { MatTabsModule } from "@angular/material/tabs";
 import { TeamsComponent } from "../../team/teams/teams.component";
 
 @Component({
@@ -17,6 +24,8 @@ import { TeamsComponent } from "../../team/teams/teams.component";
     MatIconModule,
     MatMenuModule,
     MatButtonModule,
+    RouterModule,
+    MatTabsModule,
     TeamsComponent,
   ],
   templateUrl: "./view-organization.component.html",
@@ -28,13 +37,10 @@ export class ViewOrganizationComponent {
   private readonly userService: UserService = inject(UserService);
   private readonly router: Router = inject(Router);
 
-  public activeLink: number = 1;
-
   public organization: Organization = {
     name: "",
     description: "",
     imageBase64: "",
-    teams: [],
   };
 
   public isOwner(): boolean {
@@ -49,11 +55,7 @@ export class ViewOrganizationComponent {
   }
 
   public addTeam(): void {
-    this.router.navigate(["/team", this.organization.name, "add"]);
-  }
-
-  public setActiveLink(linkNumber: number): void {
-    this.activeLink = linkNumber;
+    this.router.navigate(["/organization/team/add", this.organization.name]);
   }
 
   ngOnInit(): void {
