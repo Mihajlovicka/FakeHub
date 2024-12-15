@@ -19,4 +19,15 @@ export class TeamService {
   public getTeam(organizationName: string, teamName: string): Observable<Team> {
     return this.http.get<Team>(`${Path.Team}/${organizationName}/${teamName}`);
   }
+
+  public editTeam(
+    organizationName: string,
+    teamName: string,
+    team: Team
+  ): Observable<any | null> {
+    return this.http.put<ServiceResponse>(
+      `${Path.Team}/${organizationName}/${teamName}`,
+      team
+    );
+  }
 }

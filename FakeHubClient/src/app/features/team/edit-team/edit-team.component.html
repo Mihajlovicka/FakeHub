@@ -1,0 +1,58 @@
+<div class="centered-container">
+  <mat-card class="main-card">
+    <mat-card-header class="centered-header">
+      <mat-card-title class="title">Edit Team</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form
+        [formGroup]="teamForm"
+        (ngSubmit)="onSubmit()"
+        class="form-container"
+      >
+        <div class="row">
+          <mat-form-field class="compact-field" appearance="outline">
+            <mat-label>Name</mat-label>
+            <textarea matInput formControlName="name" rows="4"></textarea>
+            @if(teamForm.get('name')?.hasError('required')){
+            <mat-error> Name is required. </mat-error>}
+            @if(teamForm.get('name')?.hasError('maxlength')){
+            <mat-error> Description cannot exceed 500 characters. </mat-error>}
+          </mat-form-field>
+        </div>
+        <div class="row">
+          <mat-form-field class="compact-field" appearance="outline">
+            <mat-label>Description</mat-label>
+            <textarea
+              matInput
+              formControlName="description"
+              rows="4"
+            ></textarea>
+            @if(teamForm.get('description')?.hasError('maxlength')){
+            <mat-error> Description cannot exceed 500 characters. </mat-error>}
+          </mat-form-field>
+        </div>
+
+        <mat-card-actions>
+          <button
+            mat-raised-button
+            style="width: 50%"
+            (click)="cancel()"
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            mat-raised-button
+            color="primary"
+            [disabled]="teamForm.invalid"
+            style="width: 50%"
+            type="submit"
+          >
+            Edit Team
+          </button>
+        </mat-card-actions>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

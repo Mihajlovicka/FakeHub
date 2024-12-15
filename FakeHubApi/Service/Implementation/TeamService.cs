@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -41,16 +42,62 @@ public class TeamService(
         return ResponseBase.SuccessResponse(teamDto);
     }
 
+    public async Task<ResponseBase> Update(
+        string organizationName,
+        string teamName,
+        UpdateTeamDto model
+    )
+    {
+        var response = ResponseBase.SuccessResponse();
+        var organization = await organizationService.GetOrganization(organizationName);
+        var team = organization?.Teams.FirstOrDefault(x => x.Name == teamName);
+        var (success, errorMessage) = await ValidateUpdateTeam(model, organization, team);
+        if (!success)
+            response = ResponseBase.ErrorResponse(errorMessage);
+        else
+        {
+            team!.Name = model.Name;
+            team!.Description = model.Description;
+            await repositoryManager.TeamRepository.UpdateAsync(team);
+        }
+        return response;
+    }
+
     private async Task<(bool, string)> ValidateNewTeam(TeamDto model, Organization? organization)
     {
         var response = (true, string.Empty);
-        var user = await userContextService.GetCurrentUserAsync();
         if (organization == null)
             response = (false, "Organization not found");
-        if (organization!.OwnerId != user.Id)
+        else if (!await organizationService.IsLoggedInUserOwner(organization))
             response = (false, "You are not the owner of this organization.");
-        if (organization.Teams.Any(x => x.Name == model.Name))
+        else if (!IsTeamNameUnique(organization, model.Name))
             response = (false, "Team name is not unique.");
         return response;
+    }
+
+    private async Task<(bool, string)> ValidateUpdateTeam(
+        UpdateTeamDto model,
+        Organization? organization,
+        Team? team
+    )
+    {
+        var response = (true, string.Empty);
+        if (organization == null)
+            response = (false, "Organization not found");
+        else if (!await organizationService.IsLoggedInUserOwner(organization))
+            response = (false, "You are not the owner of this organization.");
+        else
+        {
+            if (team == null)
+                response = (false, "Team not found.");
+            else if (team.Name != model.Name && !IsTeamNameUnique(organization, model.Name))
+                response = (false, "Team name is not unique.");
+        }
+        return response;
+    }
+
+    private bool IsTeamNameUnique(Organization organization, string teamName)
+    {
+        return organization.Teams.All(x => x.Name != teamName);
     }
 }

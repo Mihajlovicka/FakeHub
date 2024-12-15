@@ -158,6 +158,90 @@ public class TeamControllerIntegrationTests
         });
     }
 
+    [Test, Order(6)]
+    public async Task EditTeam()
+    {
+        var teamName = "Test Team";
+        var organizationName = "Test Team Organization";
+        var teamDto = new UpdateTeamDto()
+        {
+            Name = "Test Team 2",
+            Description = "Test Description 2",
+        };
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/organization/team/{organizationName}/{teamName}",
+            teamDto
+        );
+
+        var responseBody = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBody?.Success, Is.True);
+            Assert.That(responseBody?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(7)]
+    public async Task EditTeam_NotExists()
+    {
+        var teamName = "Test Team Not Exists";
+        var organizationName = "Test Team Organization";
+        var teamDto = new UpdateTeamDto()
+        {
+            Name = "Test Team 2",
+            Description = "Test Description 2",
+        };
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/organization/team/{organizationName}/{teamName}",
+            teamDto
+        );
+
+        var responseBody = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBody?.Success, Is.False);
+            Assert.That(responseBody?.ErrorMessage, Is.EqualTo("Team not found."));
+        });
+    }
+
+    [Test, Order(8)]
+    public async Task EditTeam_NameNotUnique()
+    {
+        var teamDto = new TeamDto
+        {
+            Name = "Test Team 3",
+            Description = "Test Description",
+            OrganizationName = "Test Team Organization",
+        };
+
+        await _client.PostAsJsonAsync("/api/organization/team", teamDto);
+
+        var teamName = "Test Team 2";
+        var organizationName = "Test Team Organization";
+        var updateTeamDto = new UpdateTeamDto()
+        {
+            Name = "Test Team 3",
+            Description = "Test Description 2",
+        };
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/organization/team/{organizationName}/{teamName}",
+            updateTeamDto
+        );
+
+        var responseBody = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBody?.Success, Is.False);
+            Assert.That(responseBody?.ErrorMessage, Is.EqualTo("Team name is not unique."));
+        });
+    }
+
     private async Task SetupData()
     {
         using var scope = _factory.Services.CreateScope();

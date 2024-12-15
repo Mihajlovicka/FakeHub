@@ -51,7 +51,7 @@ export class ViewTeamComponent {
     return this.team.owner === this.userService.getUserName();
   }
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     const name = this.activatedRoute.snapshot.paramMap.get("organizationName");
     const teamName = this.activatedRoute.snapshot.paramMap.get("teamName");
     if (name && teamName) {
@@ -61,6 +61,8 @@ export class ViewTeamComponent {
           this.team = team;
         },
       });
+    } else {
+      this.router.navigate(["/organization/view", name]);
     }
   }
 }

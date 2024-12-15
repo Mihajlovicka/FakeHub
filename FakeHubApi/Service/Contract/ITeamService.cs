@@ -7,4 +7,5 @@ public interface ITeamService
 {
     Task<ResponseBase> Add(TeamDto model);
     Task<ResponseBase> Get(string organizationName, string teamName);
+    Task<ResponseBase> Update(string organizationName, string teamName, UpdateTeamDto model);
 }

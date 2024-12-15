@@ -7,11 +7,6 @@ namespace FakeHubApi.Repository.Implementation;
 
 public class TeamRepository(AppDbContext context) : CrudRepository<Team>(context), ITeamRepository
 {
-    public Task<Team?> GetByName(string name)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<Team?> GetTeam(string organizationName, string teamName)
     {
         return await context

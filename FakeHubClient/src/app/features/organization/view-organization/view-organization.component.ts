@@ -58,7 +58,7 @@ export class ViewOrganizationComponent {
     this.router.navigate(["/organization/team/add", this.organization.name]);
   }
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     const name = this.activatedRoute.snapshot.paramMap.get("name");
     if (name) {
       this.service.getOrganization(name).subscribe({
