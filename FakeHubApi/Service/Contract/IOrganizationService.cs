@@ -12,4 +12,5 @@ public interface IOrganizationService
     Task<ResponseBase> GetByUser();
     Task<ResponseBase> Search(string name);
     Task<Organization?> GetOrganization(string name);
+    Task<bool> IsLoggedInUserOwner(Organization organization);
 }

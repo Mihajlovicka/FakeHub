@@ -78,4 +78,10 @@ public class OrganizationService(
     {
         return await repositoryManager.OrganizationRepository.GetByName(name);
     }
+
+    public async Task<bool> IsLoggedInUserOwner(Organization organization)
+    {
+        var user = await userContext.GetCurrentUserAsync();
+        return organization?.OwnerId == user.Id;
+    }
 }

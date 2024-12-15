@@ -16,6 +16,7 @@ import { OrganizationsComponent } from './features/organization/organizations/or
 import { ViewOrganizationComponent } from './features/organization/view-organization/view-organization.component';
 import { AddTeamComponent } from './features/team/add-team/add-team.component';
 import { ViewTeamComponent } from './features/team/view-team/view-team.component';
+import { EditTeamComponent } from './features/team/edit-team/edit-team.component';
 
 export const routes: Routes = [
   {
@@ -96,6 +97,10 @@ export const routes: Routes = [
           {
             path: "view/:organizationName/:teamName",
             component: ViewTeamComponent,
+          },
+          {
+            path: "edit/:organizationName/:teamName",
+            component: EditTeamComponent,
           },
         ],
       },

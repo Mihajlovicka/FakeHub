@@ -72,7 +72,7 @@ export class EditOrganizationComponent {
     ]);
   }
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     const name = this.activatedRoute.snapshot.paramMap.get("name");
     if (name) {
       this.service.getOrganization(name).subscribe({

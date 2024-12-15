@@ -16,7 +16,7 @@ export class OrganizationsComponent implements OnInit {
   public readonly organizationService: OrganizationService =
     inject(OrganizationService);
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     const signal = this.organizationService.searchResultsSignal();
     if (signal) {
       this.organizations = signal;

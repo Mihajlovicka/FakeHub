@@ -34,4 +34,19 @@ public class TeamController(ITeamService teamService) : ControllerBase
         }
         return BadRequest(response);
     }
+
+    [HttpPut("{organizationName}/{teamName}")]
+    public async Task<IActionResult> Update(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName,
+        [FromBody] UpdateTeamDto model
+    )
+    {
+        var response = await teamService.Update(organizationName, teamName, model);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }
