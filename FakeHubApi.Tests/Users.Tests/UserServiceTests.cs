@@ -562,4 +562,74 @@ public class UserServiceTests
             Assert.AreEqual(userProfileResponseDto, result.Result);
         });
     }
+    
+    [Test]
+    public async Task GetUserProfileByUsernameAsync_ExceptionInServiceLayer_ReturnsErrorResponse()
+    {
+        const string username = "testUser";
+    
+        // Simulating an unexpected exception in the service layer
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(username))
+            .ThrowsAsync(new Exception("Unexpected error in service layer"));
+
+        var result = await _userService.GetUserProfileByUsernameAsync(username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Unexpected error in service layer"));
+        });
+    }
+
+    [Test]
+    public async Task GetUserProfileByUsernameAsync_SlowRequest_TimeoutOccurs_ReturnsErrorResponse()
+    {
+        const string username = "testUser";
+        var user = new User { UserName = username, Email = "testuser@example.com" };
+
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(username))
+            .ThrowsAsync(new TimeoutException("Operation timed out"));
+
+        var result = await _userService.GetUserProfileByUsernameAsync(username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Operation timed out"));
+        });
+    }
+
+    [Test]
+    public async Task GetUserProfileByUsernameAsync_MapFailure_ReturnsErrorResponse()
+    {
+        const string username = "testUser";
+        var user = new User { UserName = username, Email = "testuser@example.com" };
+
+        // Simulate the mapping failure
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(username))
+            .ReturnsAsync(user);
+        
+        _mapperManagerMock
+            .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
+            .Throws(new Exception("Mapping failed"));
+
+        var result = await _userService.GetUserProfileByUsernameAsync(username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Mapping failed"));
+        });
+    }
+
+    
 }

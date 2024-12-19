@@ -1,6 +1,21 @@
+<div class="search">
+    <form (submit)="search(); $event.preventDefault()">
+        <input
+                type="text"
+                placeholder="Search members..."
+                name="search"
+                class="search-input"
+                autocomplete="off"
+                [(ngModel)]="searchQuery"
+        />
+        <button type="submit" class="search-button">
+            <img src="icons/search.png" width="25rem" height="25rem" />
+        </button>
+    </form>
+</div>
 <div class="users-content-container">
     <div class="users-container">
-        @for (user of users; track user.username) {
+        @for (user of filteredUsers; track user.username) {
         <div class="user-container">
           <div class="user-details-container">
             <div class="link-header">
@@ -10,9 +25,7 @@
         {{ user.email }}
         </div>
         <div class="link-footer">
-          <span class="footer-text"
-            >Created at: {{ user.createdAt | date : "mediumDate" }}</span
-          >
+          <span class="footer-text">Created at: {{ user.createdAt | date : "mediumDate" }}</span>
         </div>
       </div>
     </div>
