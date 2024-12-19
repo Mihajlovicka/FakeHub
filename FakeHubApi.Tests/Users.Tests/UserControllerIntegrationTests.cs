@@ -21,6 +21,7 @@ public class UserControllerIntegrationTests
     private CustomWebApplicationFactory _factory;
     private string _regularUserToken;
     private string _adminToken;
+    private string _superAdminToken;
 
     [OneTimeSetUp]
     public async Task Setup()
@@ -131,7 +132,7 @@ public class UserControllerIntegrationTests
     [Test, Order(3)]
     public async Task GetUserProfileByUsername_ValidUsername_ReturnsOk()
     {
-        var username = "test@example.com";
+        const string username = "test@example.com";
 
         var response = await _client.GetAsync($"/api/users/{username}");
         response.EnsureSuccessStatusCode();
@@ -159,7 +160,7 @@ public class UserControllerIntegrationTests
     [Test, Order(4)]
     public async Task GetUserProfileByUsername_ValidUsernameWithDifferentCase_ReturnsOk()
     {
-        var username = "TEST@EXAMPLE.COM";
+        const string username = "TEST@EXAMPLE.COM";
 
         var response = await _client.GetAsync($"/api/users/{username}");
         response.EnsureSuccessStatusCode();
@@ -186,7 +187,7 @@ public class UserControllerIntegrationTests
     [Test, Order(5)]
     public async Task GetUserProfileByUsername_NonExistentUsername_ReturnsNotFound()
     {
-        var username = "nonexistentuser";
+        const string username = "nonexistentuser";
 
         var response = await _client.GetAsync($"/api/users/{username}");
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
@@ -367,6 +368,81 @@ public class UserControllerIntegrationTests
         Assert.That(changeUserBadgeResponseDtoObject?.Badge, Is.EqualTo(changeUserBadgeRequestDto.Badge));
     }
 
+    [Test, Order(19)]
+    public async Task GetUsersByQuery_ValidQuery_ReturnsOk()
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var response = await _client.GetAsync("/api/users?query=test");
+
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+        });
+    }
+    
+    [Test, Order(20)]
+    public async Task GetAdminsByQuery_ValidQuery_ReturnsOk()
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _superAdminToken);
+
+        var response = await _client.GetAsync("/api/users/admins?query=test");
+
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+        });
+    }
+    
+    [Test, Order(21)]
+    public async Task GetUsersByQuery_UnauthorizedAccess_ReturnsUnauthorized()
+    {
+        // No token provided
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await _client.GetAsync("/api/users?query=test");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        });
+    }
+
+    [Test, Order(22)]
+    public async Task GetAdminsByQuery_InvalidRole_ReturnsForbidden()
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+        var response = await _client.GetAsync("/api/users/admins?query=test");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        });
+    }
+    
+    [Test, Order(23)]
+    public async Task GetAdminsByQuery_InvalidRole_ReturnsForbiddenAdmin()
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var response = await _client.GetAsync("/api/users/admins?query=test");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        });
+    }
+
+    
     private async Task SetupDbData()
     {
         using var scope = _factory.Services.CreateScope();
@@ -389,7 +465,7 @@ public class UserControllerIntegrationTests
             await roleManager.CreateAsync(new IdentityRole<int> { Name = "USER" });
         }
 
-        var user = new User
+        var user = new User //superadmin
         {
             Email = "test@example.com",
             UserName = "test@example.com",
@@ -397,7 +473,7 @@ public class UserControllerIntegrationTests
             SecurityStamp = "Q7++M6z5N+Tly9yfor8HhJxhg52bNmZ"
         };
         
-        var user2 = new User
+        var user2 = new User //admin
         {
             Email = "teest@example.com",
             UserName = "teest@example.com",
@@ -424,26 +500,6 @@ public class UserControllerIntegrationTests
         await db.Users.AddAsync(user3);
         await db.SaveChangesAsync();
         await userManager.AddToRolesAsync(user3, new[] { "USER" });
-    }
-
-    private async Task<string> GetTokenFromSuccessfulUserLogin()
-    {
-        var loginRequest = new LoginRequestDto
-        {
-            Email = "test3@example.com",
-            Password = "Password123!"
-        };
-
-        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
-        loginResponse.EnsureSuccessStatusCode();
-
-
-        var responseObj = await loginResponse.Content.ReadFromJsonAsync<ResponseBase>();
-        var loginResponseDtoString = responseObj?.Result?.ToString() ?? string.Empty;
-
-        var loginResponseDtoObject = JsonConvert.DeserializeObject<LoginResponseDto>(loginResponseDtoString);
-
-        return loginResponseDtoObject?.Token ?? "";
     }
 
     private string ExtractEmailFromJwt(string token)
@@ -476,6 +532,13 @@ public class UserControllerIntegrationTests
             Password = "Password123!"
         };
         _adminToken = await GetTokenFromSuccessfulUserLogin(adminUser);
+        
+        var superAdminUser = new LoginRequestDto
+        {
+            Email = "test@example.com",
+            Password = "Password123!"
+        };
+        _superAdminToken= await GetTokenFromSuccessfulUserLogin(superAdminUser);
     }
     
     private async Task<string> GetTokenFromSuccessfulUserLogin(LoginRequestDto loginRequestDto)

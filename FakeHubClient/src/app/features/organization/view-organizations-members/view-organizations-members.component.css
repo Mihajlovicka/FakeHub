@@ -100,3 +100,40 @@ span.footer-text {
     color: #555;
     margin-top: 20px;
 }
+
+
+.search {
+    display: flex;
+    align-items: center;
+
+    > form {
+        display: flex;
+        width: 20%;
+        margin: 1%;
+        align-items: center;
+    }
+}
+
+.search-input {
+    flex: 1;
+    padding: 10px;
+    height: 2rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin-right: 1%;
+    outline: none;
+}
+
+.search-button {
+    padding-bottom: 5px;
+    height: 2rem;
+    width: 2rem;
+    background-color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}

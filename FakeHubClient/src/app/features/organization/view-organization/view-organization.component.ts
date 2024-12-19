@@ -114,7 +114,7 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
       .addMember(this.organization.name, { usernames: usernames })
       .subscribe((response) => {
         if (response) {
-          this.organization.users?.push(...response);
+          this.organization.users = [...this.organization.users!, ...response];
           this.filterUsers([...this.users$.getValue()]);
         }
       });
