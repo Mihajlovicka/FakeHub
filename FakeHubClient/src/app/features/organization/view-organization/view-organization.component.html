@@ -24,11 +24,14 @@
         <button mat-menu-item (click)="edit()">
           <span>Edit</span>
         </button>
-        <button *ngIf=isOwner() mat-menu-item (click)="addTeam()">
+        <button mat-menu-item (click)="addTeam()">
           <span>Add Team</span>
         </button>
         <button mat-menu-item (click)="addMemberToOrganizationDialog()">
           <span>Add Member</span>
+        </button>
+        <button mat-menu-item (click)="openDeactivateOrganizationModal()">
+          <span>Deactivate organization</span>
         </button>
       </mat-menu>
       }

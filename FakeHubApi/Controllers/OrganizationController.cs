@@ -89,4 +89,16 @@ public class OrganizationController(IOrganizationService organizationService) : 
         }
         return BadRequest(response);
     }
+
+    [HttpDelete("{name}/deactivate")]
+    public async Task<IActionResult> DeactivateOrganization([FromRoute] string name)
+    {
+        var response = await organizationService.DeactivateOrganization(name);
+        
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

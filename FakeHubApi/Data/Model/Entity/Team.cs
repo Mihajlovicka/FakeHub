@@ -12,4 +12,6 @@ public class Team
     [ForeignKey("Organization")]
     public int OrganizationId { get; set; }
     public Organization Organization { get; set; } = new();
+
+    public bool Active { get; set; } = true;
 }

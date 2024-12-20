@@ -13,7 +13,7 @@ public class TeamRepository(AppDbContext context) : CrudRepository<Team>(context
             .Teams.Include(x => x.Organization)
             .ThenInclude(x => x.Owner)
             .FirstOrDefaultAsync(x =>
-                x.Organization.Name == organizationName && x.Name == teamName
+                x.Organization.Name == organizationName && x.Name == teamName && x.Active
             );
     }
 }
