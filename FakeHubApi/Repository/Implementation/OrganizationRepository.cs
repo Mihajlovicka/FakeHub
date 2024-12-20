@@ -14,12 +14,13 @@ public class OrganizationRepository(AppDbContext context)
             .Organizations.Include(x => x.Owner)
             .Include(x => x.Teams)
             .Include(x => x.Users)
-            .FirstOrDefaultAsync(x => x.Name == name);
+            .FirstOrDefaultAsync(x => x.Name == name && x.Active);
 
     public Task<List<Organization>> GetByUser(int userId) =>
         _context
             .Organizations
-            .Where(x => x.OwnerId == userId || x.Users.Any(u => u.Id == userId))
+            .Where(x => x.Active && 
+                        (x.OwnerId == userId || x.Users.Any(u => u.Id == userId)))
             .Include(x => x.Owner)
             .Include(x => x.Users)
             .ToListAsync();
@@ -28,6 +29,7 @@ public class OrganizationRepository(AppDbContext context)
         _context
             .Organizations
             .Where(x =>
+                x.Active &&
                 EF.Functions.Like(x.Name, $"%{query}%") &&
                 (x.OwnerId == userId || x.Users.Any(u => u.Id == userId))
             )

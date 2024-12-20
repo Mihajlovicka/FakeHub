@@ -15,4 +15,5 @@ public interface IOrganizationService
     Task<bool> IsLoggedInUserOwner(Organization organization);
     Task<ResponseBase> AddUser(string name, List<string> usernames);
     Task<ResponseBase> DeleteUser(string name, string username);
+    Task<ResponseBase> DeactivateOrganization(string name);
 }

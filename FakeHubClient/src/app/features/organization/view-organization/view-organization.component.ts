@@ -18,6 +18,9 @@ import { BehaviorSubject, firstValueFrom, lastValueFrom, Subscription, take } fr
 import { UserProfileResponseDto } from "../../../core/model/user";
 import { AddMemberToOrganizationModalComponent } from "../add-member-to-organization-modal/add-member-to-organization-modal.component";
 import {ViewOrganizationsMembersComponent} from "../view-organizations-members/view-organizations-members.component";
+import {
+  ConfirmationDialogComponent
+} from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
 
 @Component({
   selector: "app-view-organization",
@@ -64,6 +67,24 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
 
   public addTeam(): void {
     this.router.navigate(["/organization/team/add", this.organization.name]);
+  }
+
+  public openDeactivateOrganizationModal(): void {
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: "Deactivate organization",
+        description: "Would you like to deactivate \"" + this.organization.name + "\" organization?"
+      },
+    });
+    dialogRef.afterClosed().subscribe((isConfirmed) => {
+      if (isConfirmed) {
+         this.service.deactivateOrganization(this.organization.name).subscribe(
+             _ => {
+               this.router.navigate(["/organizations"]);
+             }
+         )
+      }
+    });
   }
 
   public addMemberToOrganizationDialog(): void {

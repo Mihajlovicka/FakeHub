@@ -47,6 +47,36 @@ public class OrganizationService(
         return ResponseBase.SuccessResponse();
     }
 
+    public async Task<ResponseBase> DeactivateOrganization(string organizationName)
+    {
+        var user = await userContext.GetCurrentUserAsync();
+
+        var existingOrganization = await GetOrganization(organizationName);
+        if (existingOrganization == null)
+            return ResponseBase.ErrorResponse("Organization not found.");
+
+        if (existingOrganization.OwnerId != user.Id)
+            return ResponseBase.ErrorResponse(
+                "You are not authorized to update this organization."
+            );
+
+        existingOrganization.Active = false;
+        foreach (var existingOrganizationTeam in existingOrganization.Teams)
+        {
+            existingOrganizationTeam.Active = false;
+            //add deactivate on members team relation
+        }
+        
+        foreach (var existingOrganizationUserOrganization in existingOrganization.UserOrganizations)
+        {
+            existingOrganizationUserOrganization.Active = false;
+        }
+        
+        
+        await repositoryManager.OrganizationRepository.UpdateAsync(existingOrganization);
+        return ResponseBase.SuccessResponse();
+    }
+
     public async Task<ResponseBase> GetByName(string name)
     {
         var organization = await GetOrganization(name);
@@ -113,7 +143,12 @@ public class OrganizationService(
 
             foreach (var user in usersToAdd)
             {
-                organization.Users.Add(user);
+                //organization.Users.Add(user);
+                organization.UserOrganizations.Add(new UserOrganization()
+                {
+                    User = user,
+                    Organization = organization
+                });
                 var responseUser = mapperManager.UserToUserDtoMapper.Map(
                 user
             );
@@ -153,6 +188,13 @@ public class OrganizationService(
             }
 
             organization.Users.Remove(user);
+
+            var deleteRelation = organization.UserOrganizations.FirstOrDefault(x => x.UserId == user.Id
+                && x.OrganizationId == organization.Id
+            );
+
+            if(deleteRelation != null) organization.UserOrganizations.Remove(deleteRelation);
+            
             await repositoryManager.OrganizationRepository.UpdateAsync(organization);
 
             var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
