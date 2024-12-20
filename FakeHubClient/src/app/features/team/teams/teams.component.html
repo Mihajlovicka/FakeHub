@@ -6,6 +6,10 @@
         <div class="link-header">
           <span class="ellipsis">{{ team.name }}</span>
         </div>
+        @if(isOwner){
+      <button class="delete-button" (click)="openDeleteTeamModal(team)">
+          <mat-icon>delete</mat-icon></button>
+      }
         <div class="multi-line-ellipsis">
           {{ team.description.substring(0, 50)
           }}{{ team.description.length > 50 ? "..." : "" }}

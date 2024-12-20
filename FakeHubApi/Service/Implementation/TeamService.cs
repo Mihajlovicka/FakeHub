@@ -63,6 +63,40 @@ public class TeamService(
         return response;
     }
 
+    public async Task<ResponseBase> DeleteTeamFromOrganization(string organizationName, string teamName)
+    {
+        var response = ResponseBase.SuccessResponse();
+        var organization = await organizationService.GetOrganization(organizationName);
+        var team = organization?.Teams.FirstOrDefault(x => x.Name == teamName);
+        
+        var (success, errorMessage) = await ValidateTeamFromOrganization(organization, team);
+        if (!success)
+            response = ResponseBase.ErrorResponse(errorMessage);
+        else
+        {
+            organization!.Teams.Remove(team!);
+            await repositoryManager.TeamRepository.UpdateAsync(team!);
+        }
+        return response;
+    }
+
+    private async Task<(bool, string)> ValidateTeamFromOrganization(Organization? organization, Team? team)
+    {
+        var response = (true, string.Empty);
+        if (organization == null)
+        {
+            response = (false, "Organization not found.");
+        }
+        else if (!await organizationService.IsLoggedInUserOwner(organization))
+            response = (false, "You are not the owner of this organization.");
+        else if (team == null)
+        {
+            response = (false, "Team not found in organization.");
+        }
+
+        return response;
+    }
+
     private async Task<(bool, string)> ValidateNewTeam(TeamDto model, Organization? organization)
     {
         var response = (true, string.Empty);
