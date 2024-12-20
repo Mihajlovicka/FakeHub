@@ -17,7 +17,7 @@ export class TeamService {
   }
 
   public getTeam(organizationName: string, teamName: string): Observable<Team> {
-    return this.http.get<Team>(`${Path.Team}/${organizationName}/${teamName}`);
+    return this.http.get<Team>(`${Path.Team}${organizationName}/${teamName}`);
   }
 
   public editTeam(

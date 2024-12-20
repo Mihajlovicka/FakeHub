@@ -49,4 +49,18 @@ public class TeamController(ITeamService teamService) : ControllerBase
         }
         return BadRequest(response);
     }
+    
+    [HttpDelete("{organizationName}/{teamName}")]
+    public async Task<IActionResult> DeleteTeamFromOrganization(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName
+    )
+    {
+        var response = await teamService.DeleteTeamFromOrganization(organizationName, teamName);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

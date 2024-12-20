@@ -59,7 +59,7 @@
   </mat-tab>
   <mat-tab label="Teams">
     <ng-template matTabContent>
-      <app-teams [teams]="organization.teams || []"></app-teams>
+      <app-teams (deleteTeamEvent)="OnTeamDeleted($event)" [teams]="organization.teams || []" [organizationName]="organization.name" [isOwner]="isOwner()"></app-teams>
     </ng-template>
   </mat-tab>
 </mat-tab-group>

@@ -2,7 +2,7 @@ import { Component, Input, OnInit, OnChanges, SimpleChanges, inject, Output, Eve
 import { CommonModule } from '@angular/common';
 import { UserProfileResponseDto } from '../../../core/model/user';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import {MatIconModule} from '@angular/material/icon';
+import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmationDialogComponent } from '../../../shared/components/confirmation-dialog/confirmation-dialog.component';
 import { OrganizationService } from '../../../core/services/organization.service';

@@ -37,3 +37,7 @@ export function deleteOrganizationMember(organizationName: string, username: str
 export function deactivateOrganization(organizationName: string) : string {
   return organizationApi + organizationName + "/deactivate";
 }
+
+export function deleteTeamFromOrganization(organizationName: string, teamName: string) : string {
+  return teamApi + organizationName + "/" + teamName;
+}

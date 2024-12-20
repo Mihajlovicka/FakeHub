@@ -1,11 +1,18 @@
 import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
 import { BehaviorSubject, Observable } from "rxjs";
-import {addMemberToOrganizationPath, deactivateOrganization, deleteOrganizationMember, Path} from "../constant/path";
+import {
+  addMemberToOrganizationPath,
+  deactivateOrganization,
+  deleteOrganizationMember,
+  deleteTeamFromOrganization,
+  Path
+} from "../constant/path";
 import { ServiceResponse } from "../model/service-response";
 import { Organization } from "../model/organization";
 import { AddMemberToOrganizationRequest } from "../model/add-member-to-organization-request";
 import { UserProfileResponseDto } from "../model/user";
+import {Team} from "../model/team";
 
 @Injectable({
   providedIn: "root",
@@ -57,5 +64,10 @@ export class OrganizationService {
   public deactivateOrganization(organizationName: string): Observable<boolean> {
     const deactivateOrganizationApi = deactivateOrganization(organizationName);
     return this.http.delete<boolean>(deactivateOrganizationApi);
+  }
+
+  public deleteTeam(organizationName: string, teamName: string): Observable<boolean> {
+    const deleteTeamFromOrganizationApi = deleteTeamFromOrganization(organizationName, teamName);
+    return this.http.delete<boolean>(deleteTeamFromOrganizationApi);
   }
 }

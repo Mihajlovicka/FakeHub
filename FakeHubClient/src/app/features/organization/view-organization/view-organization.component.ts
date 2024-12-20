@@ -21,6 +21,7 @@ import {ViewOrganizationsMembersComponent} from "../view-organizations-members/v
 import {
   ConfirmationDialogComponent
 } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
+import {Team} from "../../../core/model/team";
 
 @Component({
   selector: "app-view-organization",
@@ -137,6 +138,15 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     if(deletedUserIndex >= 0) {
       this.organization.users?.splice(deletedUserIndex, 1);
       this.filterUsers([...this.users$.getValue(), deletedUser]);
+    }
+  }
+
+  public OnTeamDeleted(deletedTeam: Team): void {
+    if(deletedTeam == null) return;
+
+    const deletedTeamIndex = this.organization.teams?.findIndex(u => u.name == deletedTeam.name) ?? -1;
+    if(deletedTeamIndex >= 0) {
+      this.organization.teams?.splice(deletedTeamIndex, 1);
     }
   }
 
