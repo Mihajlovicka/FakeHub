@@ -1,5 +1,4 @@
 ﻿using FakeHubApi.Model.Dto;
-using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Authorization;

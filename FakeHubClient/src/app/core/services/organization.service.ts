@@ -6,13 +6,12 @@ import {
   deactivateOrganization,
   deleteOrganizationMember,
   deleteTeamFromOrganization,
-  Path
+  Path,
 } from "../constant/path";
 import { ServiceResponse } from "../model/service-response";
 import { Organization } from "../model/organization";
-import { AddMemberToOrganizationRequest } from "../model/add-member-to-organization-request";
+import { AddMembersRequest } from "../model/add-member-to-organization-request";
 import { UserProfileResponseDto } from "../model/user";
-import {Team} from "../model/team";
 
 @Injectable({
   providedIn: "root",
@@ -52,13 +51,21 @@ export class OrganizationService {
     return this.http.get<Organization[]>(Path.OrganizationByUser);
   }
 
-  public addMember(organizationName: string, data: AddMemberToOrganizationRequest): Observable<UserProfileResponseDto[] | null> {
+  public addMember(
+    organizationName: string,
+    data: AddMembersRequest
+  ): Observable<UserProfileResponseDto[] | null> {
     const addMemberUrl = addMemberToOrganizationPath(organizationName);
     return this.http.post<UserProfileResponseDto[]>(addMemberUrl, data);
   }
 
-  public deleteMember(organizationName: string, username: string): Observable<UserProfileResponseDto | null> {
-    return this.http.delete<UserProfileResponseDto>(deleteOrganizationMember(organizationName, username));
+  public deleteMember(
+    organizationName: string,
+    username: string
+  ): Observable<UserProfileResponseDto | null> {
+    return this.http.delete<UserProfileResponseDto>(
+      deleteOrganizationMember(organizationName, username)
+    );
   }
 
   public deactivateOrganization(organizationName: string): Observable<boolean> {
@@ -66,8 +73,26 @@ export class OrganizationService {
     return this.http.delete<boolean>(deactivateOrganizationApi);
   }
 
-  public deleteTeam(organizationName: string, teamName: string): Observable<boolean> {
-    const deleteTeamFromOrganizationApi = deleteTeamFromOrganization(organizationName, teamName);
+  public deleteTeam(
+    organizationName: string,
+    teamName: string
+  ): Observable<boolean> {
+    const deleteTeamFromOrganizationApi = deleteTeamFromOrganization(
+      organizationName,
+      teamName
+    );
     return this.http.delete<boolean>(deleteTeamFromOrganizationApi);
+  }
+
+  public filterMembers(
+    organizationName: string,
+    query: string
+  ): Observable<UserProfileResponseDto[]> {
+    return this.http.get<UserProfileResponseDto[]>(
+      `${Path.Organization}${organizationName}/users`,
+      {
+        params: { query },
+      }
+    );
   }
 }

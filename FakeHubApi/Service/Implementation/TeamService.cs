@@ -12,7 +12,7 @@ public class TeamService(
     IOrganizationService organizationService,
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
-    IUserContextService userContextService
+    IUserService userService
 ) : ITeamService
 {
     public async Task<ResponseBase> Add(TeamDto model)
@@ -39,6 +39,7 @@ public class TeamService(
             return ResponseBase.ErrorResponse("Team not found.");
         var teamDto = mapperManager.TeamDtoToTeamMapper.ReverseMap(team);
         teamDto.Owner = team.Organization.Owner.UserName!;
+        teamDto.Users = team.Users.Select(mapperManager.UserToUserDtoMapper.Map);
         return ResponseBase.SuccessResponse(teamDto);
     }
 
@@ -63,12 +64,15 @@ public class TeamService(
         return response;
     }
 
-    public async Task<ResponseBase> DeleteTeamFromOrganization(string organizationName, string teamName)
+    public async Task<ResponseBase> DeleteTeamFromOrganization(
+        string organizationName,
+        string teamName
+    )
     {
         var response = ResponseBase.SuccessResponse();
         var organization = await organizationService.GetOrganization(organizationName);
         var team = organization?.Teams.FirstOrDefault(x => x.Name == teamName);
-        
+
         var (success, errorMessage) = await ValidateTeamFromOrganization(organization, team);
         if (!success)
             response = ResponseBase.ErrorResponse(errorMessage);
@@ -80,7 +84,47 @@ public class TeamService(
         return response;
     }
 
-    private async Task<(bool, string)> ValidateTeamFromOrganization(Organization? organization, Team? team)
+    public async Task<ResponseBase> AddUser(
+        string organizationName,
+        string teamName,
+        List<string> usernames
+    )
+    {
+        var response = ResponseBase.SuccessResponse();
+        var team = await repositoryManager.TeamRepository.GetTeam(organizationName, teamName);
+        var (success, errorMessage) = ValidateTeamExists(team);
+        if (!success)
+            response = ResponseBase.ErrorResponse(errorMessage);
+        else
+        {
+            var foundUsers = userService.GetUsers(usernames);
+            var addedUsers = new List<User>();
+            (success, errorMessage) = await ValidateAddMemberToTeam(team!, foundUsers);
+            if (!success)
+                response = ResponseBase.ErrorResponse(errorMessage);
+            else
+            {
+                foreach (var user in foundUsers)
+                {
+                    if (
+                        team!.Organization.Owner.UserName == user.UserName
+                        || !team.Organization.Users.Any(x => x.UserName == user.UserName)
+                    )
+                        continue;
+                    team!.Users.Add(user);
+                    addedUsers.Add(user);
+                }
+                await repositoryManager.TeamRepository.UpdateAsync(team!);
+                response.Result = addedUsers.Select(mapperManager.UserToUserDtoMapper.Map);
+            }
+        }
+        return response;
+    }
+
+    private async Task<(bool, string)> ValidateTeamFromOrganization(
+        Organization? organization,
+        Team? team
+    )
     {
         var response = (true, string.Empty);
         if (organization == null)
@@ -93,7 +137,24 @@ public class TeamService(
         {
             response = (false, "Team not found in organization.");
         }
+        return response;
+    }
 
+    private async Task<(bool, string)> ValidateAddMemberToTeam(Team team, List<User> users)
+    {
+        var response = (true, string.Empty);
+        if (users.Count == 0)
+            response = (false, "No users found.");
+        else if (!await organizationService.IsLoggedInUserOwner(team.Organization))
+            response = (false, "You are not the owner of this organization.");
+        return response;
+    }
+
+    private (bool, string) ValidateTeamExists(Team? team)
+    {
+        var response = (true, string.Empty);
+        if (team == null)
+            response = (false, "Team not found.");
         return response;
     }
 

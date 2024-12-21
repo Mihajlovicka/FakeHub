@@ -10,5 +10,7 @@ public interface IUserService
     Task<ResponseBase> ChangePassword(ChangePasswordRequestDto changePasswordRequestDto);
     Task<ResponseBase> ChangeEmailAsync(ChangeEmailRequestDto changeEmailRequestDto);
     Task<ResponseBase> ChangeUserBadgeAsync(ChangeUserBadgeRequestDto changeUserBadgeRequestDto);
-    Task<ResponseBase> GetUsersByQuery(string query, Role role);
+    Task<ResponseBase> GetUsersByQueryGeneralSearch(string? query, Role role);
+    Task<ResponseBase> GetUsersByQuery(string? query, List<User> users);
+    List<User> GetUsers(List<string> usernames);
 }

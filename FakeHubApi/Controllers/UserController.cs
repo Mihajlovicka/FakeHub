@@ -14,15 +14,14 @@ public class UserController(IUserService userService) : ControllerBase
     [HttpGet("admins")]
     public async Task<IActionResult> GetAdminsByQuery([FromQuery] string? query)
     {
-        var response = await userService.GetUsersByQuery(query, Role.ADMIN);
+        var response = await userService.GetUsersByQueryGeneralSearch(query, Role.ADMIN);
 
         return Ok(response);
     }
-    
+
     [Authorize(Roles = "USER,ADMIN,SUPERADMIN"), HttpGet("{username}")]
     public async Task<IActionResult> GetUserProfileByUsername(string username)
     {
-
         var response = await userService.GetUserProfileByUsernameAsync(username);
 
         if (response.Success)
@@ -34,7 +33,9 @@ public class UserController(IUserService userService) : ControllerBase
     }
 
     [Authorize(Roles = "USER,ADMIN,SUPERADMIN"), HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto changePasswordRequestDto)
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequestDto changePasswordRequestDto
+    )
     {
         var response = await userService.ChangePassword(changePasswordRequestDto);
         if (response.Success)
@@ -60,7 +61,9 @@ public class UserController(IUserService userService) : ControllerBase
 
     [Authorize(Roles = "ADMIN,SUPERADMIN")]
     [HttpPost("change-user-badge")]
-    public async Task<IActionResult> ChangeUserBadge(ChangeUserBadgeRequestDto changeUserBadgeRequestDto)
+    public async Task<IActionResult> ChangeUserBadge(
+        ChangeUserBadgeRequestDto changeUserBadgeRequestDto
+    )
     {
         var response = await userService.ChangeUserBadgeAsync(changeUserBadgeRequestDto);
 
@@ -76,7 +79,7 @@ public class UserController(IUserService userService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetUsersByQuery([FromQuery] string? query)
     {
-        var response = await userService.GetUsersByQuery(query, Role.USER);
+        var response = await userService.GetUsersByQueryGeneralSearch(query, Role.USER);
 
         return Ok(response);
     }

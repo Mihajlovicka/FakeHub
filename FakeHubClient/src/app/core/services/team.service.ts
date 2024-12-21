@@ -5,6 +5,8 @@ import { ServiceResponse } from "../model/service-response";
 import { Organization } from "../model/organization";
 import { Team } from "../model/team";
 import { Path } from "../constant/path";
+import { AddMembersRequest } from "../model/add-member-to-organization-request";
+import { UserProfileResponseDto } from "../model/user";
 
 @Injectable({
   providedIn: "root",
@@ -26,8 +28,19 @@ export class TeamService {
     team: Team
   ): Observable<any | null> {
     return this.http.put<ServiceResponse>(
-      `${Path.Team}/${organizationName}/${teamName}`,
+      `${Path.Team}${organizationName}/${teamName}`,
       team
+    );
+  }
+
+  public addMember(
+    organizationName: string,
+    teamName: string,
+    data: AddMembersRequest
+  ): Observable<UserProfileResponseDto[] | null> {
+    return this.http.put<UserProfileResponseDto[]>(
+      `${Path.Team}${organizationName}/${teamName}/add-user`,
+      data
     );
   }
 }

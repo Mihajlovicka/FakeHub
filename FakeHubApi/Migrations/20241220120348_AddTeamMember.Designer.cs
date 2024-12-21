@@ -3,6 +3,7 @@ using System;
 using FakeHubApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FakeHubApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241220120348_AddTeamMember")]
+    partial class AddTeamMember
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -24,9 +27,6 @@ namespace FakeHubApi.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -59,9 +59,6 @@ namespace FakeHubApi.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<bool>("Active")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -74,9 +71,6 @@ namespace FakeHubApi.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<int>("OrganizationId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TeamRole")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -155,24 +149,6 @@ namespace FakeHubApi.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
-                });
-
-            modelBuilder.Entity("FakeHubApi.Model.Entity.UserOrganization", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("OrganizationId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("tinyint(1)");
-
-                    b.HasKey("UserId", "OrganizationId");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.ToTable("UserOrganizations");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<int>", b =>
@@ -373,25 +349,6 @@ namespace FakeHubApi.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("FakeHubApi.Model.Entity.UserOrganization", b =>
-                {
-                    b.HasOne("FakeHubApi.Model.Entity.Organization", "Organization")
-                        .WithMany("UserOrganizations")
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("FakeHubApi.Model.Entity.User", "User")
-                        .WithMany("UserOrganizations")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<int>", null)
@@ -450,8 +407,12 @@ namespace FakeHubApi.Migrations
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                    b.Navigation("Teams");  
-                    b.Navigation("UserOrganizations");
+
+                    b.HasOne("FakeHubApi.Model.Entity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("UserTeam", b =>
@@ -477,8 +438,6 @@ namespace FakeHubApi.Migrations
             modelBuilder.Entity("FakeHubApi.Model.Entity.User", b =>
                 {
                     b.Navigation("OwnedOrganizations");
-
-                    b.Navigation("UserOrganizations");
                 });
 #pragma warning restore 612, 618
         }

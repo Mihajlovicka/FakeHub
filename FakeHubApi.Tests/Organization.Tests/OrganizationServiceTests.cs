@@ -17,6 +17,8 @@ public class OrganizationServiceTests
     private Mock<IUserContextService> _userContextServiceMock;
     private Mock<UserManager<User>> _userManagerMock;
 
+    private Mock<IUserService> _userServiceMock;
+
     private Mock<ICrudRepository<Model.Entity.Organization>> _organizationRepositoryMock;
 
     [SetUp]
@@ -26,24 +28,26 @@ public class OrganizationServiceTests
         _repositoryManagerMock = new Mock<IRepositoryManager>();
         _userContextServiceMock = new Mock<IUserContextService>();
         _organizationRepositoryMock = new Mock<ICrudRepository<Model.Entity.Organization>>();
+        _userServiceMock = new Mock<IUserService>();
 
         _userManagerMock = new Mock<UserManager<User>>(
-           new Mock<IUserStore<User>>().Object,
-           null,
-           null,
-           null,
-           null,
-           null,
-           null,
-           null,
-           null
-       );
+            new Mock<IUserStore<User>>().Object,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
 
         _organizationService = new OrganizationService(
             _userManagerMock.Object,
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
-            _userContextServiceMock.Object
+            _userContextServiceMock.Object,
+            _userServiceMock.Object
         );
     }
 
@@ -365,20 +369,14 @@ public class OrganizationServiceTests
         {
             Name = orgName,
             Owner = new User { UserName = "ownerUser" },
-            Users =
-            [
-                new User { UserName = "user1" },
-                new User { UserName = "user2" }
-            ]
+            Users = [new User { UserName = "user1" }, new User { UserName = "user2" }],
         };
 
         _repositoryManagerMock
             .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
             .ReturnsAsync(organization);
 
-        _userManagerMock
-            .Setup(um => um.Users)
-            .Returns(organization.Users.AsQueryable());
+        _userManagerMock.Setup(um => um.Users).Returns(organization.Users.AsQueryable());
 
         var result = await _organizationService.AddUser(orgName, usernames);
 
@@ -401,7 +399,7 @@ public class OrganizationServiceTests
         {
             Name = orgName,
             Owner = new User { UserName = "ownerUser" },
-            Users = []
+            Users = [],
         };
 
         _repositoryManagerMock
@@ -409,14 +407,12 @@ public class OrganizationServiceTests
             .ReturnsAsync(organization);
 
         var responseUsers = new List<User>
-    {
-        new() { UserName = "user1" },
-        new() { UserName = "user2" }
-    };
+        {
+            new() { UserName = "user1" },
+            new() { UserName = "user2" },
+        };
 
-        _userManagerMock
-            .Setup(um => um.Users)
-            .Returns(responseUsers.AsQueryable());
+        _userManagerMock.Setup(um => um.Users).Returns(responseUsers.AsQueryable());
 
         _mapperManagerMock
             .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
@@ -433,8 +429,10 @@ public class OrganizationServiceTests
             Assert.That(organization.Users.Count, Is.EqualTo(2));
             Assert.That(organization.Users.Select(u => u.UserName), Is.EquivalentTo(usernames));
 
-            _repositoryManagerMock
-                .Verify(rm => rm.OrganizationRepository.UpdateAsync(organization), Times.Once);
+            _repositoryManagerMock.Verify(
+                rm => rm.OrganizationRepository.UpdateAsync(organization),
+                Times.Once
+            );
 
             var responseUsers = result.Result as List<UserDto>;
             Assert.That(responseUsers.Select(r => r.Username), Is.EquivalentTo(usernames));

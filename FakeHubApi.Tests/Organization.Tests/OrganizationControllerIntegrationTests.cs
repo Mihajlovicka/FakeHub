@@ -235,12 +235,15 @@ public class OrganizationControllerIntegrationTests
     public async Task AddUser_AddingOwnerUser_ReturnsBadRequest()
     {
         const string organizationName = "Organization1";
-        var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
+        var addUserToOrganizationRequestDto = new AddMembersDto
         {
-            Usernames = new List<string> { "owner@example.com" }
+            Usernames = new List<string> { "owner@example.com" },
         };
 
-        var response = await _client.PostAsJsonAsync($"/api/organization/{organizationName}/add-user", addUserToOrganizationRequestDto);
+        var response = await _client.PostAsJsonAsync(
+            $"/api/organization/{organizationName}/add-user",
+            addUserToOrganizationRequestDto
+        );
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
 
         Assert.Multiple(() =>
@@ -256,12 +259,15 @@ public class OrganizationControllerIntegrationTests
     public async Task AddUser_ValidRequest_ReturnsOk()
     {
         const string organizationName = "Organization1";
-        var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
+        var addUserToOrganizationRequestDto = new AddMembersDto
         {
-            Usernames = new List<string> { "test@example.com" }
+            Usernames = new List<string> { "test@example.com" },
         };
 
-        var response = await _client.PostAsJsonAsync($"/api/organization/{organizationName}/add-user", addUserToOrganizationRequestDto);
+        var response = await _client.PostAsJsonAsync(
+            $"/api/organization/{organizationName}/add-user",
+            addUserToOrganizationRequestDto
+        );
         response.EnsureSuccessStatusCode();
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
 
@@ -278,12 +284,20 @@ public class OrganizationControllerIntegrationTests
     public async Task AddUser_ListWithInvalidUsers_ReturnsOk()
     {
         const string organizationName = "Organization1";
-        var addUserToOrganizationRequestDto = new AddUserToOrganizationRequestDto
+        var addUserToOrganizationRequestDto = new AddMembersDto
         {
-            Usernames = new List<string> { "owner@example.com", "test@example.com", "testest@example.com" },
+            Usernames = new List<string>
+            {
+                "owner@example.com",
+                "test@example.com",
+                "testest@example.com",
+            },
         };
 
-        var response = await _client.PostAsJsonAsync($"/api/organization/{organizationName}/add-user", addUserToOrganizationRequestDto);
+        var response = await _client.PostAsJsonAsync(
+            $"/api/organization/{organizationName}/add-user",
+            addUserToOrganizationRequestDto
+        );
         response.EnsureSuccessStatusCode();
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
         var responseObjString = responseObj?.Result?.ToString() ?? string.Empty;
@@ -307,7 +321,9 @@ public class OrganizationControllerIntegrationTests
         const string organizationName = "Organization2";
         const string username = "testest@example.com";
 
-        var response = await _client.DeleteAsync($"/api/organization/{organizationName}/delete-user/{username}");
+        var response = await _client.DeleteAsync(
+            $"/api/organization/{organizationName}/delete-user/{username}"
+        );
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
 
         Assert.Multiple(() =>
@@ -325,7 +341,9 @@ public class OrganizationControllerIntegrationTests
         const string organizationName = "Organization1";
         const string username = "testest@example.com";
 
-        var response = await _client.DeleteAsync($"/api/organization/{organizationName}/delete-user/{username}");
+        var response = await _client.DeleteAsync(
+            $"/api/organization/{organizationName}/delete-user/{username}"
+        );
         response.EnsureSuccessStatusCode();
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
         var responseObjString = responseObj?.Result?.ToString() ?? string.Empty;
@@ -356,9 +374,12 @@ public class OrganizationControllerIntegrationTests
         await AddOrganizationsToDB(db, userManager);
     }
 
-    private async Task AddUser(AppDbContext db, UserManager<User> userManager, RoleManager<IdentityRole<int>> roleManager)
+    private async Task AddUser(
+        AppDbContext db,
+        UserManager<User> userManager,
+        RoleManager<IdentityRole<int>> roleManager
+    )
     {
-
         if (!await roleManager.RoleExistsAsync("USER"))
         {
             await roleManager.CreateAsync(new IdentityRole<int> { Name = "USER" });
@@ -409,7 +430,7 @@ public class OrganizationControllerIntegrationTests
             Description = "Organization1 description",
             IsActive = true,
             OwnerId = owner.Id,
-            Owner = owner
+            Owner = owner,
         };
         var organization2 = new Model.Entity.Organization
         {
@@ -418,7 +439,7 @@ public class OrganizationControllerIntegrationTests
             Description = "Organization2 description",
             IsActive = true,
             OwnerId = owner.Id,
-            Owner = owner
+            Owner = owner,
         };
 
         await db.Users.AddAsync(owner);

@@ -1,8 +1,4 @@
-import {
-  Router,
-  ActivatedRoute,
-  RouterModule
-} from "@angular/router";
+import { Router, ActivatedRoute, RouterModule } from "@angular/router";
 import { Component, inject, OnDestroy, OnInit } from "@angular/core";
 import { Organization } from "../../../core/model/organization";
 import { OrganizationService } from "../../../core/services/organization.service";
@@ -14,14 +10,18 @@ import { MatIconModule } from "@angular/material/icon";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatTabsModule } from "@angular/material/tabs";
 import { TeamsComponent } from "../../team/teams/teams.component";
-import { BehaviorSubject, firstValueFrom, lastValueFrom, Subscription, take } from "rxjs";
+import {
+  BehaviorSubject,
+  firstValueFrom,
+  lastValueFrom,
+  Subscription,
+  take,
+} from "rxjs";
 import { UserProfileResponseDto } from "../../../core/model/user";
 import { AddMemberToOrganizationModalComponent } from "../add-member-to-organization-modal/add-member-to-organization-modal.component";
-import {ViewOrganizationsMembersComponent} from "../view-organizations-members/view-organizations-members.component";
-import {
-  ConfirmationDialogComponent
-} from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
-import {Team} from "../../../core/model/team";
+import { ViewOrganizationsMembersComponent } from "../view-organizations-members/view-organizations-members.component";
+import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
+import { Team } from "../../../core/model/team";
 
 @Component({
   selector: "app-view-organization",
@@ -52,7 +52,7 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   public organization: Organization = {
     name: "",
     description: "",
-    imageBase64: ""
+    imageBase64: "",
   };
 
   public isOwner(): boolean {
@@ -74,16 +74,19 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
       data: {
         title: "Deactivate organization",
-        description: "Would you like to deactivate \"" + this.organization.name + "\" organization?"
+        description:
+          'Would you like to deactivate "' +
+          this.organization.name +
+          '" organization?',
       },
     });
     dialogRef.afterClosed().subscribe((isConfirmed) => {
       if (isConfirmed) {
-         this.service.deactivateOrganization(this.organization.name).subscribe(
-             _ => {
-               this.router.navigate(["/organizations"]);
-             }
-         )
+        this.service
+          .deactivateOrganization(this.organization.name)
+          .subscribe((_) => {
+            this.router.navigate(["/organizations"]);
+          });
       }
     });
   }
@@ -104,12 +107,13 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   }
 
   private filterUsers(newUsers: UserProfileResponseDto[]): void {
-    const filteredUsers = newUsers?.filter(
-      (user) =>
-        this.organization.owner !== user.username &&
-        !this.organization.users?.some((u) => u.username === user.username)
-    ) || [];
-  
+    const filteredUsers =
+      newUsers?.filter(
+        (user) =>
+          this.organization.owner !== user.username &&
+          !this.organization.users?.some((u) => u.username === user.username)
+      ) || [];
+
     this.users$.next(filteredUsers);
   }
 
@@ -132,20 +136,25 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   }
 
   public OnUserDeleted(deletedUser: UserProfileResponseDto): void {
-    if(deletedUser == null) return;
+    if (deletedUser == null) return;
 
-    const deletedUserIndex = this.organization.users?.findIndex(u => u.username == deletedUser.username) ?? -1;
-    if(deletedUserIndex >= 0) {
+    const deletedUserIndex =
+      this.organization.users?.findIndex(
+        (u) => u.username == deletedUser.username
+      ) ?? -1;
+    if (deletedUserIndex >= 0) {
       this.organization.users?.splice(deletedUserIndex, 1);
       this.filterUsers([...this.users$.getValue(), deletedUser]);
     }
   }
 
   public OnTeamDeleted(deletedTeam: Team): void {
-    if(deletedTeam == null) return;
+    if (deletedTeam == null) return;
 
-    const deletedTeamIndex = this.organization.teams?.findIndex(u => u.name == deletedTeam.name) ?? -1;
-    if(deletedTeamIndex >= 0) {
+    const deletedTeamIndex =
+      this.organization.teams?.findIndex((u) => u.name == deletedTeam.name) ??
+      -1;
+    if (deletedTeamIndex >= 0) {
       this.organization.teams?.splice(deletedTeamIndex, 1);
     }
   }

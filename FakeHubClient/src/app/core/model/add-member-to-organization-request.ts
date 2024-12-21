@@ -1,3 +1,3 @@
-export interface AddMemberToOrganizationRequest {
-    usernames: string[];
+export interface AddMembersRequest {
+  usernames: string[];
 }

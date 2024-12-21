@@ -36,6 +36,17 @@
           </mat-form-field>
         </div>
 
+        <div class="row">
+          <mat-form-field class="compact-field" appearance="outline">
+            <mat-label>Team Role</mat-label>
+            <mat-select formControlName="teamRole">
+              <mat-option *ngFor="let role of teamRoles" [value]="role">
+                {{ role }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
         <mat-card-actions>
           <button
             mat-raised-button

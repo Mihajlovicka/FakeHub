@@ -33,7 +33,10 @@ public class OrganizationController(IOrganizationService organizationService) : 
     }
 
     [HttpPost("{name}/add-user")]
-    public async Task<IActionResult> AddUser([FromRoute] string name, [FromBody] AddUserToOrganizationRequestDto model)
+    public async Task<IActionResult> AddUser(
+        [FromRoute] string name,
+        [FromBody] AddMembersDto model
+    )
     {
         var response = await organizationService.AddUser(name, model.Usernames);
         if (response.Success)
@@ -44,7 +47,10 @@ public class OrganizationController(IOrganizationService organizationService) : 
     }
 
     [HttpDelete("{name}/delete-user/{username}")]
-    public async Task<IActionResult> DeleteUser([FromRoute] string name, [FromRoute] string username)
+    public async Task<IActionResult> DeleteUser(
+        [FromRoute] string name,
+        [FromRoute] string username
+    )
     {
         var response = await organizationService.DeleteUser(name, username);
         if (response.Success)
@@ -94,11 +100,22 @@ public class OrganizationController(IOrganizationService organizationService) : 
     public async Task<IActionResult> DeactivateOrganization([FromRoute] string name)
     {
         var response = await organizationService.DeactivateOrganization(name);
-        
+
         if (response.Success)
         {
             return Ok(response);
         }
         return BadRequest(response);
+    }
+
+    [HttpGet("{name}/users")]
+    public async Task<IActionResult> GetUsersInOrganizationByQuery(
+        [FromRoute] string name,
+        [FromQuery] string? query
+    )
+    {
+        var response = await organizationService.SearchUsersInOrganization(name, query);
+
+        return Ok(response);
     }
 }

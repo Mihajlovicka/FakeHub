@@ -9,10 +9,10 @@ public class UserToUserDto : BaseMapper<User, UserDto>
     {
         return new UserDto()
         {
-            Username = source?.UserName,
-            Email = source?.Email,
-            CreatedAt = source?.CreatedAt,
-            Badge = source.Badge
+            Username = source.UserName!,
+            Email = source.Email!,
+            CreatedAt = source.CreatedAt,
+            Badge = source.Badge,
         };
     }
 }

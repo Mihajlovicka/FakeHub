@@ -1,0 +1,54 @@
+<h2 mat-dialog-title class="dialog-title">Add member to team</h2>
+<mat-dialog-content class="dialog-content">
+  <div class="search-container">
+    <div class="input-wrapper">
+      <form class="search-form" (submit)="search(); $event.preventDefault()">
+        <input
+          type="text"
+          placeholder="Search Users"
+          name="search"
+          class="search-input"
+          autocomplete="off"
+          [(ngModel)]="searchQuery"
+        />
+        <button type="submit" class="search-button">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  <mat-selection-list #users (selectionChange)="onSelectionChange($event)">
+    <mat-list-option
+      *ngFor="let user of usersData"
+      class="user-option"
+      [value]="user"
+      [selected]="isUserSelected(user)"
+    >
+      <div class="user-info">
+        <span>{{ user.username }}</span>
+        <app-user-badge
+          [userBadge]="user.badge"
+          [showInfo]="false"
+          [iconSize]="'small-icon'"
+        ></app-user-badge>
+      </div>
+    </mat-list-option>
+  </mat-selection-list>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <p>Selected users: {{ selectedUsers.length }}</p>
+  <div class="action-buttons">
+    <button mat-button (click)="onCloseClick()" class="dialog-btn">
+      Close
+    </button>
+    <button
+      mat-button
+      [mat-dialog-close]=""
+      (click)="onSaveClick()"
+      cdkFocusInitial
+      class="dialog-btn save-btn"
+    >
+      Save
+    </button>
+  </div>
+</mat-dialog-actions>
