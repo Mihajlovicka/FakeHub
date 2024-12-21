@@ -13,7 +13,7 @@ public class TeamServiceTests
     private Mock<IMapperManager> _mapperManagerMock;
     private ITeamService _teamService;
     private Mock<IRepositoryManager> _repositoryManagerMock;
-    private Mock<IUserContextService> _userContextServiceMock;
+    private Mock<IUserService> _userServiceMock;
 
     private Mock<IOrganizationService> _organizationServiceMock;
 
@@ -22,14 +22,14 @@ public class TeamServiceTests
     {
         _mapperManagerMock = new Mock<IMapperManager>();
         _repositoryManagerMock = new Mock<IRepositoryManager>();
-        _userContextServiceMock = new Mock<IUserContextService>();
+        _userServiceMock = new Mock<IUserService>();
         _organizationServiceMock = new Mock<IOrganizationService>();
 
         _teamService = new TeamService(
             _organizationServiceMock.Object,
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
-            _userContextServiceMock.Object
+            _userServiceMock.Object
         );
     }
 
@@ -41,6 +41,7 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Organization",
+            TeamRole = TeamRole.ReadOnly.ToString(),
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var organization = new Model.Entity.Organization
@@ -56,6 +57,7 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
         };
 
         _organizationServiceMock
@@ -89,6 +91,7 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Organization",
+            TeamRole = TeamRole.ReadOnly.ToString(),
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var organization = new Model.Entity.Organization
@@ -104,6 +107,7 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
         };
 
         organization.Teams.Add(team);
@@ -138,6 +142,7 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Organization",
+            TeamRole = TeamRole.ReadOnly.ToString(),
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var user2 = new User { Id = 2, UserName = "Test User" };
@@ -154,6 +159,7 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
         };
 
         _organizationServiceMock
@@ -195,6 +201,7 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
         };
 
         organization.Teams.Add(team);
@@ -245,12 +252,14 @@ public class TeamServiceTests
             Name = "Test Team",
             Description = "Test Description",
             Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
         };
         var team2 = new Model.Entity.Team
         {
             Name = "Test Team 2",
             Description = "Test Description",
             Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
         };
 
         organization.Teams.Add(team);
@@ -282,6 +291,121 @@ public class TeamServiceTests
         {
             Assert.That(result.Success, Is.False);
             Assert.That(result.ErrorMessage, Is.EqualTo("Team name is not unique."));
+        });
+    }
+
+    [Test]
+    public async Task AddMember()
+    {
+        var user = new User { Id = 1, UserName = "Test User" };
+        var member = new User { Id = 2, UserName = "Test Member" };
+        var organization = new Model.Entity.Organization
+        {
+            Name = "Test Organization",
+            Description = "Test Description",
+            ImageBase64 = "Test Image Base64",
+            Owner = user,
+            Users = new List<User> { member },
+        };
+
+        var team = new Model.Entity.Team
+        {
+            Name = "Test Team",
+            Description = "Test Description",
+            Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
+        };
+
+        _userServiceMock
+            .Setup(m => m.GetUsers(It.IsAny<List<string>>()))
+            .Returns(new List<User> { member });
+
+        _organizationServiceMock
+            .Setup(m => m.IsLoggedInUserOwner(It.IsAny<Model.Entity.Organization>()))
+            .Returns(Task.FromResult(true));
+
+        _repositoryManagerMock
+            .Setup(m => m.TeamRepository.GetTeam(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.FromResult(team));
+
+        _repositoryManagerMock
+            .Setup(m => m.TeamRepository.UpdateAsync(It.IsAny<Model.Entity.Team>()))
+            .Returns(Task.FromResult(team));
+
+        _mapperManagerMock
+            .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
+            .Returns(new UserDto { Username = "Test Member" });
+
+        var teamName = "Test Team";
+        var organizationName = "Test Organization";
+        var usernames = new List<string> { "Test Member" };
+
+        var result = await _teamService.AddUser(organizationName, teamName, usernames);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            var resultList = ((IEnumerable<UserDto>)result.Result).ToList();
+            Assert.That(resultList, Is.Not.Null);
+            Assert.That(resultList, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task AddMember_MemberNotInOrganization()
+    {
+        var user = new User { Id = 1, UserName = "Test User" };
+        var member = new User { Id = 2, UserName = "Test Member" };
+        var organization = new Model.Entity.Organization
+        {
+            Name = "Test Organization",
+            Description = "Test Description",
+            ImageBase64 = "Test Image Base64",
+            OwnerId = 1,
+        };
+
+        var team = new Model.Entity.Team
+        {
+            Name = "Test Team",
+            Description = "Test Description",
+            Organization = organization,
+            TeamRole = TeamRole.ReadOnly,
+        };
+
+        organization.Teams.Add(team);
+
+        _userServiceMock
+            .Setup(m => m.GetUsers(It.IsAny<List<string>>()))
+            .Returns(new List<User> { member });
+
+        _organizationServiceMock
+            .Setup(m => m.IsLoggedInUserOwner(It.IsAny<Model.Entity.Organization>()))
+            .Returns(Task.FromResult(true));
+
+        _repositoryManagerMock
+            .Setup(m => m.TeamRepository.GetTeam(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.FromResult(team));
+
+        _repositoryManagerMock
+            .Setup(m => m.TeamRepository.UpdateAsync(It.IsAny<Model.Entity.Team>()))
+            .Returns(Task.FromResult(team));
+
+        _mapperManagerMock
+            .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
+            .Returns(new UserDto { Username = "Test Member" });
+
+        var teamName = "Test Team";
+        var organizationName = "Test Organization";
+        var usernames = new List<string> { "Test Member" };
+
+        var result = await _teamService.AddUser(organizationName, teamName, usernames);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            var resultList = ((IEnumerable<UserDto>)result.Result).ToList();
+            Assert.That(resultList, Is.Not.Null);
+            Assert.That(resultList, Has.Count.EqualTo(0));
         });
     }
 }

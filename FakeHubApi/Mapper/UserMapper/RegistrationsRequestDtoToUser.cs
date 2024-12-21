@@ -7,10 +7,6 @@ public class RegistrationsRequestDtoToUser : BaseMapper<RegistrationRequestDto, 
 {
     public override User Map(RegistrationRequestDto source)
     {
-        return new User()
-        {
-            UserName = source.Username,
-            Email = source.Email
-        };
+        return new User() { UserName = source.Username, Email = source.Email };
     }
 }

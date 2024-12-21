@@ -11,7 +11,10 @@ public class TeamRepository(AppDbContext context) : CrudRepository<Team>(context
     {
         return await context
             .Teams.Include(x => x.Organization)
+            .ThenInclude(x => x.Users)
+            .Include(x => x.Organization)
             .ThenInclude(x => x.Owner)
+            .Include(x => x.Users)
             .FirstOrDefaultAsync(x =>
                 x.Organization.Name == organizationName && x.Name == teamName && x.Active
             );

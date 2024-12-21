@@ -48,6 +48,7 @@ public class TeamControllerIntegrationTests
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
+            TeamRole = TeamRole.ReadOnly.ToString(),
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization/team", teamDto);
@@ -69,6 +70,7 @@ public class TeamControllerIntegrationTests
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
+            TeamRole = TeamRole.ReadOnly.ToString(),
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization/team", teamDto);
@@ -96,6 +98,7 @@ public class TeamControllerIntegrationTests
             Name = "Test Team 2",
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
+            TeamRole = TeamRole.ReadOnly.ToString(),
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization/team", teamDto);
@@ -216,6 +219,7 @@ public class TeamControllerIntegrationTests
             Name = "Test Team 3",
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
+            TeamRole = TeamRole.ReadOnly.ToString(),
         };
 
         await _client.PostAsJsonAsync("/api/organization/team", teamDto);
@@ -239,6 +243,57 @@ public class TeamControllerIntegrationTests
         {
             Assert.That(responseBody?.Success, Is.False);
             Assert.That(responseBody?.ErrorMessage, Is.EqualTo("Team name is not unique."));
+        });
+    }
+
+    [Test, Order(9)]
+    public async Task AddMember_MemerNotInOrganization()
+    {
+        var teamName = "Test Team 2";
+        var organizationName = "Test Team Organization";
+        var memberDto = new AddMembersDto
+        {
+            Usernames = new List<string> { "testest@example.com" },
+        };
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/organization/team/{organizationName}/{teamName}/add-user",
+            memberDto
+        );
+        var responseBody = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var responseObjString = responseBody?.Result?.ToString() ?? string.Empty;
+        var responseObjStringObject = JsonConvert.DeserializeObject<UserDto[]>(responseObjString);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBody?.Success, Is.True);
+            Assert.That(responseObjStringObject.Length, Is.EqualTo(0));
+        });
+    }
+
+    [Test, Order(10)]
+    public async Task AddMember()
+    {
+        var teamName = "Test Team 2";
+        var organizationName = "Test Team Organization";
+        var memberDto = new AddMembersDto
+        {
+            Usernames = new List<string> { "testest@example.com" },
+        };
+        await _client.PostAsJsonAsync($"/api/organization/{organizationName}/add-user", memberDto);
+
+        var response = await _client.PutAsJsonAsync(
+            $"/api/organization/team/{organizationName}/{teamName}/add-user",
+            memberDto
+        );
+        var responseBody = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var responseObjString = responseBody?.Result?.ToString() ?? string.Empty;
+        var responseObjStringObject = JsonConvert.DeserializeObject<UserDto[]>(responseObjString);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBody?.Success, Is.True);
+            Assert.That(responseObjStringObject.Length, Is.EqualTo(1));
         });
     }
 

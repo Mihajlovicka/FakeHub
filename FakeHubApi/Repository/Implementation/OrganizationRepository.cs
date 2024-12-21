@@ -18,20 +18,19 @@ public class OrganizationRepository(AppDbContext context)
 
     public Task<List<Organization>> GetByUser(int userId) =>
         _context
-            .Organizations
-            .Where(x => x.Active && 
-                        (x.OwnerId == userId || x.Users.Any(u => u.Id == userId)))
+            .Organizations.Where(x =>
+                x.Active && (x.OwnerId == userId || x.Users.Any(u => u.Id == userId))
+            )
             .Include(x => x.Owner)
             .Include(x => x.Users)
             .ToListAsync();
 
-    public Task<List<Organization>> Search(string query, int userId) =>
+    public Task<List<Organization>> Search(string? query, int userId) =>
         _context
-            .Organizations
-            .Where(x =>
-                x.Active &&
-                EF.Functions.Like(x.Name, $"%{query}%") &&
-                (x.OwnerId == userId || x.Users.Any(u => u.Id == userId))
+            .Organizations.Where(x =>
+                x.Active
+                && (string.IsNullOrEmpty(query) || EF.Functions.Like(x.Name, $"%{query}%"))
+                && (x.OwnerId == userId || x.Users.Any(u => u.Id == userId))
             )
             .Include(x => x.Owner)
             .Include(x => x.Users)

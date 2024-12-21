@@ -108,32 +108,6 @@ export const routes: Routes = [
     ]
   },
   {
-    path: "team",
-    children: [
-      {
-        path: "add/:organizationName",
-        component: AddTeamComponent,
-      },
-      {
-        path: "team",
-        children: [
-          {
-            path: "add/:organizationName",
-            component: AddTeamComponent,
-          },
-          {
-            path: "view/:organizationName/:teamName",
-            component: ViewTeamComponent,
-          },
-          {
-            path: "edit/:organizationName/:teamName",
-            component: EditTeamComponent,
-          },
-        ],
-      }
-    ]
-  },
-  {
     path: 'users',
     component: UsersListViewComponent,
     canActivate: [AuthGuard],

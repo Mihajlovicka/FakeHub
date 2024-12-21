@@ -1,0 +1,145 @@
+::ng-deep .mat-dialog-container,
+::ng-deep .mat-mdc-dialog-surface {
+  max-width: 100%;
+  width: 50rem;
+  height: 40rem;
+  padding: 10px;
+  box-sizing: border-box;
+}
+  
+  ::ng-deep .dialog-title {
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  ::ng-deep .dialog-content {
+    text-align: center;
+  }
+  
+  ::ng-deep .dropdown {
+    width: 100%;
+  }
+  
+  ::ng-deep .form-field {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .mat-mdc-dialog-actions {
+    gap: 0.75rem;
+  }
+
+::ng-deep .dialog-btn {
+    height: 36px;
+    width: 64px;
+    border: none;
+    background: transparent;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+  
+  ::ng-deep .save-btn {
+    background: lightgray;
+  }
+  
+  ::ng-deep .dialog-btn:not(.save-btn):hover {
+    background-color: #F5F5F5;
+  }
+  
+  ::ng-deep .save-btn:hover {
+    background-color: lightgray;
+  }
+  
+  .user-option {
+    text-align: start;
+    display: flex;
+    align-items: center;
+  }
+
+  .user-option mat-icon {
+    font-size: 16px !important;
+  }
+  
+  .user-info {
+    display: flex;
+    gap: 0.5rem; 
+    align-items: center; 
+  }
+
+  mat-list-option app-user-badge {
+    font-size: 0.8rem;
+  }
+  
+  mat-list-option app-user-badge mat-icon {
+    font-size: 10px;
+    width: 10px !important;
+    height: 10px !important;
+  }
+
+  .search-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .search-form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .search-button {
+    width: 2rem;
+    border: none;
+    background: transparent;
+  }
+  
+  .input-wrapper {
+    position: relative;
+    width: 17rem;
+  }
+  
+  .input-wrapper input {
+    width: 100%;
+    padding: 5px;
+    padding-right: 30px;
+    font-size: 0.9rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  
+  .input-wrapper .search-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #7e88d3;
+    cursor: pointer;
+  }
+  
+  .input-wrapper .search-icon:hover {
+    color: var(--primary-color);
+  }
+
+  .action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  mat-dialog-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+  }
+
+  ::ng-deep .mat-mdc-list-option .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+  }
+  
+  
+  
+  

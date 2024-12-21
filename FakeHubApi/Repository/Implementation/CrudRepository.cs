@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FakeHubApi.Repository.Implementation;
 
-public class CrudRepository<T> : ICrudRepository<T> where T : class
+public class CrudRepository<T> : ICrudRepository<T>
+    where T : class
 {
     protected readonly AppDbContext _context;
     protected readonly DbSet<T> _dbSet;
@@ -16,7 +17,8 @@ public class CrudRepository<T> : ICrudRepository<T> where T : class
     }
 
     public async Task<IEnumerable<T>> GetAllAsync() => await _dbSet.ToListAsync();
-    public async Task<T> GetByIdAsync(int id) => await _dbSet.FindAsync(id);
+
+    public async Task<T?> GetByIdAsync(int id) => await _dbSet.FindAsync(id);
 
     public async Task AddAsync(T entity)
     {
@@ -33,7 +35,8 @@ public class CrudRepository<T> : ICrudRepository<T> where T : class
     public async Task DeleteAsync(int id)
     {
         var entity = await GetByIdAsync(id);
-        if (entity == null) return;
+        if (entity == null)
+            return;
         _dbSet.Remove(entity);
         await _context.SaveChangesAsync();
     }

@@ -49,7 +49,7 @@ public class TeamController(ITeamService teamService) : ControllerBase
         }
         return BadRequest(response);
     }
-    
+
     [HttpDelete("{organizationName}/{teamName}")]
     public async Task<IActionResult> DeleteTeamFromOrganization(
         [FromRoute] string organizationName,
@@ -57,6 +57,21 @@ public class TeamController(ITeamService teamService) : ControllerBase
     )
     {
         var response = await teamService.DeleteTeamFromOrganization(organizationName, teamName);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpPut("{organizationName}/{teamName}/add-user")]
+    public async Task<IActionResult> AddUser(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName,
+        [FromBody] AddMembersDto model
+    )
+    {
+        var response = await teamService.AddUser(organizationName, teamName, model.Usernames);
         if (response.Success)
         {
             return Ok(response);

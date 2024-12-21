@@ -67,6 +67,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                     .WithMany(u => u.UserOrganizations)
                     .HasForeignKey(uo => uo.UserId)
             );
+
+        modelBuilder
+            .Entity<Team>()
+            .HasMany(t => t.Users)
+            .WithMany()
+            .UsingEntity<Dictionary<string, object>>(
+                "UserTeam",
+                j => j.HasOne<User>().WithMany().HasForeignKey("UserId"),
+                j => j.HasOne<Team>().WithMany().HasForeignKey("TeamId")
+            );
     }
 
 }

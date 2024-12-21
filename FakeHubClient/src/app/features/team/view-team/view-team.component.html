@@ -15,6 +15,9 @@
         <button mat-menu-item (click)="edit()">
           <span>Edit</span>
         </button>
+        <button mat-menu-item (click)="addTeamMember()">
+          <span>Add Team Member</span>
+        </button>
       </mat-menu>
       }
     </div>
@@ -36,11 +39,18 @@
         >
       </div>
     </div>
+    <div class="community-info">
+      <div class="community">
+        <span class="joined">Team Role: {{ team.teamRole }}</span>
+      </div>
+    </div>
   </div>
 </div>
 
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
   <mat-tab label="Members">
-    <ng-template matTabContent> Members </ng-template>
+    <ng-template matTabContent>
+      <app-view-team-members [users]="team.users || []"></app-view-team-members>
+    </ng-template>
   </mat-tab>
 </mat-tab-group>

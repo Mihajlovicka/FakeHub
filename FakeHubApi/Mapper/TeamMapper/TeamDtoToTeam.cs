@@ -7,7 +7,12 @@ public class TeamDtoToTeam : BaseMapper<TeamDto, Team>
 {
     public override Team Map(TeamDto source)
     {
-        return new() { Name = source.Name, Description = source.Description };
+        return new()
+        {
+            Name = source.Name,
+            Description = source.Description,
+            TeamRole = Enum.Parse<TeamRole>(source.TeamRole),
+        };
     }
 
     public override TeamDto ReverseMap(Team source)
@@ -17,6 +22,7 @@ public class TeamDtoToTeam : BaseMapper<TeamDto, Team>
             Name = source.Name,
             Description = source.Description,
             CreatedAt = source.CreatedAt,
+            TeamRole = source.TeamRole.ToString(),
         };
     }
 }

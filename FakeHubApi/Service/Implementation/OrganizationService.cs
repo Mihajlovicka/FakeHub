@@ -12,7 +12,8 @@ public class OrganizationService(
     UserManager<User> userManager,
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
-    IUserContextService userContext
+    IUserContextService userContext,
+    IUserService userService
 ) : IOrganizationService
 {
     public async Task<ResponseBase> Add(OrganizationDto model)
@@ -66,13 +67,12 @@ public class OrganizationService(
             existingOrganizationTeam.Active = false;
             //add deactivate on members team relation
         }
-        
+
         foreach (var existingOrganizationUserOrganization in existingOrganization.UserOrganizations)
         {
             existingOrganizationUserOrganization.Active = false;
         }
-        
-        
+
         await repositoryManager.OrganizationRepository.UpdateAsync(existingOrganization);
         return ResponseBase.SuccessResponse();
     }
@@ -97,10 +97,10 @@ public class OrganizationService(
         );
     }
 
-    public async Task<ResponseBase> Search(string name)
+    public async Task<ResponseBase> Search(string? query)
     {
         var user = await userContext.GetCurrentUserAsync();
-        var organizations = await repositoryManager.OrganizationRepository.Search(name, user.Id);
+        var organizations = await repositoryManager.OrganizationRepository.Search(query, user.Id);
         return ResponseBase.SuccessResponse(
             organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap)
         );
@@ -116,7 +116,7 @@ public class OrganizationService(
         var user = await userContext.GetCurrentUserAsync();
         return organization?.OwnerId == user.Id;
     }
-    
+
     public async Task<ResponseBase> AddUser(string name, List<string> usernames)
     {
         if (usernames == null || usernames.Count == 0)
@@ -130,10 +130,12 @@ public class OrganizationService(
 
             var organizationUsernames = organization.Users.Select(x => x.UserName).ToHashSet();
 
-            var usersToAdd = userManager.Users
-                .Where(u => usernames.Contains(u.UserName) &&
-                            !string.Equals(u.UserName, organization.Owner.UserName) &&
-                            !organizationUsernames.Contains(u.UserName))
+            var usersToAdd = userManager
+                .Users.Where(u =>
+                    usernames.Contains(u.UserName!)
+                    && !string.Equals(u.UserName, organization.Owner.UserName)
+                    && !organizationUsernames.Contains(u.UserName)
+                )
                 .ToList();
 
             if (!usersToAdd.Any())
@@ -143,15 +145,10 @@ public class OrganizationService(
 
             foreach (var user in usersToAdd)
             {
-                //organization.Users.Add(user);
-                organization.UserOrganizations.Add(new UserOrganization()
-                {
-                    User = user,
-                    Organization = organization
-                });
-                var responseUser = mapperManager.UserToUserDtoMapper.Map(
-                user
-            );
+                organization.UserOrganizations.Add(
+                    new UserOrganization() { User = user, Organization = organization }
+                );
+                var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
                 responseUsers.Add(responseUser);
             }
 
@@ -189,12 +186,13 @@ public class OrganizationService(
 
             organization.Users.Remove(user);
 
-            var deleteRelation = organization.UserOrganizations.FirstOrDefault(x => x.UserId == user.Id
-                && x.OrganizationId == organization.Id
+            var deleteRelation = organization.UserOrganizations.FirstOrDefault(x =>
+                x.UserId == user.Id && x.OrganizationId == organization.Id
             );
 
-            if(deleteRelation != null) organization.UserOrganizations.Remove(deleteRelation);
-            
+            if (deleteRelation != null)
+                organization.UserOrganizations.Remove(deleteRelation);
+
             await repositoryManager.OrganizationRepository.UpdateAsync(organization);
 
             var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
@@ -205,6 +203,15 @@ public class OrganizationService(
         {
             return ResponseBase.ErrorResponse(ex.Message);
         }
+    }
 
+    public async Task<ResponseBase> SearchUsersInOrganization(string name, string? query)
+    {
+        var organization = await GetOrganization(name);
+        if (organization == null)
+            return ResponseBase.ErrorResponse("Organization not found.");
+
+        var users = organization.Users;
+        return await userService.GetUsersByQuery(query, users);
     }
 }
