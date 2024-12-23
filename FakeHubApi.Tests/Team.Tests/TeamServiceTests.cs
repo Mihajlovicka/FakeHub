@@ -1,9 +1,11 @@
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
+using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
+using Microsoft.AspNetCore.Identity;
 using Moq;
 
 namespace FakeHubApi.Tests.Team.Tests;
@@ -14,6 +16,7 @@ public class TeamServiceTests
     private ITeamService _teamService;
     private Mock<IRepositoryManager> _repositoryManagerMock;
     private Mock<IUserService> _userServiceMock;
+    private Mock<IUserContextService> _userContextServiceMock;
 
     private Mock<IOrganizationService> _organizationServiceMock;
 
@@ -406,6 +409,77 @@ public class TeamServiceTests
             var resultList = ((IEnumerable<UserDto>)result.Result).ToList();
             Assert.That(resultList, Is.Not.Null);
             Assert.That(resultList, Has.Count.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public async Task DeleteUser_UserNotInOrganization_ReturnsErrorResponse()
+    {
+        const string organizationName = "organization";
+        const string teamName = "team";
+        const string username = "user";
+
+        var user = new UserDto { Username = username };
+        var userResponseBase = new ResponseBase { Result = user, Success = true };
+
+        var team = new Model.Entity.Team { Name = teamName, Users = []};
+
+        _userServiceMock
+            .Setup(us => us.GetUserProfileByUsernameAsync(username))
+            .ReturnsAsync(userResponseBase);
+
+        _repositoryManagerMock
+            .Setup(rm => rm.TeamRepository.GetTeam(organizationName, teamName))
+            .ReturnsAsync(team);
+
+        _organizationServiceMock
+            .Setup(m => m.IsLoggedInUserOwner(It.IsAny<Model.Entity.Organization>()))
+            .Returns(Task.FromResult(true));
+
+        var result = await _teamService.DeleteUser(organizationName, teamName, username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Result, Is.Null);
+            Assert.That(result.ErrorMessage, Is.Not.Empty);
+            Assert.That(result.ErrorMessage, Is.EqualTo("User is not member of team"));
+        });
+    }
+
+    [Test]
+    public async Task DeleteUser_ValidRequest_ReturnsSuccessResponse()
+    {
+        const string organizationName = "organization";
+        const string teamName = "team";
+        const string username = "user";
+
+        var userDto = new UserDto { Username = username };
+        var user = new User { UserName = username };
+        var userResponseBase = new ResponseBase { Result = userDto, Success = true };
+
+        var team = new Model.Entity.Team { Name = teamName, Users = [user] };
+
+        _userServiceMock
+            .Setup(us => us.GetUserProfileByUsernameAsync(username))
+            .ReturnsAsync(userResponseBase);
+
+        _repositoryManagerMock
+            .Setup(rm => rm.TeamRepository.GetTeam(organizationName, teamName))
+            .ReturnsAsync(team);
+
+        _organizationServiceMock
+            .Setup(m => m.IsLoggedInUserOwner(It.IsAny<Model.Entity.Organization>()))
+            .Returns(Task.FromResult(true));
+
+        var result = await _teamService.DeleteUser(organizationName, teamName, username);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Not.Null);
+            Assert.That(result.ErrorMessage, Is.Empty);
+            Assert.That((UserDto)result.Result, Is.EqualTo(userDto));
         });
     }
 }

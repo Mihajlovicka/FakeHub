@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FakeHubApi.Data;
 using FakeHubApi.Model.Dto;
@@ -295,6 +296,50 @@ public class TeamControllerIntegrationTests
             Assert.That(responseBody?.Success, Is.True);
             Assert.That(responseObjStringObject.Length, Is.EqualTo(1));
         });
+    }
+
+    [Test, Order(11)]
+    public async Task DeleteUser_NotTeamMember_ReturnsBadRequest()
+    {
+        const string teamName = "Test Team 2";
+        const string organizationName = "Test Team Organization";
+        const string username = "test@example.com";
+
+        var response = await _client.DeleteAsync($"/api/organization/team/{organizationName}/{teamName}/delete-user/{username}");
+        var responseBase = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBase?.Success, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            Assert.That(responseBase?.ErrorMessage, Is.EqualTo("User is not member of team"));
+            Assert.That(responseBase?.Result, Is.Null);
+        });
+    }
+
+    [Test, Order(12)]
+    public async Task DeleteUser_ValidRequest_ReturnsOk()
+    {
+        const string teamName = "Test Team 2";
+        const string organizationName = "Test Team Organization";
+        const string username = "testest@example.com";
+
+        var response = await _client.DeleteAsync($"/api/organization/team/{organizationName}/{teamName}/delete-user/{username}");
+        response.EnsureSuccessStatusCode();
+        var responseBase = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var responseObjectString = responseBase?.Result?.ToString() ?? string.Empty;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBase?.Success, Is.True);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseBase?.ErrorMessage, Is.Empty);
+            Assert.That(responseObjectString, Is.Not.Empty);
+        });
+
+        var responseObject = JsonConvert.DeserializeObject<UserDto>(responseObjectString);
+
+        Assert.That(responseObject.Username, Is.EqualTo(username));
     }
 
     private async Task SetupData()

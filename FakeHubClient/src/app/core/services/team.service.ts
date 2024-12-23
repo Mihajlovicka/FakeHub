@@ -4,7 +4,7 @@ import { Observable } from "rxjs";
 import { ServiceResponse } from "../model/service-response";
 import { Organization } from "../model/organization";
 import { Team } from "../model/team";
-import { Path } from "../constant/path";
+import { deleteTeamMember, Path } from "../constant/path";
 import { AddMembersRequest } from "../model/add-member-to-organization-request";
 import { UserProfileResponseDto } from "../model/user";
 
@@ -43,4 +43,14 @@ export class TeamService {
       data
     );
   }
+
+  public deleteMember(
+      organizationName: string,
+      teamName: string,
+      username: string
+    ): Observable<UserProfileResponseDto | null> {
+      return this.http.delete<UserProfileResponseDto>(
+        deleteTeamMember(organizationName, teamName, username),
+      );
+    }
 }

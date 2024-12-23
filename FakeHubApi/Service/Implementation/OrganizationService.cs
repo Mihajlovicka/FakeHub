@@ -128,6 +128,9 @@ public class OrganizationService(
             if (organization == null)
                 return ResponseBase.ErrorResponse("Organization not found");
 
+            if (!await IsLoggedInUserOwner(organization))
+                return ResponseBase.ErrorResponse("You are not the owner of this organization");
+
             var organizationUsernames = organization.Users.Select(x => x.UserName).ToHashSet();
 
             var usersToAdd = userManager
@@ -170,20 +173,18 @@ public class OrganizationService(
             var organization = await repositoryManager.OrganizationRepository.GetByName(name);
 
             if (user == null)
-            {
                 return ResponseBase.ErrorResponse("User not found");
-            }
 
             if (organization == null)
-            {
                 return ResponseBase.ErrorResponse("Organization not found");
-            }
+
+            if (!await IsLoggedInUserOwner(organization))
+                return ResponseBase.ErrorResponse("You are not the owner of this organization");
 
             if (organization.Users.FirstOrDefault(u => u.UserName == username) == null)
-            {
                 return ResponseBase.ErrorResponse("User not in organization");
-            }
 
+            organization.Teams.ForEach(t => t.Users.Remove(user));
             organization.Users.Remove(user);
 
             var deleteRelation = organization.UserOrganizations.FirstOrDefault(x =>
