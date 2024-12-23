@@ -50,7 +50,7 @@
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
   <mat-tab label="Members">
     <ng-template matTabContent>
-      <app-view-team-members [users]="team.users || []"></app-view-team-members>
+      <app-view-team-members [users]="team.users || []" [organizationName]="organizationName" [teamName]="team.name" [isOwner]="isOwner()" (deleteUserEvent)="OnUserDeleted($event)"></app-view-team-members>
     </ng-template>
   </mat-tab>
 </mat-tab-group>

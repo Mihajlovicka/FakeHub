@@ -21,6 +21,9 @@
             <div class="link-header">
               <span class="ellipsis">{{ user.username }}</span>
         </div>
+        @if(isOwner){
+          <button class="delete-button" (click)="openDeleteMemberModal(user)"><mat-icon>delete</mat-icon></button>
+          }
         <div class="multi-line-ellipsis">
         {{ user.email }}
         </div>

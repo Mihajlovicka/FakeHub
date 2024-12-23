@@ -4,23 +4,36 @@ import {
   OnInit,
   OnChanges,
   SimpleChanges,
+  inject,
+  Output,
+  EventEmitter
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { UserProfileResponseDto } from "../../../core/model/user";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { MatIconModule } from "@angular/material/icon";
+import { MatDialog } from "@angular/material/dialog";
+import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
+import { TeamService } from "../../../core/services/team.service";
 
 @Component({
   selector: "app-view-team-members",
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule],
   templateUrl: "./view-team-members.component.html",
   styleUrls: ["./view-team-members.component.css"],
 })
 export class ViewTeamMembersComponent implements OnInit, OnChanges {
   public filteredUsers: UserProfileResponseDto[] = [];
   public searchQuery: string = "";
+  private readonly dialog = inject(MatDialog);
+  private readonly service = inject(TeamService);
 
   @Input() public users: UserProfileResponseDto[] = [];
+  @Input() public isOwner: boolean = false;
+  @Input() public organizationName: string = "";
+  @Input() public teamName: string = "";
+  @Output() deleteUserEvent = new EventEmitter<UserProfileResponseDto>();
 
   public ngOnInit(): void {
     this.initializeFilteredUsers();
@@ -106,4 +119,29 @@ export class ViewTeamMembersComponent implements OnInit, OnChanges {
       return 0;
     });
   }
+
+  public openDeleteMemberModal(user: UserProfileResponseDto): void {
+      const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+        data: {
+          title: "Delete member",
+          description:
+            'Would you like to delete "' + user.username + '" from "' + this.teamName + '" team?' ,
+        },
+      });
+      dialogRef.afterClosed().subscribe((isConfirmed) => {
+        if (isConfirmed) {
+          this.service
+            .deleteMember(this.organizationName, this.teamName,  user.username)
+            .subscribe((data) => {
+              if (data?.username != null) {
+                const userIndex = this.filteredUsers.findIndex(
+                  (u) => u.username == data.username
+                );
+                this.filteredUsers.splice(userIndex, 1);
+                this.deleteUserEvent.emit(data);
+              }
+            });
+        }
+      });
+    }
 }

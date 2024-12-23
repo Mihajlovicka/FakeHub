@@ -10,4 +10,5 @@ public interface ITeamService
     Task<ResponseBase> Update(string organizationName, string teamName, UpdateTeamDto model);
     Task<ResponseBase> DeleteTeamFromOrganization(string organizationName, string teamName);
     Task<ResponseBase> AddUser(string organizationName, string teamName, List<string> usernames);
+    Task<ResponseBase> DeleteUser(string organizationName, string teamName, string username);
 }

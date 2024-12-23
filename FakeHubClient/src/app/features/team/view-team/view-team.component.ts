@@ -40,7 +40,7 @@ export class ViewTeamComponent implements OnInit, OnDestroy {
     inject(OrganizationService);
   private readonly userService: UserService = inject(UserService);
   private readonly dialog = inject(MatDialog);
-  private organizationName: string = "";
+  public organizationName: string = "";
 
   private searchSubscription: Subscription | null = null;
   public users$ = new BehaviorSubject<UserProfileResponseDto[]>([]);
@@ -85,6 +85,19 @@ export class ViewTeamComponent implements OnInit, OnDestroy {
       }
       this.users$.next(usersSnapshot);
     });
+  }
+
+  public OnUserDeleted(deletedUser: UserProfileResponseDto): void {
+    if (deletedUser == null) return;
+
+    const deletedUserIndex =
+      this.team.users?.findIndex(
+        (u) => u.username == deletedUser.username
+      ) ?? -1;
+    if (deletedUserIndex >= 0) {
+      this.team.users?.splice(deletedUserIndex, 1);
+      this.filterUsers([...this.users$.getValue(), deletedUser]);
+    }
   }
 
   private filterUsers(newUsers: UserProfileResponseDto[]): void {

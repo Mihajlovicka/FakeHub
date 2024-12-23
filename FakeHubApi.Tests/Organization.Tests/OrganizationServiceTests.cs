@@ -364,17 +364,21 @@ public class OrganizationServiceTests
     {
         const string orgName = "organizationName";
         var usernames = new List<string> { "user1", "user2", "ownerUser" };
+        var loggedInUser = new User { Id = 1, UserName = "ownerUser" };
 
         var organization = new Model.Entity.Organization
         {
             Name = orgName,
-            Owner = new User { UserName = "ownerUser" },
+            Owner = loggedInUser,
+            OwnerId = loggedInUser.Id,
             Users = [new User { UserName = "user1" }, new User { UserName = "user2" }],
         };
 
         _repositoryManagerMock
             .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
             .ReturnsAsync(organization);
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
 
         _userManagerMock.Setup(um => um.Users).Returns(organization.Users.AsQueryable());
 
@@ -394,17 +398,21 @@ public class OrganizationServiceTests
     {
         const string orgName = "organizationName";
         var usernames = new List<string> { "user1", "user2" };
+        var loggedInUser = new User { Id = 1, UserName = "ownerUser" };
 
         var organization = new Model.Entity.Organization
         {
             Name = orgName,
-            Owner = new User { UserName = "ownerUser" },
+            Owner = loggedInUser,
+            OwnerId = loggedInUser.Id,
             Users = [],
         };
 
         _repositoryManagerMock
             .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
             .ReturnsAsync(organization);
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
 
         var responseUsers = new List<User>
         {
@@ -501,10 +509,14 @@ public class OrganizationServiceTests
     {
         const string username = "user";
         const string orgName = "organizationName";
+        var loggedInUser = new User { Id = 1, UserName = "ownerUser" };
         var user = new User { UserName = username };
+
         var organization = new Model.Entity.Organization
         {
             Name = orgName,
+            Owner = loggedInUser,
+            OwnerId = loggedInUser.Id,
             Users = []
         };
 
@@ -515,6 +527,8 @@ public class OrganizationServiceTests
         _repositoryManagerMock
             .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
             .ReturnsAsync(organization);
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
 
         var result = await _organizationService.DeleteUser(orgName, username);
 
@@ -532,10 +546,14 @@ public class OrganizationServiceTests
     {
         const string username = "user";
         const string orgName = "organizationName";
+        var loggedInUser = new User { Id = 1, UserName = "ownerUser" };
         var user = new User { UserName = username };
+
         var organization = new Model.Entity.Organization
         {
             Name = orgName,
+            Owner = loggedInUser,
+            OwnerId = loggedInUser.Id,
             Users = new List<User> { user }
         };
         var responseUser = new UserDto { Username = username };
@@ -547,6 +565,8 @@ public class OrganizationServiceTests
         _repositoryManagerMock
             .Setup(rm => rm.OrganizationRepository.GetByName(orgName))
             .ReturnsAsync(organization);
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
 
         _mapperManagerMock.Setup(m => m.UserToUserDtoMapper.Map(user)).Returns(responseUser);
 

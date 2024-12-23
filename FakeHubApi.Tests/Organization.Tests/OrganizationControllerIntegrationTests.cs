@@ -240,6 +240,12 @@ public class OrganizationControllerIntegrationTests
             Usernames = new List<string> { "owner@example.com" },
         };
 
+        var ownerToken = await GetTokenFromSuccessfulUserLogin(new LoginRequestDto { Email = "owner@example.com", Password = "Password123!" });
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            ownerToken
+        );
+
         var response = await _client.PostAsJsonAsync(
             $"/api/organization/{organizationName}/add-user",
             addUserToOrganizationRequestDto
@@ -264,10 +270,17 @@ public class OrganizationControllerIntegrationTests
             Usernames = new List<string> { "test@example.com" },
         };
 
+        var ownerToken = await GetTokenFromSuccessfulUserLogin(new LoginRequestDto { Email = "owner@example.com", Password = "Password123!" });
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            ownerToken
+        );
+
         var response = await _client.PostAsJsonAsync(
             $"/api/organization/{organizationName}/add-user",
             addUserToOrganizationRequestDto
         );
+
         response.EnsureSuccessStatusCode();
         var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
 
@@ -293,6 +306,12 @@ public class OrganizationControllerIntegrationTests
                 "testest@example.com",
             },
         };
+
+        var ownerToken = await GetTokenFromSuccessfulUserLogin(new LoginRequestDto { Email = "owner@example.com", Password = "Password123!" });
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            ownerToken
+        );
 
         var response = await _client.PostAsJsonAsync(
             $"/api/organization/{organizationName}/add-user",

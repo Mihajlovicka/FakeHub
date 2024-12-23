@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -119,6 +118,51 @@ public class TeamService(
             }
         }
         return response;
+    }
+
+
+    public async Task<ResponseBase> DeleteUser(
+        string organizationName, 
+        string teamName, 
+        string username)
+    {
+        try
+        {
+            var userResponse = await userService.GetUserProfileByUsernameAsync(username);
+
+            if (!userResponse.Success)
+                return ResponseBase.ErrorResponse(userResponse.ErrorMessage);
+
+            var user = userResponse.Result as UserDto;
+
+            if (user == null)
+                return ResponseBase.ErrorResponse("User not found");
+
+            var team = await repositoryManager.TeamRepository.GetTeam(organizationName, teamName);
+
+            if (team == null)
+                return ResponseBase.ErrorResponse("Team not in organization");
+
+            if (!await organizationService.IsLoggedInUserOwner(team.Organization))
+                return ResponseBase.ErrorResponse("You are not the owner of this organization");
+                
+            var deleteRelation = team.Users.FirstOrDefault(u =>
+                u.UserName == user.Username
+            );
+
+            if (deleteRelation == null)
+                return ResponseBase.ErrorResponse("User is not member of team");
+
+            team.Users.Remove(deleteRelation);
+
+            await repositoryManager.TeamRepository.UpdateAsync(team);
+
+            return ResponseBase.SuccessResponse(user);
+        }
+        catch (Exception ex)
+        {
+            return ResponseBase.ErrorResponse(ex.Message);
+        }
     }
 
     private async Task<(bool, string)> ValidateTeamFromOrganization(
