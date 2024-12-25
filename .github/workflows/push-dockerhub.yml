@@ -20,10 +20,11 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }} #dckr_pat_x5-LMd2v4UOaYmylqk5wAvhKmcI
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -53,20 +54,14 @@ jobs:
           git config --global user.name 'lepotice'
           git config --global user.email 'saramihajlovic94@gmail.com'
 
-      - name: Get Last Commit Message
-        id: get_commit_message
-        run: |
-          COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
-          echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_ENV
-
-      - name: Create Tag
+      - name: Create Tag from Commit Message
         id: create_tag
         run: |
-          COMMIT_MESSAGE="${{ env.commit_message }}"
-          git tag -a "$COMMIT_MESSAGE" -m "Tagging commit with commit message: $COMMIT_MESSAGE"
-          echo "tag=$COMMIT_MESSAGE" >> $GITHUB_ENV
+          COMMIT_MESSAGE=$(git log -1 --format="%s" | tr -cd '[:alnum:]_-' | tr ' ' '_')
+          COMMIT_BODY=$(git log -1 --format="%b")
+          git tag -a "${COMMIT_MESSAGE}" -m "${COMMIT_MESSAGE}" -m "${COMMIT_BODY}"
+          echo "tag=${COMMIT_MESSAGE}" >> $GITHUB_ENV
 
       - name: Push Tag to Remote
         run: |
-          COMMIT_MESSAGE="${{ env.tag }}"
-          git push origin "$COMMIT_MESSAGE"
+          git push origin "${{ env.tag }}"
