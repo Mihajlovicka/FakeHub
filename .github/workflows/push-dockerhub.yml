@@ -56,7 +56,7 @@ jobs:
       - name: Get Last Commit Message
         id: get_commit_message
         run: |
-          COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:"%B")
           echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_ENV
 
       - name: Create Tag
