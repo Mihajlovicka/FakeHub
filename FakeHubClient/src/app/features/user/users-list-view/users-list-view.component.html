@@ -1,0 +1,42 @@
+<div class="content-container">
+    <div class="header-container">
+        <h1 class="title">{{ title }}</h1>
+        <button *ngIf="isSuperAdmin && fetchAdmins()" class="add-button" (click)="goToAdminRegistration()">+</button>
+    </div>
+    <div class="orgs-container">
+        @for (user of users; track user.username) {
+        <div class="container">
+          <a class="link-container">
+            <div class="avatar-container">
+              <div class="avatar">
+                <span class="avatar-letter">{{
+                user.username[0].toUpperCase()
+            }}</span>
+          </div>
+        </div>
+        <div class="details-container">
+          <div class="link-header">
+            <span class="ellipsis">{{ user.username }}</span>
+            <!-- ADD BADGE SHOW -->
+          </div>
+          <div class="multi-line-ellipsis">
+        {{
+            'Email: ' + user.email
+        }}
+        </div>
+        <div class="link-footer">
+          <span class="footer-text">
+            {{ "Manage user ..." }}
+          </span>
+          </div>
+        </div>
+      </a>
+    </div>
+        } @empty {
+        <div class="no-users">
+      <p>There are no users</p>
+    </div>
+
+        }
+    </div>
+</div>

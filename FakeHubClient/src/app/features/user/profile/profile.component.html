@@ -1,0 +1,83 @@
+
+<div *ngIf="user?.username != ''">
+  <div class="profile-container">
+    <div class="avatar-container">
+      <div class="avatar">
+        <span class="avatar-letter">{{
+            capitalizedLetterAvatar
+        }}</span>
+      </div>
+    </div>
+    <div class="info-container">
+      <div class="username-container">
+        <span class="username">{{ user.username }}</span>
+        <div [ngClass]="{ 'editable-badge': isAdmin || isSuperAdmin, 'badge-btn': true }" (click)="openBadgeDialog()">
+          <app-user-badge [userBadge]="user.badge" [showNone]="(isAdmin || isSuperAdmin) && !isLoggedInUserProfile"></app-user-badge>
+        </div>
+        <button *ngIf="isLoggedInUserProfile" class="edit-icon-btn" (click)="goToSettings()">
+          <i class="fa-solid fa-pen icons"></i>
+        </button>
+      </div>
+      <div *ngIf="((isAdmin || isSuperAdmin) && !isLoggedInUserProfile) || isUser" class="community-info">
+        <div class="community">
+          <i class="fa-regular fa-user icons"></i>
+          <span class="joined">Community User</span>
+        </div>
+        <div *ngIf="isJoinedDateValid" class="date-info">
+          <i class="fa-regular fa-calendar icons"></i>
+          <span class="joined">Joined {{ formatedDateString }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="links-container">
+    <a
+      [ngClass]="{ active: activeLink === 1 }"
+      (click)="setActiveLink(1)"
+      class="link"
+    >
+      Repositories
+    </a>
+
+    <a
+      [ngClass]="{ active: activeLink === 2 }"
+      (click)="setActiveLink(2)"
+      class="link"
+    >
+      Starred
+    </a>
+
+    <a
+      *ngIf="isLoggedInUserProfile"
+      [ngClass]="{ active: activeLink === 3 }"
+      (click)="setActiveLink(3)"
+      class="link"
+    >
+      Contributed
+    </a>
+  </div>
+
+  <div
+    class="content"
+    [ngClass]="{ 'content-center': activeLink === 2 || activeLink === 3 }"
+  >
+    <div *ngIf="activeLink === 1" class="search-container">
+      <input type="text" placeholder="Search Repositories" />
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    </div>
+
+    <div *ngIf="activeLink === 2">
+      <h2>Starred Content</h2>
+    </div>
+
+    <div *ngIf="activeLink === 3">
+      <h2>Contributed Repositories</h2>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="user?.username == ''">
+  <div class="no-user-container">
+    <p class="no-user-message">User not found.</p>
+  </div>
+</div>

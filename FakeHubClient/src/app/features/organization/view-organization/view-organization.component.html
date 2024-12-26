@@ -1,0 +1,65 @@
+<div class="profile-container">
+  <div class="avatar-container">
+    <div class="avatar">
+      <img
+        class="image"
+        [src]="organization.imageBase64 || 'icons/no-photo-avatar.png'"
+        alt="avatar"
+      />
+    </div>
+  </div>
+  <div class="info-container">
+    <div class="username-container">
+      <span class="username">{{ organization.name }}</span>
+      @if(isOwner()){
+
+      <button
+        mat-icon-button
+        [matMenuTriggerFor]="menu"
+        aria-label="Example icon-button with a menu"
+      >
+        <mat-icon>edit</mat-icon>
+      </button>
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="edit()">
+          <span>Edit</span>
+        </button>
+        <button mat-menu-item (click)="addTeam()">
+          <span>Add Team</span>
+        </button>
+        <button mat-menu-item (click)="addMemberToOrganizationDialog()">
+          <span>Add Member</span>
+        </button>
+        <button mat-menu-item (click)="openDeactivateOrganizationModal()">
+          <span>Deactivate organization</span>
+        </button>
+      </mat-menu>
+      }
+    </div>
+    @if(!isOwner()){
+    <div class="community-info">
+      <div class="community">
+        <i class="fa-regular fa-user icons"></i>
+        <span class="joined">Owner: {{ organization.owner }}</span>
+      </div>
+    </div>
+    }
+    <div class="community-info">
+      <div class="community">
+        <span class="joined">{{ organization.description }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+<mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
+  <mat-tab label="Members">
+    <ng-template matTabContent>
+        <app-view-organizations-members (deleteUserEvent)="OnUserDeleted($event)" [users]="organization.users || []" [organizationName]="organization.name" [isOwner]="isOwner()"></app-view-organizations-members>
+    </ng-template>
+  </mat-tab>
+  <mat-tab label="Teams">
+    <ng-template matTabContent>
+      <app-teams (deleteTeamEvent)="OnTeamDeleted($event)" [teams]="organization.teams || []" [organizationName]="organization.name" [isOwner]="isOwner()"></app-teams>
+    </ng-template>
+  </mat-tab>
+</mat-tab-group>

@@ -1,0 +1,96 @@
+using FakeHubApi.Model.Dto;
+using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FakeHubApi.Controllers;
+
+[ApiController]
+[Route("api/organization/[controller]")]
+[Authorize(Roles = "USER")]
+public class TeamController(ITeamService teamService) : ControllerBase
+{
+    [HttpPost]
+    public async Task<IActionResult> Add([FromBody] TeamDto model)
+    {
+        var response = await teamService.Add(model);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpGet("{organizationName}/{teamName}")]
+    public async Task<IActionResult> Get(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName
+    )
+    {
+        var response = await teamService.Get(organizationName, teamName);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpPut("{organizationName}/{teamName}")]
+    public async Task<IActionResult> Update(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName,
+        [FromBody] UpdateTeamDto model
+    )
+    {
+        var response = await teamService.Update(organizationName, teamName, model);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpDelete("{organizationName}/{teamName}")]
+    public async Task<IActionResult> DeleteTeamFromOrganization(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName
+    )
+    {
+        var response = await teamService.DeleteTeamFromOrganization(organizationName, teamName);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpPut("{organizationName}/{teamName}/add-user")]
+    public async Task<IActionResult> AddUser(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName,
+        [FromBody] AddMembersDto model
+    )
+    {
+        var response = await teamService.AddUser(organizationName, teamName, model.Usernames);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpDelete("{organizationName}/{teamName}/delete-user/{username}")]
+    public async Task<IActionResult> DeleteUser(
+        [FromRoute] string organizationName,
+        [FromRoute] string teamName,
+        [FromRoute] string username
+    )
+    {
+        var response = await teamService.DeleteUser(organizationName, teamName, username);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+}

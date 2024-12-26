@@ -1,0 +1,77 @@
+name: CI - Test API
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - master
+
+jobs:
+  build-and-test-api:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:9.1
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: admin
+          MYSQL_DATABASE: fake-hub-test
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Wait for MySQL to be ready
+        run: |
+          until mysqladmin ping -h127.0.0.1 -uroot -proot --silent; do
+          sleep 5
+          done
+
+      - name: Restore dependencies
+        working-directory: ./FakeHubApi
+        run: dotnet restore
+
+      - name: Build API
+        working-directory: ./FakeHubApi
+        run: dotnet build -c Release
+
+      - name: Cache test dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: test-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            test-${{ runner.os }}-
+
+      - name: Restore dependencies Test
+        working-directory: ./FakeHubApi.Tests
+        run: dotnet restore
+
+      - name: Set Environment Variables
+        run: |
+          echo "ConnectionStrings__Database=Server=127.0.0.1;Port=3306;Database=fake-hub-test;User=root;Password=admin;" >> $GITHUB_ENV
+
+      - name: Run Unit and Integration Tests
+        env:
+          ConnectionStrings__Database: ${{ env.ConnectionStrings__Database }}
+        working-directory: ./FakeHubApi.Tests
+        run: dotnet test --configuration Release --verbosity normal

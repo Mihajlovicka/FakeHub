@@ -1,0 +1,35 @@
+<div class="content-container">
+    <div class="header-container">
+        <h1 class="title">Organizations</h1>
+        <button class="add-button" (click)="addOrganization()">+</button>
+    </div>
+  <div class="orgs-container">
+    @for (org of organizations; track org.name) {
+    <div class="container">
+      <a class="link-container" [routerLink]="['/organization/view', org.name]">
+        <div class="image-container">
+          <img [src]="org.imageBase64 || 'icons/no-photo-avatar.png'" alt="{{ org.name }}" class="logo" />
+        </div>
+        <div class="details-container">
+          <div class="link-header">
+            <span class="ellipsis">{{ org.owner + "/" + org.name }}</span>
+          </div>
+          <div class="multi-line-ellipsis">
+            {{ org.description.substring(0, 50)
+            }}{{ org.description.length > 50 ? "..." : "" }}
+          </div>
+          <div class="link-footer">
+            <span class="footer-text">Owner: {{ org.owner }}</span>
+            <span class="footer-text">Active: {{ true ? "Yes" : "No" }}</span>
+          </div>
+        </div>
+      </a>
+    </div>
+    } @empty {
+      <div class="no-organizations">
+    <p>There are no organizations</p>
+  </div>
+
+      }
+  </div>
+</div>

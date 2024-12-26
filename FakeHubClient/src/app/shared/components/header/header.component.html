@@ -1,0 +1,86 @@
+<nav class="navbar navbar-dark navbar-expand-lg">
+    <div class="navbar-container">
+        <div class="navbar-leftpart">
+            <div>
+                <a class="navbar-brand" (click)="goToHomePage()">
+                    <img src="icons/fakehub-icon.png" width="30" class="logo-img"/>
+                    FakeHub
+                </a>
+            </div>
+            <div *ngIf="isLoggedIn" class="navbar-links">
+                <a *ngIf="isUser" class="nav-link text-white mx-2" href="#">Explore</a>
+                <a class="nav-link text-white mx-2" href="#">Repositories</a>
+                <a *ngIf="isUser" class="nav-link text-white mx-2" (click)="goToOrganizations()">Organizations</a>
+
+                <!-- superadmin-->
+                <div *ngIf="isSuperAdmin"  class="nav-link2 text-white mx-2" (click)="toggleUsersDropdown($event)">
+                    <a>Users</a>
+                    <div class="dropdown2 dropdown" [class.show]="isUsersDropdownVisible">
+                        <div class="dropdown-content2 dropdown-content">
+                            <a (click)="goToUsers()">User Management</a>
+                            <a (click)="goToAdmins()">Admin Management</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- admin-->
+                <a *ngIf="isAdmin" class="nav-link text-white mx-2" (click)="goToUsers()">Users</a>
+
+            </div>
+        </div>
+        <div class="navbar-rightpart">
+            <div class="search">
+                <form (submit)="search(); $event.preventDefault()">
+                    <input
+                            type="text"
+                            [placeholder]="'Search.. / ' + searchTitlePreview"
+                            name="search"
+                            class="search-input"
+                            autocomplete="off"
+                            [(ngModel)]="searchQuery"
+                    />
+                    <button type="submit" class="search-button">
+                        <img src="icons/search.png" width="25rem" height="25rem" />
+                    </button>
+                </form>
+            </div>
+            <div>
+                <button
+                        *ngIf="isLoggedIn"
+                        class="btn-hover color-9"
+                        (click)="toggleDropdown($event)"
+                >
+                    {{ profileLabel }}
+                </button>
+
+                <button
+                        *ngIf="!isLoggedIn"
+                        (click)="goToLogin()"
+                        class="btn-hover color-9 sign-in-btn button-font"
+                >
+                    Sign In
+                </button>
+                <button
+                        *ngIf="!isLoggedIn"
+                        (click)="goToRegistration()"
+                        class="btn-hover color-9 button-font"
+                >
+                    Sign Up
+                </button>
+
+                <div class="dropdown" [class.show]="isDropdownVisible">
+                    <div class="dropdown-content">
+                        <a [href]="'profile/' + username">
+                            <i class="fa fa-user"></i>
+                            My Profile
+                        </a>
+                        <a href="#" (click)="signOut()">
+                            <i class="fa fa-sign-out"></i>
+                            Sign Out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

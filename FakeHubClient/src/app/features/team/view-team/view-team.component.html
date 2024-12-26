@@ -1,0 +1,56 @@
+<div class="profile-container">
+  <div class="info-container">
+    <div class="username-container">
+      <span class="username">{{ team.name }}</span>
+      @if(isOwner()){
+
+      <button
+        mat-icon-button
+        [matMenuTriggerFor]="menu"
+        aria-label="Example icon-button with a menu"
+      >
+        <mat-icon>edit</mat-icon>
+      </button>
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="edit()">
+          <span>Edit</span>
+        </button>
+        <button mat-menu-item (click)="addTeamMember()">
+          <span>Add Team Member</span>
+        </button>
+      </mat-menu>
+      }
+    </div>
+    <div class="community-info">
+      <div class="community">
+        <span class="joined">{{ team.description }}</span>
+      </div>
+    </div>
+    <div class="community-info">
+      <div class="community">
+        <i class="fa-regular fa-user icons"></i>
+        <span class="joined">Owner: {{ team.owner }}</span>
+      </div>
+    </div>
+    <div class="community-info">
+      <div class="community">
+        <span class="joined"
+          >Created At: {{ team.createdAt | date : "mediumDate" }}</span
+        >
+      </div>
+    </div>
+    <div class="community-info">
+      <div class="community">
+        <span class="joined">Team Role: {{ team.teamRole }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
+  <mat-tab label="Members">
+    <ng-template matTabContent>
+      <app-view-team-members [users]="team.users || []" [organizationName]="organizationName" [teamName]="team.name" [isOwner]="isOwner()" (deleteUserEvent)="OnUserDeleted($event)"></app-view-team-members>
+    </ng-template>
+  </mat-tab>
+</mat-tab-group>
