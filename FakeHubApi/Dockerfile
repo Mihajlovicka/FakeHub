@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy the project files and restore dependencies
+# Copy project files and restore dependencies
 COPY *.csproj ./
 RUN dotnet restore
 
@@ -10,17 +10,26 @@ RUN dotnet restore
 COPY . ./
 RUN dotnet build -c Release -o /src/build
 
-
-# Stage 3: Publish the app
+# Stage 2: Publish the app
 FROM build AS publish
 RUN dotnet publish -c Release -o /src/publish
 
-# Stage 4: Production image
+# Stage 3: Production image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
-WORKDIR /src
+WORKDIR /app
+
+# Copy published app
 COPY --from=publish /src/publish .
 
-# Expose port 80 for the application
+# Create Logs folder with proper permissions
+RUN mkdir -p /app/Logs \
+    && chown -R www-data:www-data /app/Logs \
+    && chmod -R 755 /app/Logs
+
+# Set environment variable for logging folder (optional, for consistency)
+ENV DOTNET_LOG_DIR=/app/Logs
+
+# Expose port 8080
 EXPOSE 8080
 
 # Run the application

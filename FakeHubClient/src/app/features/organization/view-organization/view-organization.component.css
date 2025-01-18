@@ -175,13 +175,77 @@ input:focus {
 }
 
 .content-center {
-  justify-content: center;
+  justify-content: flex-start;
   margin-top: 2rem;
 }
 
 .members-container {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   margin: 2.5rem;
 }
 
+.repositories-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 2rem;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 1rem 0 1rem 1rem;
+}
+
+.search>form {
+  display: flex;
+  width: 20%;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px;
+  height: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-right: 1%;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-button {
+  height: 2rem;
+  width: 2rem;
+  background-color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.search-button img {
+  width: 25px;
+  height: 25px;
+}
+
+.leave-org-button {
+    transition: all 0.2s ease-in;
+    color: #8b0c33;
+}
+
+.leave-org-button:hover mat-icon {
+    color: gray;
+}
+.leave-org-button:hover {
+    background-color: #e2e3e5;
+}

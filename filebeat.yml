@@ -1,0 +1,23 @@
+filebeat.inputs:
+  - type: filestream
+    enabled: true
+    paths:
+      - /var/log/fakehubapi/*.log
+    ignore_older: 24h
+
+setup.template.name: "fakehub-filebeat"
+setup.template.pattern: "fakehub-filebeat-*"
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "elastic"
+  password: "changeme"
+  index: "fakehub-filebeat-%{+yyyy.MM.dd}"
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644

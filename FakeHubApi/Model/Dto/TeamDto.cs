@@ -17,6 +17,10 @@ public class TeamDto
 
     [TeamRoleValidation]
     public string TeamRole { get; set; } = string.Empty;
+
+    [Required]
+    public RepositoryDto? Repository { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public string? Owner { get; set; }

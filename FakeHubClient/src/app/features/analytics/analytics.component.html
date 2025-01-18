@@ -1,0 +1,51 @@
+<div class="log-viewer">
+  <div class="controls">
+    <input [(ngModel)]="query" placeholder="Search logs or enter logical query..." />
+
+    <select [(ngModel)]="levelFilter">
+      <option value="">All levels</option>
+      <option *ngFor="let lvl of levels" [value]="lvl">{{ lvl }}</option>
+    </select>
+
+    <input type="datetime-local" [(ngModel)]="fromDate" placeholder="From date" />
+    <input type="datetime-local" [(ngModel)]="toDate" placeholder="To date" />
+
+    <button (click)="applyFilters()">Search logs</button>
+    <button (click)="resetFilters()">Reset</button>
+    <button (click)="downloadJson()">Download JSON</button>
+  </div>
+
+  <table class="logs-table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Level</th>
+        <th>Application</th>
+        <th>Message</th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-container *ngFor="let log of filtered; let i = index">
+        <tr (click)="toggleExpand(i)" [class.expanded]="expandedIndex === i">
+          <td>{{ log.timestamp }}</td>
+          <td>
+            <span class="badge {{ log.level?.toLowerCase() }}">
+              {{ log.level }}
+            </span>
+          </td>
+          <td>{{ log.application }}</td>
+          <td>{{ log.message }}</td>
+        </tr>
+        <tr *ngIf="expandedIndex === i" class="expanded-row">
+          <td colspan="4">
+            <pre>{{ log | json }}</pre>
+          </td>
+        </tr>
+      </ng-container>
+    </tbody>
+  </table>
+
+  <div *ngIf="filtered.length === 0" class="no-results">
+    No logs found.
+  </div>
+</div>

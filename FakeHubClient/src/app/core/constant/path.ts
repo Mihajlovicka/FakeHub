@@ -5,6 +5,7 @@ const authApi = api + 'auth/';
 const organizationApi = api + 'organization/';
 const usersApi = api + 'users/';
 const teamApi = organizationApi + 'team/';
+const repositoryApi = api + 'repositories'
 
 export const Path = {
   Register: authApi + 'register',
@@ -19,7 +20,12 @@ export const Path = {
   OrganizationByUser: organizationApi + "user",
   Users: usersApi,
   AdminUsers: usersApi + "admins",
-  Team: teamApi
+  Team: teamApi,
+  OrganizationByUserIdName: organizationApi + "user/names",
+  Repositories: repositoryApi,
+  Log: api + 'log',
+  Tag: repositoryApi + '/tag/',
+  ElasticLogs: api + 'elasticsearch/logs'
 };
 
 export function getProfilePath(username: string): string {
@@ -44,4 +50,7 @@ export function deleteTeamFromOrganization(organizationName: string, teamName: s
 
 export function deleteTeamMember(organizationName: string, teamName: string, username: string): string {
   return teamApi + organizationName + '/' + teamName + '/delete-user/' + username;
+}
+export function getRepository(id: number): string {
+  return Path.Repositories + "/" + id;
 }

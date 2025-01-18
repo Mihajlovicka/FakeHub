@@ -1,7 +1,9 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Identity;
@@ -13,7 +15,10 @@ public class OrganizationService(
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
     IUserContextService userContext,
-    IUserService userService
+    IUserService userService,
+    IHarborService harborService,
+    IServiceProvider serviceProvider,
+    IRedisCacheService _cacheService
 ) : IOrganizationService
 {
     public async Task<ResponseBase> Add(OrganizationDto model)
@@ -26,6 +31,11 @@ public class OrganizationService(
 
         organization.Owner = user;
         await repositoryManager.OrganizationRepository.AddAsync(organization);
+
+        await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = organization.Name });
+
+        await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{user.UserName}");
+
         return ResponseBase.SuccessResponse();
     }
 
@@ -45,6 +55,10 @@ public class OrganizationService(
         existingOrganization.Description = model.Description;
         existingOrganization.ImageBase64 = model.ImageBase64;
         await repositoryManager.OrganizationRepository.UpdateAsync(existingOrganization);
+
+        await _cacheService.RemoveCacheValueAsync($"Organization:{name}");
+        existingOrganization.Users.ForEach(async (el) => await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{el.UserName}"));
+        
         return ResponseBase.SuccessResponse();
     }
 
@@ -58,8 +72,17 @@ public class OrganizationService(
 
         if (existingOrganization.OwnerId != user.Id)
             return ResponseBase.ErrorResponse(
-                "You are not authorized to update this organization."
+                "You are not authorized to deactivate this organization."
             );
+
+        if (!existingOrganization.Active)
+            return ResponseBase.ErrorResponse(
+                "Organization is already deactivated."
+            );
+
+        var repoService = serviceProvider.GetRequiredService<IRepositoryService>();
+        await repoService.DeleteRepositoriesOfOrganization(existingOrganization);
+
 
         existingOrganization.Active = false;
         foreach (var existingOrganizationTeam in existingOrganization.Teams)
@@ -74,27 +97,44 @@ public class OrganizationService(
         }
 
         await repositoryManager.OrganizationRepository.UpdateAsync(existingOrganization);
+
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
+        existingOrganization.Users.ForEach(async (el) => await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{el.UserName}"));
+
         return ResponseBase.SuccessResponse();
     }
 
     public async Task<ResponseBase> GetByName(string name)
     {
+        var cachedOrg = await _cacheService.GetCacheValueAsync<OrganizationDto>($"Organization:{name}");
+        if (cachedOrg != null)
+        {
+            return ResponseBase.SuccessResponse(cachedOrg);
+        }
         var organization = await GetOrganization(name);
         if (organization == null)
             return ResponseBase.ErrorResponse("Organization not found.");
 
-        return ResponseBase.SuccessResponse(
-            mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap(organization)
-        );
+        var orgDto = mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap(organization);
+        await _cacheService.SetCacheValueAsync($"Organization:{name}", orgDto);
+
+        return ResponseBase.SuccessResponse(orgDto);
     }
 
     public async Task<ResponseBase> GetByUser()
     {
         var user = await userContext.GetCurrentUserAsync();
+        var cachedOrgs = await _cacheService.GetCacheValueAsync<List<OrganizationDto>>($"OrganizationsByUser:{user.UserName}");
+        if (cachedOrgs != null && cachedOrgs.Count > 0)
+        {
+            return ResponseBase.SuccessResponse(cachedOrgs);
+        }
         var organizations = await repositoryManager.OrganizationRepository.GetByUser(user.Id);
-        return ResponseBase.SuccessResponse(
-            organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap)
-        );
+        var orgDtos = organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap);
+
+        await _cacheService.SetCacheValueAsync($"OrganizationsByUser:{user.UserName}", orgDtos);
+
+        return ResponseBase.SuccessResponse(orgDtos);
     }
 
     public async Task<ResponseBase> Search(string? query)
@@ -153,9 +193,13 @@ public class OrganizationService(
                 );
                 var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
                 responseUsers.Add(responseUser);
+                
+                await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{user.UserName}");
             }
 
             await repositoryManager.OrganizationRepository.UpdateAsync(organization);
+
+            await _cacheService.RemoveCacheValueAsync($"Organization:{name}");
 
             return ResponseBase.SuccessResponse(responseUsers);
         }
@@ -178,14 +222,26 @@ public class OrganizationService(
             if (organization == null)
                 return ResponseBase.ErrorResponse("Organization not found");
 
-            if (!await IsLoggedInUserOwner(organization))
+            var currentUser = await userContext.GetCurrentUserAsync();
+            var isCurrentUserLeavingOrganizaion = string.Equals(currentUser.UserName, username, StringComparison.OrdinalIgnoreCase);
+            if (!isCurrentUserLeavingOrganizaion
+                && !(organization.OwnerId == currentUser.Id))
                 return ResponseBase.ErrorResponse("You are not the owner of this organization");
 
             if (organization.Users.FirstOrDefault(u => u.UserName == username) == null)
                 return ResponseBase.ErrorResponse("User not in organization");
 
-            organization.Teams.ForEach(t => t.Users.Remove(user));
-            organization.Users.Remove(user);
+            foreach (var t in organization.Teams)
+            {
+                if (t.Users.Remove(user))
+                {
+                    await harborService.removeMemberFromTeam(
+                        $"{name}-{t.Repository.Name}",
+                        username,
+                        isCurrentUserLeavingOrganizaion
+                    );
+                }
+            }
 
             var deleteRelation = organization.UserOrganizations.FirstOrDefault(x =>
                 x.UserId == user.Id && x.OrganizationId == organization.Id
@@ -197,6 +253,9 @@ public class OrganizationService(
             await repositoryManager.OrganizationRepository.UpdateAsync(organization);
 
             var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
+
+            await _cacheService.RemoveCacheValueAsync($"Organization:{name}");
+            await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{user.UserName}");
 
             return ResponseBase.SuccessResponse(responseUser);
         }
@@ -214,5 +273,24 @@ public class OrganizationService(
 
         var users = organization.Users;
         return await userService.GetUsersByQuery(query, users);
+    }
+
+    public async Task<Organization?> GetOrganizationById(int id)
+    {
+        return await repositoryManager.OrganizationRepository.GetByIdAsync(id);
+    }
+
+    public async Task<ResponseBase> GetByUserIdNamePair()
+    {
+        var user = await userContext.GetCurrentUserAsync();
+        var organizations = await repositoryManager.OrganizationRepository.GetByUser(user.Id);
+        return ResponseBase.SuccessResponse(
+            organizations?.Select(x => new IdNamePairDto()
+            {
+                Id = x.Id,
+                Name = x.Name
+            })
+            ?? []
+        );
     }
 }

@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -13,7 +14,8 @@ public class UserService(
     IMapperManager mapperManager,
     IJwtTokenGenerator jwtTokenGenerator,
     IUserContextService userContextService,
-    IRepositoryManager repositoryManager
+    IRepositoryManager repositoryManager,
+    IHarborService harborService
 ) : IUserService
 {
     public async Task<ResponseBase> GetUserProfileByUsernameAsync(string username)
@@ -30,9 +32,34 @@ public class UserService(
                 return ResponseBase.ErrorResponse("User not found");
             }
 
+            var userRole = await userManager.GetRolesAsync(user);
+
             var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
+            responseUser.Role = userRole.FirstOrDefault();
 
             return ResponseBase.SuccessResponse(responseUser);
+        }
+        catch (Exception ex)
+        {
+            return ResponseBase.ErrorResponse(ex.Message);
+        }
+    }
+
+    public async Task<ResponseBase> GetUserByUsernameAsync(string username)
+    {
+        if (string.IsNullOrEmpty(username))
+            return ResponseBase.ErrorResponse("Username is empty");
+
+        try
+        {
+            var user = await userManager.FindByNameAsync(username);
+
+            if (user == null)
+            {
+                return ResponseBase.ErrorResponse("User not found");
+            }
+
+            return ResponseBase.SuccessResponse(user);
         }
         catch (Exception ex)
         {
@@ -77,6 +104,12 @@ public class UserService(
                     ?? "Failed to update user settings"
             );
         }
+
+        var res = await harborService.updatePassword(user.HarborUserId, new HarborUserPassword
+        {
+            OldPassword = changePasswordRequestDto.OldPassword,
+            NewPassword = changePasswordRequestDto.NewPassword,
+        });
 
         var roles = await userManager.GetRolesAsync(user);
         var token = jwtTokenGenerator.GenerateToken(user, roles);
@@ -131,6 +164,12 @@ public class UserService(
             );
         }
 
+        var resHarbor =  await harborService.updateUser(user.HarborUserId, new HarborUserUpdate
+        {
+            Email = changeEmailRequestDto.NewEmail,
+            Realname = user.UserName,
+        });
+
         var roles = await userManager.GetRolesAsync(user);
         var newToken = jwtTokenGenerator.GenerateToken(user, roles);
         return ResponseBase.SuccessResponse(new LoginResponseDto { Token = newToken });
@@ -160,6 +199,16 @@ public class UserService(
             if (!result.Succeeded)
             {
                 return ResponseBase.ErrorResponse("Failed to update badge");
+            }
+
+            var userRepositories = await repositoryManager.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, false);
+            foreach (var repo in userRepositories)
+            {
+                if (repo.OwnedBy == RepositoryOwnedBy.User)
+                {
+                    repo.Badge = user.Badge;
+                    await repositoryManager.RepositoryRepository.UpdateAsync(repo);
+                }
             }
 
             var userProfileResponseDto = mapperManager.UserToUserDtoMapper.Map(user);

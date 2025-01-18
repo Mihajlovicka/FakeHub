@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -18,7 +19,8 @@ public class UserServiceTests
     private IUserService _userService;
     private Mock<IUserContextService> _userContextService;
     private Mock<IRepositoryManager> _repositoryManager;
-    
+    private Mock<IHarborService> _harborService;
+
     [SetUp]
     public void Setup()
     {
@@ -26,6 +28,7 @@ public class UserServiceTests
         _mockJwtTokenGenerator = new Mock<IJwtTokenGenerator>();
         _userContextService = new Mock<IUserContextService>();
         _repositoryManager = new Mock<IRepositoryManager>();
+        _harborService = new Mock<IHarborService>();
         
         _mockUserManager = new Mock<UserManager<User>>(
             new Mock<IUserStore<User>>().Object,
@@ -44,7 +47,8 @@ public class UserServiceTests
             _mapperManagerMock.Object,
             _mockJwtTokenGenerator.Object,
             _userContextService.Object,
-            _repositoryManager.Object
+            _repositoryManager.Object,
+            _harborService.Object
         );
     }
     
@@ -62,12 +66,19 @@ public class UserServiceTests
             Username = user.UserName,
             Email = user.Email
         };
+        var userRoles = new List<string>
+        {
+            "USER"
+        };
         _mockUserManager
             .Setup(um => um.FindByNameAsync(username))
             .ReturnsAsync(user);
         _mapperManagerMock
             .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
             .Returns(userProfileDto);
+        _mockUserManager
+            .Setup(um => um.GetRolesAsync(user))
+            .ReturnsAsync(userRoles);
 
         var result = await _userService.GetUserProfileByUsernameAsync(username);
 
@@ -530,14 +541,24 @@ public class UserServiceTests
     [Test]
     public async Task ChangeUserBadgeAsync_SuccessfulUpdate_ReturnsSuccessResponse()
     {
-        var user = new User();
+        var user = new User { Id = 1, Badge = Badge.None, UserName = "validUser" };
         var userProfileResponseDto = new UserDto();
-
         var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
         {
             Badge = Badge.VerifiedPubisher,
             Username = "validUser"
         };
+
+        var repositories = new List<Model.Entity.Repository>
+        {
+            new Model.Entity.Repository { Id = 1, OwnerId = 1, OwnedBy = RepositoryOwnedBy.User, Badge = Badge.None },
+            new Model.Entity.Repository { Id = 2, OwnerId = 1, OwnedBy = RepositoryOwnedBy.User, Badge = Badge.None }
+        };
+
+        var mockRepoRepo = new Mock<IRepositoryRepository>();
+        mockRepoRepo.Setup(r => r.GetUserRepositoriesByOwnerId(user.Id, false)).ReturnsAsync(repositories);
+        mockRepoRepo.Setup(r => r.UpdateAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
+        _repositoryManager.Setup(rm => rm.RepositoryRepository).Returns(mockRepoRepo.Object);
 
         _mockUserManager
             .Setup(um => um.FindByNameAsync(changeUserBadgeRequestDto.Username))
@@ -561,6 +582,58 @@ public class UserServiceTests
             Assert.That(result.ErrorMessage, Is.Empty);
             Assert.AreEqual(userProfileResponseDto, result.Result);
         });
+    }
+    
+    [Test]
+    public async Task ChangeUserBadgeAsync_UpdatesBadgeOnAllUserRepositories_ReturnsSuccessResponse()
+    {
+        var user = new User { Id = 1, Badge = Badge.None, UserName = "validUser" };
+        var userProfileResponseDto = new UserDto();
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "validUser"
+        };
+
+        var repositories = new List<Model.Entity.Repository>
+        {
+            new Model.Entity.Repository { Id = 1, OwnerId = 1, OwnedBy = RepositoryOwnedBy.User, Badge = Badge.None },
+            new Model.Entity.Repository { Id = 2, OwnerId = 1, OwnedBy = RepositoryOwnedBy.User, Badge = Badge.None },
+            new Model.Entity.Repository { Id = 3, OwnerId = 2, OwnedBy = RepositoryOwnedBy.User, Badge = Badge.None }
+        };
+
+        var mockRepoRepo = new Mock<IRepositoryRepository>();
+        mockRepoRepo.Setup(r => r.GetUserRepositoriesByOwnerId(user.Id, false)).ReturnsAsync(repositories.Where(r => r.OwnerId == user.Id));
+        mockRepoRepo.Setup(r => r.UpdateAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
+        _repositoryManager.Setup(rm => rm.RepositoryRepository).Returns(mockRepoRepo.Object);
+
+        _mockUserManager
+            .Setup(um => um.FindByNameAsync(changeUserBadgeRequestDto.Username))
+            .ReturnsAsync(user);
+
+        _mockUserManager
+            .Setup(um => um.UpdateAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
+
+        _mapperManagerMock
+            .Setup(m => m.UserToUserDtoMapper
+            .Map(user))
+            .Returns(userProfileResponseDto);
+
+        var result = await _userService.ChangeUserBadgeAsync(changeUserBadgeRequestDto);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.Result, Is.Not.Null);
+            Assert.That(result.ErrorMessage, Is.Empty);
+        });
+
+        foreach (var repo in repositories.Where(r => r.OwnerId == user.Id))
+        {
+            Assert.That(repo.Badge, Is.EqualTo(changeUserBadgeRequestDto.Badge));
+        }
+        Assert.That(repositories.First(r => r.OwnerId == 2).Badge, Is.EqualTo(Badge.None));
     }
     
     [Test]

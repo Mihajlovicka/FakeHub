@@ -100,6 +100,12 @@ export class ViewTeamComponent implements OnInit, OnDestroy {
     }
   }
 
+  public isTeamMember(): boolean {  
+    const currentUserUsername = this.userService.getUserNameFromToken() ?? '';
+    return this.team?.users?.some((u) => u.username === currentUserUsername) ?? false;
+  }
+
+
   private filterUsers(newUsers: UserProfileResponseDto[]): void {
     const filteredUsers =
       newUsers?.filter(

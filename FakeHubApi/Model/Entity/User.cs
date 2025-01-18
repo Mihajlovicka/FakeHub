@@ -10,4 +10,5 @@ public class User : IdentityUser<int>
     public List<Organization> Organizations =>
         UserOrganizations.Where(uo => uo.Active).Select(uo => uo.Organization).ToList();
     public List<UserOrganization> UserOrganizations { get; set; } = new();
+    public int HarborUserId { get; set; } = 0;
 }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, model } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogActions, MatDialogClose, MatDialogContent, MatDialogRef, MatDialogTitle } from '@angular/material/dialog';
@@ -33,7 +33,8 @@ export interface DialogData {
 export class UserBadgeModalComponent {
   readonly dialogRef = inject(MatDialogRef<UserBadgeModalComponent>);
   readonly data = inject(MAT_DIALOG_DATA);
-  readonly selectedBadge = model<string>(this.data.currentBadge);
+  readonly selectedBadge = signal<string>(this.data.currentBadge ?? UserBadge.None);
+
   public UserBadge = UserBadge;
 
   public onNoClick(): void {

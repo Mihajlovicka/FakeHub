@@ -14,8 +14,18 @@ public class OrganizationRepository(AppDbContext context)
             .Organizations.Include(x => x.Owner)
             .Include(x => x.Teams)
                 .ThenInclude(t => t.Users)
+            .Include("Teams.Repository")
             .Include(x => x.Users)
             .FirstOrDefaultAsync(x => x.Name == name && x.Active);
+
+    public Task<Organization?> GetById(int id) =>
+        _context
+            .Organizations.Include(x => x.Owner)
+            .Include(x => x.Teams)
+                .ThenInclude(t => t.Users)
+            .Include("Teams.Repository")
+            .Include(x => x.Users)
+            .FirstOrDefaultAsync(x => x.Id == id && x.Active);
 
     public Task<List<Organization>> GetByUser(int userId) =>
         _context
@@ -35,5 +45,10 @@ public class OrganizationRepository(AppDbContext context)
             )
             .Include(x => x.Owner)
             .Include(x => x.Users)
+            .ToListAsync();
+
+    public async Task<List<Organization>> GetOrganizationsByNameContaining(string name) =>
+        await _context.Organizations
+            .Where(o => o.Active && EF.Functions.Like(o.Name, $"%{name}%"))
             .ToListAsync();
 }

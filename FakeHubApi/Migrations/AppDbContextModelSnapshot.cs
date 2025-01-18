@@ -53,6 +53,40 @@ namespace FakeHubApi.Migrations
                     b.ToTable("Organizations");
                 });
 
+            modelBuilder.Entity("FakeHubApi.Model.Entity.Repository", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("Badge")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("OwnedBy")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OwnerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Repositories");
+                });
+
             modelBuilder.Entity("FakeHubApi.Model.Entity.Team", b =>
                 {
                     b.Property<int>("Id")
@@ -76,12 +110,17 @@ namespace FakeHubApi.Migrations
                     b.Property<int>("OrganizationId")
                         .HasColumnType("int");
 
+                    b.Property<int>("RepositoryId")
+                        .HasColumnType("int");
+
                     b.Property<int>("TeamRole")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId");
+
+                    b.HasIndex("RepositoryId");
 
                     b.ToTable("Teams");
                 });
@@ -111,6 +150,9 @@ namespace FakeHubApi.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("HarborUserId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("tinyint(1)");
@@ -321,19 +363,19 @@ namespace FakeHubApi.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("UserOrganization", b =>
+            modelBuilder.Entity("RepositoryCollaborator", b =>
                 {
-                    b.Property<int>("OrganizationId")
+                    b.Property<int>("RepositoryId")
                         .HasColumnType("int");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
-                    b.HasKey("OrganizationId", "UserId");
+                    b.HasKey("RepositoryId", "UserId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserOrganization");
+                    b.ToTable("RepositoryCollaborator");
                 });
 
             modelBuilder.Entity("UserTeam", b =>
@@ -370,7 +412,15 @@ namespace FakeHubApi.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("FakeHubApi.Model.Entity.Repository", "Repository")
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Organization");
+
+                    b.Navigation("Repository");
                 });
 
             modelBuilder.Entity("FakeHubApi.Model.Entity.UserOrganization", b =>
@@ -443,15 +493,19 @@ namespace FakeHubApi.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("UserOrganization", b =>
+            modelBuilder.Entity("RepositoryCollaborator", b =>
                 {
-                    b.HasOne("FakeHubApi.Model.Entity.Organization", null)
+                    b.HasOne("FakeHubApi.Model.Entity.Repository", null)
                         .WithMany()
-                        .HasForeignKey("OrganizationId")
+                        .HasForeignKey("RepositoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                    b.Navigation("Teams");  
-                    b.Navigation("UserOrganizations");
+
+                    b.HasOne("FakeHubApi.Model.Entity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("UserTeam", b =>
@@ -472,6 +526,8 @@ namespace FakeHubApi.Migrations
             modelBuilder.Entity("FakeHubApi.Model.Entity.Organization", b =>
                 {
                     b.Navigation("Teams");
+
+                    b.Navigation("UserOrganizations");
                 });
 
             modelBuilder.Entity("FakeHubApi.Model.Entity.User", b =>

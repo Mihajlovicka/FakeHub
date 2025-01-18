@@ -47,6 +47,17 @@
           </mat-form-field>
         </div>
 
+        <div class="row">
+          <mat-form-field class="compact-field" appearance="outline">
+            <mat-label>Repository</mat-label>
+            <mat-select formControlName="repository">
+              <mat-option *ngFor="let repo of repositories" [value]="repo">
+                {{ repo.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
         <mat-card-actions>
           <button
             mat-raised-button

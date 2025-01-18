@@ -3,7 +3,7 @@
 }
 
 .link-container {
-  width: 18rem;
+  width: 20rem;
   height: fit-content;
   box-shadow: 1px 1px 6px 0px lightgray;
   border-radius: 10px;
@@ -16,6 +16,12 @@
   margin-bottom: 10px;
   text-decoration: none;
   cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.link-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 3px 3px 12px 0px rgba(0, 0, 0, 0.2);
 }
 
 .link-header {
@@ -34,7 +40,7 @@
 
 .ellipsis {
   display: inline-block;
-  max-width: 150px;
+  max-width: 80%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -45,17 +51,15 @@
 }
 
 .fa-check-circle {
-  color: rgba(13, 110, 253 ,0.8);
+  color: rgba(13, 110, 253, 0.8);
   font-size: 1.2rem;
 }
 
 .multi-line-ellipsis {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   overflow: hidden;
-  text-overflow: ellipsis;
   width: 100%;
   padding-bottom: 3px;
   margin-top: 10px;
@@ -63,9 +67,8 @@
   color: #555;
   border-bottom: 1px solid lightgray;
   text-align: left;
-
   line-height: 18px;
-  height: calc(18px * 2);
+  height: 4rem;
 }
 
 .link-footer {
@@ -85,4 +88,21 @@
 span.footer-text {
   margin-right: 15px;
   font-family: "roboto-light";
+}
+
+.description {
+  font-size: 0.85rem;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  margin: 0;
+}
+
+.created {
+  font-size: 0.73rem;
+  margin: 0;
+  margin-top: auto;
 }

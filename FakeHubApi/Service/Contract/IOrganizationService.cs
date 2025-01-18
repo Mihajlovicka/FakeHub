@@ -17,4 +17,6 @@ public interface IOrganizationService
     Task<ResponseBase> DeleteUser(string name, string username);
     Task<ResponseBase> DeactivateOrganization(string name);
     Task<ResponseBase> SearchUsersInOrganization(string name, string? query);
+    Task<Organization?> GetOrganizationById(int id);
+    Task<ResponseBase> GetByUserIdNamePair();
 }

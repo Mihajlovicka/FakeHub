@@ -79,6 +79,8 @@
   text-align: right;
   margin-top: 10px;
   font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
 }
 
 .footer-text {
@@ -101,32 +103,102 @@ span.footer-text {
   margin-top: 20px;
 }
 
-.delete-button {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  border: none;
-  background: transparent;
+.search {
   display: flex;
-  justify-content: center;
   align-items: center;
-  transition: all 0.2s ease-in;
-  border-radius: 50%;
-  padding: 0.25rem;
-  width: 2rem;
+  justify-content: flex-start;
+  width: 100%;
+  margin-bottom: 40px;
+}
+
+.search form {
+  display: flex;
+  width: 20%;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px;
   height: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-right: 1%;
+  outline: none;
+}
+
+.search-button {
+  padding-bottom: 5px;
+  height: 2rem;
+  width: 2rem;
+  background-color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.teams-content-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.teams-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-direction: row-reverse;
+    position:absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+.action-button {
+    border: none;
+    background: transparent;
+    transition: all 0.2s ease-in;
+    border-radius: 50%;
+    padding: 0.25rem;
+    width: 2rem;
+    height: 2rem;
 }
 
 .delete-button mat-icon {
-  font-size: 17px;
-  color: gray;
-  transition: all 0.2s ease-in;
-  height: auto;
+    font-size: 1rem;
+    color: gray;
+    height: auto;
 }
 
 .delete-button:hover mat-icon {
-  color: #8b0c33;
+    color: #8b0c33;
 }
 .delete-button:hover {
-  background-color: #e2e3e5;
+    background-color: #e2e3e5;
+}
+
+.leave-button mat-icon {
+    font-size: 1rem;
+    color: gray;
+    height: auto;
+}
+
+.leave-button:hover mat-icon {
+    color: #8b0c33;
+}
+.leave-button:hover {
+    background-color: #e2e3e5;
 }

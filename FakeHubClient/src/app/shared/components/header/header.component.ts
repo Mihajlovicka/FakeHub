@@ -6,6 +6,7 @@ import { HelperService } from '../../../core/services/helper.service';
 import { OrganizationService } from '../../../core/services/organization.service';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { RepositoryService } from '../../../core/services/repository.service';
 
 @Component({
   selector: 'app-header',
@@ -18,6 +19,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private helperService: HelperService = inject(HelperService);
   private userService: UserService = inject(UserService);
   private organizationService: OrganizationService = inject(OrganizationService);
+  private repositoryService: RepositoryService = inject<any>(RepositoryService);
   private router: Router = inject(Router);
 
   public isLoggedIn: boolean = false;
@@ -87,11 +89,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
   public signOut(): void {
     this.isDropdownVisible = false;
     this.userService.logout();
+    this.router.navigate(['/'], { queryParams: { reload: new Date().getTime() } });
   }
 
   public goToOrganizations(): void {
     this.searchQuery = '';
     this.router.navigate(['/organizations']);
+  }
+
+  public goToRepositories(): void {
+    this.searchQuery = "";
+    this.router.navigate(['/repositories']);
   }
 
  public goToUsers(): void {
@@ -106,7 +114,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   public goToHomePage(): void {
     this.searchQuery = '';
+    this.repositoryService.updateQuery('');
     this.router.navigate(['/']);
+  }
+
+  public goToAnalytics(): void {
+    this.router.navigate(["/analytics"]);
   }
 
   public search(): void {
@@ -116,7 +129,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   public toggleUsersDropdown(event: MouseEvent): void {
     this.isUsersDropdownVisible = !this.isUsersDropdownVisible;
-    event.stopPropagation(); // Prevent triggering the document click handler
+    event.stopPropagation();
   }
 
   private getService(): any {
@@ -127,12 +140,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if(currentRoute.includes('/users')){
       return this.userService;
     }
+    if(currentRoute.includes('/repositories') || currentRoute === '/'){
+      return this.repositoryService;
+    }
     return null;
   }
 
   private getSearchTitlePreview(urlAfterRedirects: string): string {
-    if(urlAfterRedirects.includes('/organizations')) return "organizations";
+    if(urlAfterRedirects.includes('/organizations') || urlAfterRedirects.includes('/organization/')) return "organizations";
     if(urlAfterRedirects.includes('/users')) return "users";
+    if(urlAfterRedirects.includes('/repositories') || urlAfterRedirects.includes('/repository/')) return "repositories";
     return "FakeHub";
   }
 }

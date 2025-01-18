@@ -14,7 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     
     public virtual DbSet<UserOrganization> UserOrganizations { get; set; }
 
-
+    public virtual DbSet<Model.Entity.Repository> Repositories { get; set; }
    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -76,6 +76,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 "UserTeam",
                 j => j.HasOne<User>().WithMany().HasForeignKey("UserId"),
                 j => j.HasOne<Team>().WithMany().HasForeignKey("TeamId")
+            );
+
+        modelBuilder
+            .Entity<Model.Entity.Repository>()
+            .HasMany(r => r.Collaborators)
+            .WithMany()
+            .UsingEntity<Dictionary<string, object>>(
+                "RepositoryCollaborator",
+                j => j.HasOne<User>().WithMany().HasForeignKey("UserId"),
+                j => j.HasOne<Model.Entity.Repository>().WithMany().HasForeignKey("RepositoryId")
             );
     }
 

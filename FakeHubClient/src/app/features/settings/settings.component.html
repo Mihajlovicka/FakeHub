@@ -6,8 +6,8 @@
         <div>
             <span class="username">{{user.username}}</span>
         </div>
-        <div *ngIf="((isAdmin || isSuperAdmin) && !isLoggedInUserProfile) || isUser" class="account-info">
-            <span class="account-joined">Joined {{ formatedDate }}</span>
+        <div *ngIf="((isAdminLoggedIn || isSuperAdminLoggedIn) && !isLoggedInUserProfile) || isUserLoggedIn" class="account-info">
+            <span class="account-joined">Joined {{ user.createdAt | date : 'mediumDate' }}</span>
         </div>
     </div>
 </div>

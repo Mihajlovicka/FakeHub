@@ -5,4 +5,5 @@ namespace FakeHubApi.Service.Contract;
 public interface IUserContextService
 {
     Task<User> GetCurrentUserAsync();
+    Task<(User, string)> GetCurrentUserWithRoleAsync();
 }

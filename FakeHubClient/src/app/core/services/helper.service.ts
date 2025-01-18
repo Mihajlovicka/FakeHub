@@ -5,14 +5,6 @@ import { format, isValid } from "date-fns";
   providedIn: "root",
 })
 export class HelperService {
-  public formatDate(date: Date): string {
-    return this.isDateValid(date) ? format(date, "MMMM d, yyyy") : "";
-  }
-
-  public isDateValid(date: Date): boolean {
-    return isValid(date);
-  }
-
   public capitalizeFirstLetter(input: string): string {
     if (!input) {
       return "";

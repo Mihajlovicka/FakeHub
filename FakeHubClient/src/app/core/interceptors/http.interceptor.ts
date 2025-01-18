@@ -21,12 +21,13 @@ export const HttpResponseInterceptor: HttpInterceptorFn = (
   return next(request).pipe(
     map((event: HttpEvent<any>) => {
       if (event instanceof HttpResponse) {
-        return event.clone({ body: event.body.result });
+        return event.clone({ body: event.body?.result });
       }
       return event;
     }),
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
+        localStorage.clear();
         popupHandler.openSnackbar('Unauthorized');
         router.navigate(['/login']);
       } else if (error.status === 403) {

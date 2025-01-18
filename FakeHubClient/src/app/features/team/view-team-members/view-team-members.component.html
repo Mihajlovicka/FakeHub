@@ -16,13 +16,14 @@
 <div class="users-content-container">
     <div class="users-container">
         @for (user of filteredUsers; track user.username) {
-        <div class="user-container">
+        <div class="user-container" (click)="onUserClick(user)">
           <div class="user-details-container">
             <div class="link-header">
               <span class="ellipsis">{{ user.username }}</span>
+              <app-user-badge [userBadge]="user.badge" [showInfo]="false" [iconSize]="'small-icon'"></app-user-badge>
         </div>
         @if(isOwner){
-          <button class="delete-button" (click)="openDeleteMemberModal(user)"><mat-icon>delete</mat-icon></button>
+          <button class="delete-button" (click)="openDeleteMemberModal(user); $event.stopPropagation()"><mat-icon>delete</mat-icon></button>
           }
         <div class="multi-line-ellipsis">
         {{ user.email }}
