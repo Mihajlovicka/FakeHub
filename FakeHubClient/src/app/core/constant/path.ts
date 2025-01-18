@@ -5,6 +5,7 @@ const authApi = api + 'auth/';
 const organizationApi = api + 'organization/';
 const usersApi = api + 'users/';
 const teamApi = organizationApi + 'team/';
+const repositoryApi = api + 'repositories'
 
 export const Path = {
   Register: authApi + 'register',
@@ -19,7 +20,9 @@ export const Path = {
   OrganizationByUser: organizationApi + "user",
   Users: usersApi,
   AdminUsers: usersApi + "admins",
-  Team: teamApi
+  Team: teamApi,
+  OrganizationByUserIdName: organizationApi + "user/names",
+  Repositories: repositoryApi
 };
 
 export function getProfilePath(username: string): string {

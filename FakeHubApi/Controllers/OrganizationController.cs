@@ -118,4 +118,15 @@ public class OrganizationController(IOrganizationService organizationService) : 
 
         return Ok(response);
     }
+    
+    [HttpGet("user/names")]
+    public async Task<IActionResult> GetByUserIdNamesPair()
+    {
+        var response = await organizationService.GetByUserIdNamePair();
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

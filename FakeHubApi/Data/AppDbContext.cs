@@ -14,7 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     
     public virtual DbSet<UserOrganization> UserOrganizations { get; set; }
 
-
+    public virtual DbSet<Model.Entity.Repository> Repositories { get; set; }
    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

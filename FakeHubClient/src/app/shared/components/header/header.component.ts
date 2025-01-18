@@ -94,6 +94,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.router.navigate(['/organizations']);
   }
 
+  public goToRepositories(): void {
+    this.searchQuery = "";
+    this.router.navigate(['/repositories']);
+  }
+
  public goToUsers(): void {
    this.searchQuery = '';
    this.router.navigate(['/users']);
@@ -131,8 +136,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   private getSearchTitlePreview(urlAfterRedirects: string): string {
-    if(urlAfterRedirects.includes('/organizations')) return "organizations";
+    if(urlAfterRedirects.includes('/organizations') || urlAfterRedirects.includes('/organization/')) return "organizations";
     if(urlAfterRedirects.includes('/users')) return "users";
+    if(urlAfterRedirects.includes('/repositories') || urlAfterRedirects.includes('/repository/')) return "repositories";
     return "FakeHub";
   }
 }

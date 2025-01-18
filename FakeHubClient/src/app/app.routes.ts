@@ -18,6 +18,8 @@ import { AddTeamComponent } from './features/team/add-team/add-team.component';
 import { ViewTeamComponent } from './features/team/view-team/view-team.component';
 import { EditTeamComponent } from './features/team/edit-team/edit-team.component';
 import { UsersListViewComponent } from "./features/user/users-list-view/users-list-view.component";
+import { RepositoriesListViewComponent } from './features/repository/repositories-list-view/repositories-list-view.component';
+import { CreateRepositoryComponent } from './features/repository/create-repository/create-repository.component';
 
 export const routes: Routes = [
   {
@@ -64,6 +66,22 @@ export const routes: Routes = [
     component: EmailEditComponent,
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] },
+  },
+  {
+    path: 'repositories',
+    component: RepositoriesListViewComponent,
+    data: { requiredRole: [UserRole.USER] }
+  },
+  {
+    path: 'repository',
+    canActivate: [AuthGuard],
+    data: { requiredRole: [UserRole.USER] },
+    children: [
+      {
+        path: 'add',
+        component: CreateRepositoryComponent
+      }
+    ]
   },
   {
     path: 'organizations',
@@ -118,18 +136,6 @@ export const routes: Routes = [
     component: UsersListViewComponent,
     canActivate: [AuthGuard],
     data: { requiredRole: [UserRole.SUPERADMIN]}
-  },
-  {
-    path: 'users',
-    component: UsersListViewComponent,
-    canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.ADMIN, UserRole.SUPERADMIN] }
-  },
-  {
-    path: 'users/admins',
-    component: UsersListViewComponent,
-    canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.SUPERADMIN] }
   },
   {
     path: '**',

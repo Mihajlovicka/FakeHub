@@ -7,8 +7,9 @@ public class MapperManager(
     IBaseMapper<RegistrationRequestDto, User> registrationsRequestDtoToUserMapper,
     IBaseMapper<User, UserDto> userToUserDto,
     IBaseMapper<OrganizationDto, Organization> organizationDtoToOrganizationMapper,
-    IBaseMapper<TeamDto, Team> teamDtoToTeamMapper
-) : IMapperManager
+    IBaseMapper<TeamDto, Team> teamDtoToTeamMapper,
+    IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryDtoToRepositoryMapper
+        ) : IMapperManager
 {
     public IBaseMapper<
         RegistrationRequestDto,
@@ -25,4 +26,7 @@ public class MapperManager(
         organizationDtoToOrganizationMapper;
 
     public IBaseMapper<TeamDto, Team> TeamDtoToTeamMapper { get; } = teamDtoToTeamMapper;
+
+    public IBaseMapper<RepositoryDto, Model.Entity.Repository> RepositoryDtoToRepositoryMapper { get; set; } =
+        repositoryDtoToRepositoryMapper;
 }
