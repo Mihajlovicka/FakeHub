@@ -1,6 +1,7 @@
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
+using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
@@ -579,5 +580,38 @@ public class OrganizationServiceTests
             Assert.That(result.ErrorMessage, Is.Empty);
             Assert.That((UserDto)result.Result, Is.EqualTo(responseUser));
         });
+    }
+    
+    [Test]
+    public async Task GetOrganizationById_ShouldReturnOrganization_WhenOrganizationExists()
+    {
+        // Arrange
+        int orgId = 1;
+        var organization = new Model.Entity.Organization { Id = orgId, Name = "Test Org" };
+        _repositoryManagerMock
+            .Setup(r => r.OrganizationRepository.GetByIdAsync(orgId))
+            .ReturnsAsync(organization);
+
+        // Act
+        var result = await _organizationService.GetOrganizationById(orgId);
+
+        // Assert
+        Assert.NotNull(result);
+    }
+
+    [Test]
+    public async Task GetOrganizationById_ShouldReturnNull_WhenOrganizationDoesNotExist()
+    {
+        // Arrange
+        int orgId = 2;
+        _repositoryManagerMock
+            .Setup(r => r.OrganizationRepository.GetByIdAsync(orgId))
+            .ReturnsAsync((Model.Entity.Organization?)null);
+
+        // Act
+        var result = await _organizationService.GetOrganizationById(orgId);
+
+        // Assert
+        Assert.Null(result);
     }
 }

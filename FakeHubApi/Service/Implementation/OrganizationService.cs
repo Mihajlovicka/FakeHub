@@ -215,4 +215,22 @@ public class OrganizationService(
         var users = organization.Users;
         return await userService.GetUsersByQuery(query, users);
     }
+
+    public async Task<Organization?> GetOrganizationById(int id)
+    {
+        return await repositoryManager.OrganizationRepository.GetByIdAsync(id);
+    }
+
+    public async Task<ResponseBase> GetByUserIdNamePair()
+    {
+        var user = await userContext.GetCurrentUserAsync();
+        var organizations = await repositoryManager.OrganizationRepository.GetByUser(user.Id);
+        return ResponseBase.SuccessResponse(
+            organizations.Select(x => new IdNamePairDto()
+            {
+                Id = x.Id,
+                Name = x.Name
+            })
+        );
+    }
 }

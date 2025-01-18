@@ -5,14 +5,14 @@
 namespace FakeHubApi.Migrations
 {
     /// <inheritdoc />
-    public partial class AddTeamRole : Migration
+    public partial class AddOwnerIdIntoRepositories : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<int>(
-                name: "TeamRole",
-                table: "Teams",
+                name: "OwnerId",
+                table: "Repositories",
                 type: "int",
                 nullable: false,
                 defaultValue: 0);
@@ -22,8 +22,8 @@ namespace FakeHubApi.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "TeamRole",
-                table: "Teams");
+                name: "OwnerId",
+                table: "Repositories");
         }
     }
 }

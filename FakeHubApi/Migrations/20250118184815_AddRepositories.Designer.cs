@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FakeHubApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241220122213_AddActiveProperty")]
-    partial class AddActiveProperty
+    [Migration("20250118184815_AddRepositories")]
+    partial class AddRepositories
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -56,6 +56,31 @@ namespace FakeHubApi.Migrations
                     b.ToTable("Organizations");
                 });
 
+            modelBuilder.Entity("FakeHubApi.Model.Entity.Repository", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("OwnedBy")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Repositories");
+                });
+
             modelBuilder.Entity("FakeHubApi.Model.Entity.Team", b =>
                 {
                     b.Property<int>("Id")
@@ -77,6 +102,9 @@ namespace FakeHubApi.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<int>("OrganizationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TeamRole")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -321,6 +349,21 @@ namespace FakeHubApi.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("UserTeam", b =>
+                {
+                    b.Property<int>("TeamId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("TeamId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserTeam");
+                });
+
             modelBuilder.Entity("FakeHubApi.Model.Entity.Organization", b =>
                 {
                     b.HasOne("FakeHubApi.Model.Entity.User", "Owner")
@@ -406,6 +449,21 @@ namespace FakeHubApi.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<int>", b =>
                 {
+                    b.HasOne("FakeHubApi.Model.Entity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("UserTeam", b =>
+                {
+                    b.HasOne("FakeHubApi.Model.Entity.Team", null)
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("FakeHubApi.Model.Entity.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
