@@ -8,4 +8,5 @@ public interface IUserRepository : ICrudRepository<User>
     Task<List<Organization>> GetOwnedOrganizationsByUsername(string username);
     Task<List<Organization>> GetAllOrganizationsByUsername(string username);
     Task<List<User>> GetUsersByRoleAsync(string roleName);
+    Task<List<User>> GetUsersByUsernameContaining(string username);
 }

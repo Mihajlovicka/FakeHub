@@ -14,6 +14,10 @@ public class Team
     [ForeignKey("Organization")]
     public int OrganizationId { get; set; }
     public Organization Organization { get; set; } = new();
+
+    [ForeignKey("Repository")]
+    public int RepositoryId { get; set; }
+    public Repository Repository { get; set; } = new();
     public bool Active { get; set; } = true;
     public List<User> Users { get; set; } = new();
 }

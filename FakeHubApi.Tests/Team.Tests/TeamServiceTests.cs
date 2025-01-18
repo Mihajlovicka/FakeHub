@@ -1,11 +1,12 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
-using Microsoft.AspNetCore.Identity;
 using Moq;
 
 namespace FakeHubApi.Tests.Team.Tests;
@@ -17,8 +18,9 @@ public class TeamServiceTests
     private Mock<IRepositoryManager> _repositoryManagerMock;
     private Mock<IUserService> _userServiceMock;
     private Mock<IUserContextService> _userContextServiceMock;
-
+    private Mock<IHarborService> _harborServiceMock;
     private Mock<IOrganizationService> _organizationServiceMock;
+    private Mock<IRedisCacheService> _redisCacheServiceMock;
 
     [SetUp]
     public void Setup()
@@ -26,13 +28,19 @@ public class TeamServiceTests
         _mapperManagerMock = new Mock<IMapperManager>();
         _repositoryManagerMock = new Mock<IRepositoryManager>();
         _userServiceMock = new Mock<IUserService>();
+        _userContextServiceMock = new Mock<IUserContextService>();
         _organizationServiceMock = new Mock<IOrganizationService>();
+        _harborServiceMock = new Mock<IHarborService>();
+        _redisCacheServiceMock = new Mock<IRedisCacheService>();
 
         _teamService = new TeamService(
             _organizationServiceMock.Object,
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
-            _userServiceMock.Object
+            _userServiceMock.Object,
+            _userContextServiceMock.Object,
+            _harborServiceMock.Object,
+            _redisCacheServiceMock.Object
         );
     }
 
@@ -45,6 +53,7 @@ public class TeamServiceTests
             Description = "Test Description",
             OrganizationName = "Test Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = new RepositoryDto { Id = 1, Name = "Test Repository" }
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var organization = new Model.Entity.Organization
@@ -74,6 +83,14 @@ public class TeamServiceTests
             .ReturnsAsync(organization);
 
         _repositoryManagerMock
+            .Setup(m => m.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync(new Model.Entity.Repository
+            {
+                Id = 1,
+                Name = "Test Repository"
+            });
+
+        _repositoryManagerMock
             .Setup(m => m.TeamRepository.AddAsync(It.IsAny<Model.Entity.Team>()))
             .Returns(Task.FromResult(team));
 
@@ -89,12 +106,18 @@ public class TeamServiceTests
     [Test]
     public async Task AddTeam_Fails_NameNotUnique()
     {
+        var repository = new Model.Entity.Repository
+        {
+            Id = 1,
+            Name = "Test Repository"
+        };
         var teamDto = new TeamDto
         {
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = new RepositoryDto { Id = 1, Name = "Test Repository" }
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var organization = new Model.Entity.Organization
@@ -124,6 +147,10 @@ public class TeamServiceTests
             .ReturnsAsync(organization);
 
         _repositoryManagerMock
+            .Setup(m => m.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync(repository);
+
+        _repositoryManagerMock
             .Setup(m => m.TeamRepository.AddAsync(It.IsAny<Model.Entity.Team>()))
             .Returns(Task.FromResult(team));
         _mapperManagerMock.Setup(m => m.TeamDtoToTeamMapper.Map(It.IsAny<TeamDto>())).Returns(team);
@@ -140,12 +167,18 @@ public class TeamServiceTests
     [Test]
     public async Task AddTeam_Fails_NotAuthorized()
     {
+        var repository = new Model.Entity.Repository
+        {
+            Id = 1,
+            Name = "Test Repository"
+        };
         var teamDto = new TeamDto
         {
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = new RepositoryDto { Id = 1, Name = "Test Repository" }
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var user2 = new User { Id = 2, UserName = "Test User" };
@@ -171,6 +204,10 @@ public class TeamServiceTests
 
         _mapperManagerMock.Setup(m => m.TeamDtoToTeamMapper.Map(It.IsAny<TeamDto>())).Returns(team);
 
+        _repositoryManagerMock
+            .Setup(m => m.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync(repository);
+            
         _organizationServiceMock
             .Setup(m => m.GetOrganization(It.IsAny<string>()))
             .ReturnsAsync(organization);
@@ -428,6 +465,10 @@ public class TeamServiceTests
             .Setup(us => us.GetUserProfileByUsernameAsync(username))
             .ReturnsAsync(userResponseBase);
 
+        _userContextServiceMock
+            .Setup(uc => uc.GetCurrentUserAsync())
+            .ReturnsAsync(new User { UserName = "user1"});
+
         _repositoryManagerMock
             .Setup(rm => rm.TeamRepository.GetTeam(organizationName, teamName))
             .ReturnsAsync(team);
@@ -464,6 +505,10 @@ public class TeamServiceTests
             .Setup(us => us.GetUserProfileByUsernameAsync(username))
             .ReturnsAsync(userResponseBase);
 
+        _userContextServiceMock
+            .Setup(uc => uc.GetCurrentUserAsync())
+            .ReturnsAsync(new User { UserName = "user1" });
+
         _repositoryManagerMock
             .Setup(rm => rm.TeamRepository.GetTeam(organizationName, teamName))
             .ReturnsAsync(team);
@@ -480,6 +525,101 @@ public class TeamServiceTests
             Assert.That(result.Result, Is.Not.Null);
             Assert.That(result.ErrorMessage, Is.Empty);
             Assert.That((UserDto)result.Result, Is.EqualTo(userDto));
+        });
+    }
+    
+    [Test]
+public async Task DeleteTeamFromOrganization_TeamExists_ReturnsSuccessResponse()
+{
+    const string organizationName = "Test Organization";
+    const string teamName = "Test Team";
+    var organization = new Model.Entity.Organization
+    {
+        Name = organizationName,
+        Teams = new List<Model.Entity.Team>
+        {
+            new Model.Entity.Team { Name = teamName }
+        }
+    };
+    _organizationServiceMock
+        .Setup(m => m.GetOrganization(organizationName))
+        .ReturnsAsync(organization);
+    _repositoryManagerMock
+        .Setup(m => m.TeamRepository.UpdateAsync(It.IsAny<Model.Entity.Team>()))
+        .Returns(Task.FromResult(new Model.Entity.Team { Name = teamName }));
+    _organizationServiceMock
+        .Setup(m => m.IsLoggedInUserOwner(organization))
+        .Returns(Task.FromResult(true));
+
+    var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+    Assert.Multiple(() =>
+    {
+        Assert.That(result.Success, Is.True);
+        Assert.That(organization.Teams.Any(t => t.Name == teamName), Is.False);
+    });
+}
+
+    [Test]
+    public async Task DeleteTeamFromOrganization_TeamDoesNotExist_ReturnsErrorResponse()
+    {
+        const string organizationName = "Test Organization";
+        const string teamName = "Nonexistent Team";
+        var organization = new Model.Entity.Organization { Name = organizationName };
+        _organizationServiceMock
+            .Setup(m => m.GetOrganization(organizationName))
+            .ReturnsAsync(organization);
+
+        var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("You are not the owner of this organization."));
+        });
+    }
+
+    [Test]
+    public async Task DeleteTeamFromOrganization_NotAuthorized_ReturnsErrorResponse()
+    {
+        const string organizationName = "Test Organization";
+        const string teamName = "Test Team";
+        var organization = new Model.Entity.Organization
+        {
+            Name = organizationName,
+            Teams = new List<Model.Entity.Team> { new Model.Entity.Team { Name = teamName } }
+        };
+        _organizationServiceMock
+            .Setup(m => m.GetOrganization(organizationName))
+            .ReturnsAsync(organization);
+        _organizationServiceMock
+            .Setup(m => m.IsLoggedInUserOwner(It.IsAny<Model.Entity.Organization>()))
+            .Returns(Task.FromResult(false));
+
+        var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("You are not the owner of this organization."));
+        });
+    }
+
+    [Test]
+    public async Task DeleteTeamFromOrganization_OrganizationNotFound_ReturnsErrorResponse()
+    {
+        const string organizationName = "Nonexistent Organization";
+        const string teamName = "Test Team";
+        _organizationServiceMock
+            .Setup(m => m.GetOrganization(organizationName))
+            .ReturnsAsync((Model.Entity.Organization)null);
+
+        var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Organization not found."));
         });
     }
 }

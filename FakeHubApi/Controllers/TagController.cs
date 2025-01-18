@@ -1,0 +1,47 @@
+using FakeHubApi.Model.Dto;
+using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FakeHubApi.Controllers;
+
+[Route("api/repositories/[controller]")]
+[ApiController]
+public class TagController(ITagService tagService) : ControllerBase
+{
+    [Authorize(Roles = "ADMIN, SUPERADMIN, USER")]
+    [HttpGet("{repositoryId}/canUserDelete")]
+    public async Task<IActionResult> canDelete([FromRoute] int repositoryId)
+    {
+        var response = await tagService.CanDelete(repositoryId);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpGet("all/{repositoryId}")]
+    public async Task<IActionResult> getTags([FromRoute] int repositoryId)
+    {
+        var response = await tagService.GetTags(repositoryId);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [Authorize(Roles = "ADMIN, SUPERADMIN, USER")]
+    [HttpDelete("{repositoryId}")]
+    public async Task<IActionResult> deleteTag([FromRoute] int repositoryId, [FromBody] ArtifactDto artifact)
+    {
+        var response = await tagService.DeleteTag(artifact, repositoryId);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+}

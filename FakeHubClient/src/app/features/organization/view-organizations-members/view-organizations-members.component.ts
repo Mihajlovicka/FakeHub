@@ -15,11 +15,13 @@ import { MatIconModule } from "@angular/material/icon";
 import { MatDialog } from "@angular/material/dialog";
 import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
 import { OrganizationService } from "../../../core/services/organization.service";
+import { UserBadgeComponent } from "../../../shared/components/user-badge/user-badge.component";
+import { Router } from "@angular/router";
 
 @Component({
   selector: "app-view-organizations-members",
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule, UserBadgeComponent],
   templateUrl: "./view-organizations-members.component.html",
   styleUrls: ["./view-organizations-members.component.css"],
 })
@@ -28,6 +30,7 @@ export class ViewOrganizationsMembersComponent implements OnInit, OnChanges {
   public searchQuery: string = "";
   private readonly dialog = inject(MatDialog);
   private readonly service = inject(OrganizationService);
+  private readonly router: Router = inject(Router);
 
   @Input() public users: UserProfileResponseDto[] = [];
   @Input() public organizationName: string = "";
@@ -142,5 +145,9 @@ export class ViewOrganizationsMembersComponent implements OnInit, OnChanges {
           });
       }
     });
+  }
+
+  public onUserClick(user: UserProfileResponseDto): void {
+    this.router.navigate([`/profile/${user.username}`]);
   }
 }

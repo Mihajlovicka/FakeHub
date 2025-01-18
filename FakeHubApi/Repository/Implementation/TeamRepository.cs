@@ -14,9 +14,22 @@ public class TeamRepository(AppDbContext context) : CrudRepository<Team>(context
             .ThenInclude(x => x.Users)
             .Include(x => x.Organization)
             .ThenInclude(x => x.Owner)
+            .Include(x => x.Repository)
             .Include(x => x.Users)
             .FirstOrDefaultAsync(x =>
                 x.Organization.Name == organizationName && x.Name == teamName && x.Active
             );
+    }
+    public async Task<List<Team>> GetAllByRepositoryIdAsync(int repositoryId)
+    {
+        return await context.Teams
+            .Include(t => t.Organization)
+            .ThenInclude(o => o.Users)
+            .Include(t => t.Organization)
+            .ThenInclude(o => o.Owner)
+            .Include(t => t.Repository)
+            .Include(t => t.Users)
+            .Where(t => t.Repository.Id == repositoryId && t.Active)
+            .ToListAsync();
     }
 }

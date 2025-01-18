@@ -4,5 +4,6 @@ public enum Badge
 {
     None = 0,
     VerifiedPubisher = 1,
-    SponsoredOSS = 2
+    SponsoredOSS = 2,
+    DockerOfficialImage = 3
 }

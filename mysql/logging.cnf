@@ -1,0 +1,16 @@
+[mysqld]
+# --- Error log to file ---
+log_error = /var/log/mysql/error.log
+
+# --- Slow query log ---
+slow_query_log = ON
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 1
+log_output = FILE
+
+# --- General query log (optional) ---
+general_log = ON
+general_log_file = /var/log/mysql/general.log
+
+#docker compose exec db ls -l /var/log/mysql
+#docker compose exec db tail -f /var/log/mysql/general.log

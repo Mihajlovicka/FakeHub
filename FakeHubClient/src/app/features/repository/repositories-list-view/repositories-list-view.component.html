@@ -1,0 +1,25 @@
+<div class="content-container">
+  <div class="header-container">
+    <h1 class="title">Repositories</h1>
+    <button class="add-button" (click)="goToCreateRepository()">+</button>
+  </div>
+    <div class="repositories-container">
+      @for (repository of repositories; track repository.id) {
+      <app-docker-image
+        [title]="repository?.fullName"
+        [updatedAt]="repository?.updatedAt"
+        [description]="repository?.description"
+        [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
+        [ownedBy]="repository?.ownedBy"
+        [badge]="repository?.badge"
+        (click)="navigateToRepository(repository.id)"
+      ></app-docker-image>
+      }
+      @empty {
+        <div class="no-repos">
+      <p>There are no repositories</p>
+    </div>
+  
+        }
+    </div>
+</div>

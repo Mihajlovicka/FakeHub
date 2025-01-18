@@ -7,59 +7,91 @@ import { HelperService } from '../../../core/services/helper.service';
 import { UserBadgeComponent } from '../../../shared/components/user-badge/user-badge.component';
 import { UserBadgeModalComponent } from '../../../shared/components/user-badge/user-badge-modal/user-badge-modal.component';
 import { MatDialog } from '@angular/material/dialog';
+import { MatTabsModule } from '@angular/material/tabs';
 import { ChangeUserBadgeRequest } from '../../../core/model/change-badge-to-user-request';
+import { RepositoryService } from '../../../core/services/repository.service';
+import { Repository, RepositoryOwnedBy } from '../../../core/model/repository';
+import { DockerImageComponent } from '../../../shared/components/docker-image/docker-image.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, UserBadgeComponent],
+  imports: [CommonModule, UserBadgeComponent, DockerImageComponent, MatTabsModule],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css'
 })
 export class ProfileComponent implements OnInit{
   private helperService: HelperService = inject(HelperService);
   private userService: UserService = inject(UserService);
+  private readonly repositoryService: RepositoryService = inject(RepositoryService);
   private route: ActivatedRoute = inject(ActivatedRoute);
   private router: Router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
 
-  public showAddMemberButton: boolean = true;
   public user: UserProfileResponseDto = new UserProfileResponseDto();
-  public activeLink: number = 1;  
   public isLoggedInUserProfile: boolean = false;
-  public isAdmin: boolean = false;
-  public isSuperAdmin: boolean = false;
-  public isUser: boolean = false;
-  public isJoinedDateValid = false;
-  public formatedDateString = "";
+  public isAdminLoggedIn: boolean = false;
+  public isSuperAdminLoggedIn: boolean = false;
+  public isUserLoggedIn: boolean = false;
   public capitalizedLetterAvatar = "";
+  public repositories: Repository[] = [];
+  public contributedRepositories: Repository[] = [];
+
+  get editable(): boolean {
+    return (this.isAdminLoggedIn || this.isSuperAdminLoggedIn) && this.user.role === 'USER';
+  }
 
   public ngOnInit(): void {
-    const usernameParam = this.route.snapshot.paramMap.get('username') ?? "";
-    this.isAdmin = this.userService.isAdminLoggedIn();
-    this.isSuperAdmin = this.userService.isSuperAdminLoggedIn();
-    this.isUser = this.userService.isUserLoggedIn();
+    const usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
+    this.checkUserPermissions();
+    this.loadUserProfile(this.usernameParam);
 
-    this.isLoggedInUserProfile = this.userService.getUserNameFromToken() == usernameParam;
+    this.repositoryService.getAllVisibleRepositoriesForUser(usernameParam).subscribe({
+      next: repos => {
+        this.repositories = repos;
+      }
+    });
 
-    this.userService.getUserProfileByUsername(usernameParam).subscribe(user => {
+    if(this.isLoggedInUserProfile || this.isAdminLoggedIn || this.isSuperAdminLoggedIn) {
+      this.repositoryService.getRepositoriesUserContributed(usernameParam).subscribe({
+      next: repos => {
+        this.contributedRepositories = repos;
+      }
+    });
+    }
+  }
+
+  private checkUserPermissions(): void {
+    this.isAdminLoggedIn = this.userService.isAdminLoggedIn();
+    this.isSuperAdminLoggedIn = this.userService.isSuperAdminLoggedIn();
+    this.isUserLoggedIn = this.userService.isUserLoggedIn();
+    this.isLoggedInUserProfile = this.userService.getUserNameFromToken() === this.route.snapshot.paramMap.get('username');
+  }
+
+  private loadUserProfile(username: string): void {
+    this.userService.getUserProfileByUsername(username).subscribe(user => {
       this.user = user ?? new UserProfileResponseDto();
-      this.isJoinedDateValid = this.helperService.isDateValid(this.user.createdAt);
-      this.formatedDateString = this.isJoinedDateValid ? this.helperService.formatDate(this.user.createdAt) : '';
       this.capitalizedLetterAvatar = this.helperService.capitalizeFirstLetter(user?.username ?? "");
     });
   }
 
-  public setActiveLink(linkNumber: number) {
-    this.activeLink = linkNumber;  
+  private updateRepositoriesBadge(selectedBadge: string): void {
+    this.repositories = this.repositories.map(repo => {
+      if (repo.ownedBy === RepositoryOwnedBy.USER) {
+        return { ...repo, badge: Number(selectedBadge) };
+      }
+      return repo;
+    });
   }
+
 
   public goToSettings() {
     this.router.navigate(['/settings']);
   }
 
   public openBadgeDialog(): void {
-    if(this.isAdmin) {
+    if(this.isAdminLoggedIn || this.isSuperAdminLoggedIn) {
       const dialogRef = this.dialog.open(UserBadgeModalComponent, {
         data: {currentBadge: this.user?.badge ?? UserBadge.None},
       });
@@ -67,6 +99,8 @@ export class ProfileComponent implements OnInit{
       dialogRef.afterClosed().subscribe(selectedBadge => {
         if (selectedBadge !== undefined) {
            this.changeUserBadge(selectedBadge);
+
+          this.updateRepositoriesBadge(selectedBadge);
         }
       });
     }
@@ -76,8 +110,18 @@ export class ProfileComponent implements OnInit{
     const changeUserBadge = new ChangeUserBadgeRequest(Number(selectedBadge), this.user.username);
     this.userService.changeUserBadge(changeUserBadge).subscribe((result) => {
       if(result?.username) {
-        this.user = result;
+        this.user.badge = result.badge;
       }
     });
+  }
+
+  public isDateValid(dateString: string | Date): boolean {
+    const date = new Date(dateString);
+    const minValidDate = new Date(1, 0, 1);
+    return date > minValidDate;
+  }
+
+  public navigateToRepository(id: number | undefined){
+    if(id) this.router.navigate(["/repository/", id]);
   }
 }

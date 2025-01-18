@@ -12,6 +12,7 @@ import { ServiceResponse } from "../model/service-response";
 import { Organization } from "../model/organization";
 import { AddMembersRequest } from "../model/add-member-to-organization-request";
 import { UserProfileResponseDto } from "../model/user";
+import { IdNamePair } from "../model/id-name-pair";
 
 @Injectable({
   providedIn: "root",
@@ -94,5 +95,9 @@ export class OrganizationService {
         params: { query },
       }
     );
+  }
+
+  public getByUserIdName(): Observable<IdNamePair[]> {
+    return this.http.get<IdNamePair[]>(Path.OrganizationByUserIdName);
   }
 }

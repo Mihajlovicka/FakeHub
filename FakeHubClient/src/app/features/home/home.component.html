@@ -1,61 +1,59 @@
 <h1 class="title">Docker Images</h1>
 <div class="content-container">
-  <div *ngIf="!isLoggedIn" class="filters-container">
+  <div class="filters-container">
     <div class="trusted-content">
+      <div class="sort-content">
+        <label for="sortSelect">Sort by:</label>
+        <select
+          id="sortSelect"
+          [(ngModel)]="selectedSortOption"
+          (change)="sortRepositories()"
+        >
+          <option *ngFor="let option of sortBy" [value]="option.id">
+            {{ option.name }}
+          </option>
+        </select>
+      </div>
       <button (click)="toggleTrustedContentVisibility()" class="dropdown-btn">
         Trusted content
         <i
           class="fa chevron-icon"
           [ngClass]="
-            isLoggedIn ? 'fa-chevron-up' : 'fa-chevron-down'
+            isTrustedContentVisible ? 'fa-chevron-up' : 'fa-chevron-down'
           "
         ></i>
       </button>
-
       <div *ngIf="isTrustedContentVisible">
         <div class="dropdown-content">
-          <a href="#">Docker Official Image</a>
-          <a href="#">Verified Publisher</a>
-          <a href="#">Sponsored OSS</a>
+          <mat-checkbox
+            *ngFor="let option of trustedOptions"
+            [checked]="selectedBadges.includes(option.value)"
+            (change)="filterByBadge(option.value)"
+          >
+            {{ option.label }}
+          </mat-checkbox>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="repositories.length > 0; else noRepos" class="docker-images-container">
+      <div *ngFor="let repo of repositories">
+        <app-docker-image
+          [title]="repo?.fullName"
+          [updatedAt]="repo?.updatedAt"
+          [description]="repo?.description"
+          [footerText]="'Public'"
+          [ownedBy]="repo?.ownedBy"
+          [badge]="repo?.badge"
+          (click)="navigateToRepository(repo.id)"
+        ></app-docker-image>
       </div>
     </div>
 
-    <div class="categories">
-      <button (click)="toggleCategoriesVisibility()" class="dropdown-btn">
-        Categories
-        <i
-          class="fa chevron-icon"
-          [ngClass]="
-            isLoggedIn ? 'fa-chevron-up' : 'fa-chevron-down'
-          "
-        ></i>
-      </button>
-      <div *ngIf="isCategoriesVisible">
-        <div class="dropdown-content">
-          <a href="#">API Management</a>
-          <a href="#">Content Management System</a>
-          <a href="#">Data Science</a>
-          <a href="#">Database & Storage</a>
-          <a href="#">Languages & Frameworks</a>
-          <a href="#">Integration & Delivery</a>
-          <a href="#">Internet of Things</a>
-          <a href="#">Machine Learning & AI</a>
-          <a href="#">Message Queues</a>
-          <a href="#">Monitoring Observability</a>
-          <a href="#">Networing</a>
-          <a href="#">Operating Systems</a>
-          <a href="#">Security</a>
-          <a href="#">Web Servers</a>
-          <a href="#">Developer Tools</a>
-          <a href="#">Web Analytics</a>
-        </div>
+    <ng-template #noRepos>
+      <div class="docker-images-container">
+        <p class="no-repos">No repositories found.</p>
       </div>
-    </div>
+    </ng-template>
   </div>
-  <div class="docker-images-container">
-    <div *ngFor="let dockerImage of dockerImages">
-      <app-docker-image [dockerImage]="dockerImage"></app-docker-image>
-    </div>
-  </div>
-</div>

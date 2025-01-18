@@ -1,0 +1,1668 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using FakeHubApi.ContainerRegistry;
+using FakeHubApi.Data;
+using FakeHubApi.Model.Dto;
+using FakeHubApi.Model.Entity;
+using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Newtonsoft.Json;
+
+namespace FakeHubApi.Tests.Repositories.Tests
+{
+    public class RepositoryControllerIntegrationTests
+    {
+        private HttpClient _client;
+        private CustomWebApplicationFactory _factory;
+        private string _regularUserToken;
+        private string _regularUser1Token;
+        private string _adminToken;
+        private string _superAdminToken;
+
+        [OneTimeSetUp]
+        public async Task Setup()
+        {
+            _factory = new CustomWebApplicationFactory();
+            _client = _factory.CreateClient();
+            await SetupDbData();
+            await InitializeTokens();
+        }
+
+        [OneTimeTearDown]
+        public void TearDown()
+        {
+            _client.Dispose();
+            _factory.Dispose();
+        }
+
+        [Test, Order(1)]
+        public async Task Register_WithoutBearerToken_ReturnsUnauthorized()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "Test Repo",
+                Description = "Test repository description.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = 1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = null;
+
+            var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(2)]
+        public async Task Register_WithAdminUserToken_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "Admin Repository",
+                Description = "Admin repository description.",
+                IsPrivate = true,
+                OwnerId = 1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+            var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            var responseRepositoryString = responseObj?.Result?.ToString() ?? string.Empty;
+
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseRepositoryString, Is.Not.Empty);
+
+            var responseRepositoryObject = JsonConvert.DeserializeObject<Model.Entity.Repository>(responseRepositoryString);
+
+            Assert.That(responseRepositoryObject?.Badge, Is.EqualTo(Badge.DockerOfficialImage));
+            Assert.That(responseRepositoryObject?.OwnedBy, Is.EqualTo(RepositoryOwnedBy.Admin));
+            Assert.That(responseRepositoryObject?.OwnerId, Is.GreaterThanOrEqualTo(0));
+        }
+
+        [Test, Order(3)]
+        public async Task Register_WithSuperAdminUserToken_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "SuperAdmin Repository",
+                Description = "SuperAdmin repository description.",
+                IsPrivate = false,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _superAdminToken);
+            var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            var responseRepositoryString = responseObj?.Result?.ToString() ?? string.Empty;
+
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseRepositoryString, Is.Not.Empty);
+
+            var responseRepositoryObject = JsonConvert.DeserializeObject<Model.Entity.Repository>(responseRepositoryString);
+
+            Assert.That(responseRepositoryObject?.Badge, Is.EqualTo(Badge.DockerOfficialImage));
+            Assert.That(responseRepositoryObject?.OwnedBy, Is.EqualTo(RepositoryOwnedBy.SuperAdmin));
+            Assert.That(responseRepositoryObject?.OwnerId, Is.GreaterThanOrEqualTo(0));
+        }
+
+        [Test, Order(4)]
+        public async Task GetRepositories_WithoutToken_ReturnsUnauthorized()
+        {
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.GetAsync("/api/repositories/all");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(5)]
+        public async Task GetRepositories_AsUser_ReturnsEmptyList()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+            var response = await _client.GetAsync("/api/repositories/all");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.EqualTo(0));
+        }
+
+        [Test, Order(6)]
+        public async Task GetRepositories_AsAdmin_ReturnsAllRepositories()
+        {
+            using var scope = _factory.Services.CreateScope();
+            await using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var repositoriesCount = db.Repositories.Count();
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+            var response = await _client.GetAsync("/api/repositories/all");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.EqualTo(repositoriesCount));
+        }
+
+        [Test, Order(7)]
+        public async Task GetVisibleRepositories_AsUser_ReturnsPublicAdminRepositories()
+        {
+            var username = "superadmin@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/all/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Is.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+        }
+
+        [Test, Order(8)]
+        public async Task GetVisibleRepositories_AsCurrentUser_ReturnsAllUserRepositories()
+        {
+            var username = "user@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/all/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Has.Some.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.Some.Matches<RepositoryDto>(r => r.IsPrivate == true));
+        }
+
+        [Test, Order(9)]
+        public async Task GetVisibleRepositories_AsAdmin_ReturnsAllUserRepositories()
+        {
+            var username = "user@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+            var response = await _client.GetAsync($"/api/repositories/all/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Has.Some.Matches<RepositoryDto>(repo => repo.IsPrivate));
+        }
+
+        [Test, Order(10)]
+        public async Task GetAllRepositoriesForOrganization_ValidOrgName_ReturnsOk()
+        {
+            var orgName = "Organization1";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/organization/{orgName}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories!.Count, Is.GreaterThan(0));
+        }
+
+        [Test, Order(11)]
+        public async Task GetAllRepositoriesForOrganization_InvalidOrgName_ReturnsBadRequest()
+        {
+            var orgName = "NonExistentOrg";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/organization/{orgName}");
+
+            Assert.That(response.IsSuccessStatusCode, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test, Order(12)]
+        public async Task GetAllRepositoriesForOrganization_NoRepositories_ReturnsOk()
+        {
+            var orgName = "Organization2";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/organization/{orgName}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Empty);
+        }
+
+        [Test, Order(13)]
+        public async Task Register_RepositoryBadgeEqualsUserBadge_ReturnsOk()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var userProfileResponse = await _client.GetAsync($"/api/users/user@fakehub.com");
+            userProfileResponse.EnsureSuccessStatusCode();
+
+            var userProfileObj = await userProfileResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var userProfileString = userProfileObj?.Result?.ToString() ?? string.Empty;
+            var userProfile = JsonConvert.DeserializeObject<UserDto>(userProfileString);
+
+            Assert.That(userProfile, Is.Not.Null);
+            var userBadge = userProfile!.Badge;
+
+            var repoName = $"RepoBadgeEqualsUserBadge_{Guid.NewGuid().ToString().Substring(0, 8)}";
+            var repositoryDto = new RepositoryDto
+            {
+                Name = repoName,
+                Description = "Repo for badge equals user badge test.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+            var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            var responseRepositoryString = responseObj?.Result?.ToString() ?? string.Empty;
+
+            Assert.That(responseRepositoryString, Is.Not.Empty);
+            var responseRepositoryObject = JsonConvert.DeserializeObject<Model.Entity.Repository>(responseRepositoryString);
+            Assert.That(responseRepositoryObject, Is.Not.Null);
+            Assert.That(responseRepositoryObject?.Badge, Is.EqualTo(userBadge));
+        }
+
+        [Test, Order(14)]
+        public async Task DeleteRepository_AsAdminOwner_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RepoToDelete",
+                Description = "Repository for deletion test.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.Admin,
+                OwnerId = 2
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var deleteResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo!.Id}");
+            deleteResponse.EnsureSuccessStatusCode();
+            var deleteResponseObj = await deleteResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(deleteResponseObj, Is.Not.Null);
+            Assert.That(deleteResponseObj!.Success, Is.True);
+            Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        [Test, Order(15)]
+        public async Task DeleteRepository_RepoDoesNotExist_ReturnsBadRequest()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var invalidRepoId = 9999;
+            var response = await _client.DeleteAsync($"/api/repositories/{invalidRepoId}");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(responseObj, Is.Not.Null);
+                Assert.That(responseObj!.Success, Is.False);
+                Assert.That(responseObj.ErrorMessage, Is.EqualTo("Repository not found"));
+            });
+        }
+
+        [Test, Order(16)]
+        public async Task DeleteRepository_AsNonOwner_ReturnsBadRequest()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RepoOtherOwner",
+                Description = "Repository owned by another user.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.Admin,
+                OwnerId = 3
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _superAdminToken);
+
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+
+            var deleteResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo!.Id}");
+            Assert.That(deleteResponse.IsSuccessStatusCode, Is.False);
+
+            var deleteResponseObj = await deleteResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(deleteResponseObj, Is.Not.Null);
+                Assert.That(deleteResponseObj!.Success, Is.False);
+                Assert.That(deleteResponseObj.ErrorMessage, Is.EqualTo("You do not have permission to delete this repository"));
+            });
+        }
+
+        [Test, Order(17)]
+        public async Task GetAllPublicRepositories_WithRepositories_ReturnsOk()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+        }
+
+        [Test, Order(18)]
+        public async Task GetRepository_ValidId_ReturnsOk()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+
+            var repositoryId = 5;
+            var response = await _client.GetAsync($"/api/repositories/{repositoryId}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repository = JsonConvert.DeserializeObject<RepositoryDto>(responseObj.Result.ToString()!);
+            Assert.That(repository, Is.Not.Null);
+            Assert.That(repository!.Id, Is.EqualTo(repositoryId));
+        }
+
+        [Test, Order(19)]
+        public async Task GetRepository_InvalidId_ReturnsBadRequest()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var invalidRepositoryId = 99999;
+            var response = await _client.GetAsync($"/api/repositories/{invalidRepositoryId}");
+
+            Assert.That(response.IsSuccessStatusCode, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+            Assert.That(responseObj.ErrorMessage, Is.EqualTo($"Repository with id {invalidRepositoryId} does not exist."));
+        }
+
+        [Test, Order(20)]
+        public async Task GetRepository_PrivateRepositoryWithoutAccess_ReturnsBadRequest()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+
+            var privateRepositoryId = 4;
+            var response = await _client.GetAsync($"/api/repositories/{privateRepositoryId}");
+
+            Assert.That(response.IsSuccessStatusCode, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+            Assert.That(responseObj.ErrorMessage, Is.EqualTo($"Repository with id {privateRepositoryId} does not exist."));
+        }
+
+        [Test, Order(21)]
+        public async Task AddCollaborator_WithValidData_ReturnsOk()
+        {
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "CollabTestRepo",
+                Description = "Repository for collaborator testing",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var response = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", addCollaboratorDto);
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj.Success, Is.True);
+        }
+
+        [Test, Order(22)]
+        public async Task AddCollaborator_WithoutToken_ReturnsUnauthorized()
+        {
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.PostAsJsonAsync("/api/repositories/1/add-collaborator", addCollaboratorDto);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(23)]
+        public async Task AddCollaborator_InvalidRepository_ReturnsBadRequest()
+        {
+            var invalidRepoId = 9999;
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.PostAsJsonAsync($"/api/repositories/{invalidRepoId}/add-collaborator", addCollaboratorDto);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+        }
+
+        [Test, Order(24)]
+        public async Task AddCollaborator_NonExistentUser_ReturnsBadRequest()
+        {
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "nonexistent@fakehub.com" };
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "CollabTestRepo2",
+                Description = "Repository for collaborator testing",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var response = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", addCollaboratorDto);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+        }
+
+        [Test, Order(25)]
+        public async Task AddCollaborator_AddingOwnerAsCollaborator_ReturnsBadRequest()
+        {
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user@fakehub.com" };
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "CollabTestRepo3",
+                Description = "Repository for collaborator testing",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+            var response = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", addCollaboratorDto);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+            Assert.That(responseObj.ErrorMessage, Is.EqualTo("Cannot add owner as collaborator."));
+        }
+
+        [Test, Order(26)]
+        public async Task GetCollaborators_ValidUserRepository_ReturnsOk()
+        {
+            var regularUser1Username = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "CollabGetUserTestRepo",
+                Description = "Repository for getting collaborators",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var addCollabResponse = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", regularUser1Username);
+            Assert.That(addCollabResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            var addCollabResponseObj = await addCollabResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(addCollabResponseObj, Is.Not.Null);
+            Assert.That(addCollabResponseObj!.Success, Is.True);
+
+            var getCollabsResponse = await _client.GetAsync($"/api/repositories/{createdRepo!.Id}/collaborators");
+            getCollabsResponse.EnsureSuccessStatusCode();
+
+            var getCollabsResponseObj = await getCollabsResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(getCollabsResponseObj, Is.Not.Null);
+            Assert.That(getCollabsResponseObj!.Success, Is.True);
+
+            var collaborators = JsonConvert.DeserializeObject<List<UserDto>>(getCollabsResponseObj.Result.ToString()!);
+            Assert.That(collaborators, Is.Not.Null);
+            Assert.That(collaborators.Count, Is.EqualTo(1));
+        }
+
+        [Test, Order(27)]
+        public async Task GetCollaborators_WithoutToken_ReturnsUnauthorized()
+        {
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.GetAsync("/api/repositories/1/collaborators");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(28)]
+        public async Task GetCollaborators_InvalidRepository_ReturnsBadRequest()
+        {
+            var invalidRepoId = 9999;
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/{invalidRepoId}/collaborators");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+        }
+
+        [Test, Order(29)]
+        public async Task GetCollaborators_OrganizationRepository_ReturnsTeams()
+        {
+            var organizationRepoId = 3;
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync($"/api/repositories/{organizationRepoId}/collaborators");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var teams = JsonConvert.DeserializeObject<List<TeamDto>>(responseObj.Result.ToString()!);
+            Assert.That(teams, Is.Not.Null);
+        }
+
+        [Test, Order(30)]
+        public async Task GetRepositoriesUserContributed_ValidUser_ReturnsOk()
+        {
+            var username = "user1@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+
+            var response = await _client.GetAsync($"/api/repositories/contributed/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories.Count, Is.GreaterThanOrEqualTo(1));
+        }
+
+        [Test, Order(31)]
+        public async Task GetRepositoriesUserContributed_WithoutToken_ReturnsUnauthorized()
+        {
+            var username = "user@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = null;
+
+            var response = await _client.GetAsync($"/api/repositories/contributed/{username}");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(32)]
+        public async Task GetRepositoriesUserContributed_NonExistentUser_ReturnsBadRequest()
+        {
+            var username = "nonexistent@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync($"/api/repositories/contributed/{username}");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+        }
+
+        [Test, Order(33)]
+        public async Task GetRepositoriesUserContributed_AsAdmin_ReturnsOk()
+        {
+            var privateRepositoryDto = new RepositoryDto
+            {
+                Name = "PrivateRepoForContribution",
+                Description = "Private repository for contribution testing",
+                IsPrivate = true,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", privateRepositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+            Assert.That(createdRepo!.IsPrivate, Is.True);
+
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+            var addCollabResponse = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo.Id}/add-collaborator", addCollaboratorDto);
+            addCollabResponse.EnsureSuccessStatusCode();
+
+            var addCollabResponseObj = await addCollabResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(addCollabResponseObj, Is.Not.Null);
+            Assert.That(addCollabResponseObj!.Success, Is.True);
+
+            var username = "user1@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var response = await _client.GetAsync($"/api/repositories/contributed/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(1));
+            Assert.That(repositories, Has.Some.Matches<RepositoryDto>(r => r.IsPrivate == true));
+        }
+
+        [Test, Order(34)]
+        public async Task RemoveCollaborator_OwnerRemovesCollaborator_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RemoveCollabTestRepo",
+                Description = "Repository for remove collaborator testing",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+            var addResponse = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", addCollaboratorDto);
+            addResponse.EnsureSuccessStatusCode();
+
+            var removeResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo.Id}/remove-collaborator/user1@fakehub.com");
+            removeResponse.EnsureSuccessStatusCode();
+
+            var responseObj = await removeResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+        }
+
+        [Test, Order(35)]
+        public async Task RemoveCollaborator_WithoutToken_ReturnsUnauthorized()
+        {
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.DeleteAsync("/api/repositories/1/remove-collaborator/user1@fakehub.com");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(36)]
+        public async Task RemoveCollaborator_InvalidRepository_ReturnsBadRequest()
+        {
+            var invalidRepoId = 9999;
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.DeleteAsync($"/api/repositories/{invalidRepoId}/remove-collaborator/user1@fakehub.com");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+            Assert.That(responseObj!.ErrorMessage, Is.EqualTo("Repository not found."));
+        }
+
+        [Test, Order(37)]
+        public async Task RemoveCollaborator_CollaboratorLeavesRepository_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "LeaveCollabTestRepo",
+                Description = "Repository for leave collaborator testing",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+            var addResponse = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", addCollaboratorDto);
+            addResponse.EnsureSuccessStatusCode();
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+            var leaveResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo.Id}/remove-collaborator/user1@fakehub.com");
+            leaveResponse.EnsureSuccessStatusCode();
+
+            var responseObj = await leaveResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+        }
+
+        [Test, Order(38)]
+        public async Task RemoveCollaborator_NonExistentUser_ReturnsBadRequest()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RemoveNonExistentCollabRepo",
+                Description = "Repository for testing non-existent collaborator removal",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var removeResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo!.Id}/remove-collaborator/nonexistent@fakehub.com");
+
+            Assert.That(removeResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await removeResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+            Assert.That(responseObj!.ErrorMessage, Is.EqualTo("User is not a collaborator."));
+        }
+
+        [Test, Order(39)]
+        public async Task Register_WithValidUserToken_AndSuccessfulSave_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "Valid Repo",
+                Description = "A valid repository description.",
+                IsPrivate = true,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = 1
+            };
+
+            var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll(typeof(IRepositoryService));
+                    services.AddSingleton<IRepositoryService>(new FakeRepositoryService
+                    {
+                        SaveFunc = dto => Task.FromResult(new ResponseBase
+                        {
+                            Success = true,
+                            Result = new { Message = "Repository saved successfully" }
+                        })
+                    });
+                });
+            }).CreateClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+        }
+
+        [Test, Order(40)]
+        public async Task Register_WithValidUserToken_AndUnsuccessfulSave_ReturnsBadRequest()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "Invalid Repo",
+                Description = "This repository fails to save.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = 1
+            };
+
+            var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll(typeof(IRepositoryService));
+                    services.AddSingleton<IRepositoryService>(new FakeRepositoryService
+                    {
+                        SaveFunc = dto => Task.FromResult(new ResponseBase
+                        {
+                            Success = false,
+                            ErrorMessage = "Repository could not be saved"
+                        })
+                    });
+                });
+            }).CreateClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(responseObj, Is.Not.Null);
+                Assert.That(responseObj!.Success, Is.False);
+                Assert.That(responseObj.ErrorMessage, Is.EqualTo("Repository could not be saved"));
+            });
+        }
+        
+        [Test, Order(41)]
+        public async Task EditRepository_AsAdmin_SuccessfulEdit_ReturnsOk()
+        {
+            var fakeService = new FakeRepositoryService
+            {
+                EditRepositoryFunc = dto => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                    {
+                        Id = dto.Id,
+                        Description = dto.Description,
+                        IsPrivate = dto.IsPrivate,
+                        OwnedBy = RepositoryOwnedBy.Admin,
+                        OwnerId = 2
+                    })
+                })
+            };
+
+            var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll(typeof(IRepositoryService));
+                    services.AddSingleton<IRepositoryService>(fakeService);
+                });
+            }).CreateClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var editDto = new EditRepositoryDto(1, "Updated Description", false);
+            var editResponse = await client.PutAsJsonAsync("/api/repositories", editDto);
+
+            editResponse.EnsureSuccessStatusCode();
+
+            var editResponseObj = await editResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(editResponseObj, Is.Not.Null);
+            Assert.That(editResponseObj!.Success, Is.True);
+
+            var updatedRepoString = editResponseObj.Result?.ToString() ?? string.Empty;
+            var updatedRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(updatedRepoString);
+
+            Assert.That(updatedRepo, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(updatedRepo!.Description, Is.EqualTo("Updated Description"));
+                Assert.That(updatedRepo.IsPrivate, Is.False);
+            });
+        }
+
+        [Test, Order(42)]
+        public async Task EditRepository_WithoutToken_ReturnsUnauthorized()
+        {
+            var editDto = new EditRepositoryDto(1, "", false);
+
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.PutAsJsonAsync("/api/repositories", editDto);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(43)]
+        public async Task EditRepository_RepoDoesNotExist_ReturnsBadRequest()
+        {
+            var editDto = new EditRepositoryDto(9999, "Updated Description", true);
+
+            var fakeService = new FakeRepositoryService
+            {
+                EditRepositoryFunc = dto =>
+                {
+                    if (dto.Id == 9999)
+                    {
+                        return Task.FromResult(new ResponseBase
+                        {
+                            Success = false,
+                            ErrorMessage = "Repository not found."
+                        });
+                    }
+
+                    return Task.FromResult(new ResponseBase
+                    {
+                        Success = true,
+                        Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                        {
+                            Id = dto.Id,
+                            Description = dto.Description,
+                            IsPrivate = dto.IsPrivate
+                        })
+                    });
+                }
+            };
+
+            var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll(typeof(IRepositoryService));
+                    services.AddSingleton<IRepositoryService>(fakeService);
+                });
+            }).CreateClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+            var response = await client.PutAsJsonAsync("/api/repositories", editDto);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.IsSuccessStatusCode, Is.False);
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            });
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(responseObj, Is.Not.Null);
+                Assert.That(responseObj!.Success, Is.False);
+                Assert.That(responseObj.ErrorMessage, Is.EqualTo("Repository not found."));
+            });
+        }
+
+        [Test, Order(44)]
+        public async Task GetAllPublicRepositories_WithoutQuery_ReturnsAllPublicRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+        }
+
+        [Test, Order(45)]
+        public async Task GetAllPublicRepositories_WithDescriptionQuery_ReturnsFilteredRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=description:description");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Description.Contains("description", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        [Test, Order(46)]
+        public async Task GetAllPublicRepositories_WithComplexQuery_ReturnsFilteredRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=name:Repository description:description badge:DockerOfficialImage");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Name.Contains("Repository", StringComparison.OrdinalIgnoreCase)));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Description.Contains("description", StringComparison.OrdinalIgnoreCase)));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Badge == Badge.DockerOfficialImage));
+        }
+
+        [Test, Order(47)]
+        public async Task GetAllPublicRepositories_WithGeneralTermQuery_ReturnsFilteredRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=Repository");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => (r.Name != null && r.Name.Contains("Repository", StringComparison.OrdinalIgnoreCase)) ||
+                    (r.Description != null && r.Description.Contains("Repository", StringComparison.OrdinalIgnoreCase))));
+        }
+
+        [Test, Order(48)]
+        public async Task GetAllPublicRepositories_WithNonExistentQuery_ReturnsEmptyList()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=name:NonExistentRepository");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.EqualTo(0));
+        }
+
+        [Test, Order(49)]
+        public async Task GetAllPublicRepositories_WithoutToken_ReturnsOk()
+        {
+            _client.DefaultRequestHeaders.Authorization = null;
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+        }
+
+        private async Task SetupDbData()
+        {
+            using var scope = _factory.Services.CreateScope();
+            await using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
+
+            if (!await roleManager.RoleExistsAsync("USER"))
+            {
+                await roleManager.CreateAsync(new IdentityRole<int> { Name = "USER" });
+            }
+            if (!await roleManager.RoleExistsAsync("ADMIN"))
+            {
+                await roleManager.CreateAsync(new IdentityRole<int> { Name = "ADMIN" });
+            }
+            if (!await roleManager.RoleExistsAsync("SUPERADMIN"))
+            {
+                await roleManager.CreateAsync(new IdentityRole<int> { Name = "SUPERADMIN" });
+            }
+
+            var regularUser = await userManager.FindByEmailAsync("user@fakehub.com");
+            if (regularUser == null)
+            {
+                regularUser = new User
+                {
+                    Email = "user@fakehub.com",
+                    UserName = "user@fakehub.com"
+                };
+                var result = await userManager.CreateAsync(regularUser, "Password123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(regularUser, "USER");
+                }
+            }
+
+            var adminUser = await userManager.FindByEmailAsync("admin@fakehub.com");
+            if (adminUser == null)
+            {
+                adminUser = new User
+                {
+                    Email = "admin@fakehub.com",
+                    UserName = "admin@fakehub.com"
+                };
+                var result = await userManager.CreateAsync(adminUser, "Password123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "ADMIN");
+                }
+            }
+
+            var superAdminUser = await userManager.FindByEmailAsync("superadmin@fakehub.com");
+            if (superAdminUser == null)
+            {
+                superAdminUser = new User
+                {
+                    Email = "superadmin@fakehub.com",
+                    UserName = "superadmin@fakehub.com"
+                };
+                var result = await userManager.CreateAsync(superAdminUser, "Password123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(superAdminUser, "SUPERADMIN");
+                }
+            }
+
+            var regularUser1 = await userManager.FindByEmailAsync("user1@fakehub.com");
+            if (regularUser1 == null)
+            {
+                regularUser1 = new User
+                {
+                    Email = "user1@fakehub.com",
+                    UserName = "user1@fakehub.com"
+                };
+                var result = await userManager.CreateAsync(regularUser1, "Password123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(regularUser1, "USER");
+                }
+            }
+
+            var organization1 = new Model.Entity.Organization
+            {
+                Id = 1,
+                Name = "Organization1",
+                Description = "Organization1 description",
+                IsActive = true,
+                OwnerId = regularUser.Id,
+                Owner = regularUser,
+            };
+
+            var organization2 = new Model.Entity.Organization
+            {
+                Id = 2,
+                Name = "Organization2",
+                Description = "Organization2 description",
+                IsActive = true,
+                OwnerId = regularUser.Id,
+                Owner = regularUser,
+            };
+
+            var repository1 = new Model.Entity.Repository
+            {
+                Id = 1,
+                Name = "Repository1",
+                Description = "Repository1 description",
+                IsPrivate = true,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+            };
+
+            var repository2 = new Model.Entity.Repository
+            {
+                Id = 2,
+                Name = "Repository2",
+                Description = "Repository2 description",
+                IsPrivate = false,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+            };
+
+            var repository3 = new Model.Entity.Repository
+            {
+                Id = 3,
+                Name = "Repository3",
+                Description = "Repository3 description",
+                IsPrivate = false,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.Organization,
+            };
+
+            var repository4 = new Model.Entity.Repository
+            {
+                Id = 4,
+                Name = "PublicRepo4",
+                Description = "A private repository",
+                IsPrivate = true,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+            };
+
+            var repository5 = new Model.Entity.Repository
+            {
+                Id = 5,
+                Name = "PublicRepo5",
+                Description = "A public repository",
+                IsPrivate = false,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+            };
+
+            var repository6 = new Model.Entity.Repository
+            {
+                Id = 6,
+                Name = "AdminPublicRepo",
+                Description = "Admin public repository for testing",
+                IsPrivate = false,
+                OwnerId = adminUser.Id,
+                OwnedBy = RepositoryOwnedBy.Admin,
+                Badge = Badge.DockerOfficialImage
+            };
+
+            var repository7 = new Model.Entity.Repository
+            {
+                Id = 7,
+                Name = "SuperAdminPublicRepo",
+                Description = "SuperAdmin public repository for testing",
+                IsPrivate = false,
+                OwnerId = superAdminUser.Id,
+                OwnedBy = RepositoryOwnedBy.SuperAdmin,
+                Badge = Badge.DockerOfficialImage
+            };
+
+            var repository8 = new Model.Entity.Repository
+            {
+                Id = 8,
+                Name = "UserPublicRepo",
+                Description = "User public repository for testing",
+                IsPrivate = false,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+                Badge = Badge.SponsoredOSS
+            };
+
+            await db.Organizations.AddAsync(organization1);
+            await db.Organizations.AddAsync(organization2);
+            await db.Repositories.AddAsync(repository1);
+            await db.Repositories.AddAsync(repository2);
+            await db.Repositories.AddAsync(repository3);
+            await db.Repositories.AddAsync(repository4);
+            await db.Repositories.AddAsync(repository5);
+            await db.Repositories.AddAsync(repository6);
+            await db.Repositories.AddAsync(repository7);
+            await db.Repositories.AddAsync(repository8);
+            await db.SaveChangesAsync();
+        }
+        
+        private async Task InitializeTokens()
+        {
+            var regularUserLogin = new LoginRequestDto
+            {
+                Email = "user@fakehub.com",
+                Password = "Password123!"
+            };
+            _regularUserToken = await GetTokenFromSuccessfulUserLogin(regularUserLogin);
+
+            var regularUser1Login = new LoginRequestDto
+            {
+                Email = "user1@fakehub.com",
+                Password = "Password123!"
+            };
+            _regularUser1Token = await GetTokenFromSuccessfulUserLogin(regularUser1Login);
+
+            var adminUserLogin = new LoginRequestDto
+            {
+                Email = "admin@fakehub.com",
+                Password = "Password123!"
+            };
+            _adminToken = await GetTokenFromSuccessfulUserLogin(adminUserLogin);
+
+            var superAdminUserLogin = new LoginRequestDto
+            {
+                Email = "superadmin@fakehub.com",
+                Password = "Password123!"
+            };
+            _superAdminToken = await GetTokenFromSuccessfulUserLogin(superAdminUserLogin);
+        }
+        
+        private async Task<string> GetTokenFromSuccessfulUserLogin(LoginRequestDto loginRequestDto)
+        {
+            var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequestDto);
+            loginResponse.EnsureSuccessStatusCode();
+
+            var responseObj = await loginResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var loginResponseDtoString = responseObj?.Result?.ToString() ?? string.Empty;
+
+            var loginResponseDtoObject = JsonConvert.DeserializeObject<LoginResponseDto>(loginResponseDtoString);
+            return loginResponseDtoObject?.Token ?? "";
+        }
+
+        private class FakeRepositoryService : IRepositoryService
+        {
+            public Func<RepositoryDto, Task<ResponseBase>> SaveFunc { get; set; } =
+                dto => Task.FromResult(new ResponseBase { Success = true });
+
+            private Func<Task<ResponseBase>> GetAllRepositoriesForCurrentUserFunc { get; set; } =
+                () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
+
+            private Func<Task<ResponseBase>> GetAllVisibleRepositoriesForUserFunc { get; set; } =
+                () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
+
+            private Func<Task<ResponseBase>> GetAllRepositoriesForOrganizationFunc { get; set; } =
+                () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
+
+            private Func<int, Task<ResponseBase>> DeleteRepositoryFunc { get; set; } =
+                repositoryId => Task.FromResult(new ResponseBase { Success = true });
+
+            public Task<(string, string)> GetFullProjectRepositoryName(int repositoryId)
+            {
+                // Return dummy values for testing
+                return Task.FromResult(("ProjectName", "RepositoryName"));
+            }
+
+            public List<ArtifactDto> MapHarborArtifactToArtifactDto(HarborArtifact source)
+            {
+                // Return an empty list for testing
+                return new List<ArtifactDto>();
+            }
+
+            public Task<ResponseBase> DeleteRepositoriesOfOrganization(Model.Entity.Organization existingOrganization)
+            {
+                // Simulate async deletion
+                return Task.FromResult(ResponseBase.SuccessResponse());
+            }
+
+            public Task<ResponseBase> Search(string? query)
+            {
+                throw null;
+            }
+
+            private Func<string?, Task<ResponseBase>> GetAllPublicRepositoriesFunc { get; set; } =
+        query =>
+        {
+            var allPublicRepos = new List<RepositoryDto>
+            {
+                new()
+                {
+                    Id = 1,
+                    Name = "PublicRepo1",
+                    Description = "A public repository",
+                    IsPrivate = false,
+                    OwnedBy = RepositoryOwnedBy.User,
+                    OwnerId = 2,
+                    FullName = "User-PublicRepo1/PublicRepo1",
+                    OwnerUsername = "User"
+                },
+                new()
+                {
+                    Id = 2,
+                    Name = "SearchResultRepo",
+                    Description = "Found by search",
+                    IsPrivate = false,
+                    OwnedBy = RepositoryOwnedBy.User,
+                    OwnerId = 3,
+                    FullName = "User-SearchResultRepo/SearchResultRepo",
+                    OwnerUsername = "User"
+                }
+            };
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                allPublicRepos = allPublicRepos
+                    .Where(r =>
+                        r.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        r.Description.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            return Task.FromResult(ResponseBase.SuccessResponse(allPublicRepos));
+        };
+
+
+            public Func<EditRepositoryDto, Task<ResponseBase>> EditRepositoryFunc { get; set; } =
+                dto => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                    {
+                        Id = dto.Id,
+                        Description = dto.Description,
+                        IsPrivate = dto.IsPrivate
+                    })
+                });
+
+            private Func<int, Task<ResponseBase>> GetRepositoryFunc { get; set; } =
+                repositoryId => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                    {
+                        Id = repositoryId,
+                        Description = "Existing Description",
+                        IsPrivate = false,
+                        OwnedBy = RepositoryOwnedBy.Admin,
+                        OwnerId = 2
+                    })
+                });
+
+            private Func<int, Task<ResponseBase>> CanEditRepositoryFunc { get; set; } =
+                repositoryId => Task.FromResult(new ResponseBase
+                {
+                    Success = true
+                });
+
+            private Func<int, string, Task<ResponseBase>> AddCollaboratorFunc { get; set; } =
+                (repositoryId, username) => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                     Result = $"Collaborator {username} added to repository {repositoryId}"
+                });
+
+            private Func<int, Task<ResponseBase>> GetCollaboratorsFunc { get; set; } =
+                repositoryId => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new List<UserDto>
+                    {
+                        new() { Username = "collab1", Email = "collab1@example.com" },
+                        new() { Username = "collab2", Email = "collab2@example.com" }
+                    })
+                });
+
+            private Func<string, Task<ResponseBase>> GetRepositoriesUserContributedFunc { get; set; } =
+                username => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new List<RepositoryDto>
+                    {
+                        new()
+                        {
+                            Id = 10,
+                            Name = "Repo1",
+                            Description = "Contributed repo 1",
+                            IsPrivate = false,
+                            OwnedBy = RepositoryOwnedBy.User,
+                            OwnerId = 5,
+                            FullName = "User-Repo1/Repo1",
+                            OwnerUsername = "User"
+                        },
+                        new()
+                        {
+                            Id = 11,
+                            Name = "Repo2",
+                            Description = "Contributed repo 2",
+                            IsPrivate = true,
+                            OwnedBy = RepositoryOwnedBy.Organization,
+                            OwnerId = 7,
+                            FullName = "Org-Repo2/Repo2",
+                            OwnerUsername = "Org"
+                        }
+                    })
+                });
+
+
+            private Func<int, string, Task<ResponseBase>> RemoveCollaboratorFunc { get; set; } =
+                (repositoryId, username) => Task.FromResult(new ResponseBase
+                {
+                    Success = true
+                });
+
+            public Task<ResponseBase> Save(RepositoryDto model)
+            {
+                return SaveFunc(model);
+            }
+
+            public Task<ResponseBase> GetAllRepositoriesForCurrentUser()
+            {
+                return GetAllRepositoriesForCurrentUserFunc();
+            }
+
+            public Task<ResponseBase> GetAllVisibleRepositoriesForUser(string username)
+            {
+                return GetAllVisibleRepositoriesForUserFunc();
+            }
+
+            public Task<ResponseBase> GetAllRepositoriesForOrganization(string name)
+            {
+                return GetAllRepositoriesForOrganizationFunc();
+            }
+
+            public Task<ResponseBase> GetRepository(int repositoryId)
+            {
+                return GetRepositoryFunc(repositoryId);
+            }
+
+            public Task<ResponseBase> DeleteRepository(int repositoryId)
+            {
+                return DeleteRepositoryFunc(repositoryId);
+            }
+            public Task<ResponseBase> CanEditRepository(int repositoryId)
+            {
+                return CanEditRepositoryFunc(repositoryId);
+            }
+
+            public Task<ResponseBase> EditRepository(EditRepositoryDto data)
+            {
+                return EditRepositoryFunc(data);
+            }
+
+            public Task<ResponseBase> GetAllPublicRepositories(string? query = null)
+            {
+                return GetAllPublicRepositoriesFunc(query);
+            }
+
+            public Task<ResponseBase> AddCollaborator(int repositoryId, string username)
+            {
+                return AddCollaboratorFunc(repositoryId, username);
+            }
+
+            public Task<ResponseBase> GetCollaborators(int repositoryId)
+            {
+                return GetCollaboratorsFunc(repositoryId);
+            }
+
+            public Task<ResponseBase> GetRepositoriesUserContributed(string username)
+            {
+                return GetRepositoriesUserContributedFunc(username);
+            }
+
+            public Task<ResponseBase> RemoveCollaborator(int repositoryId, string username)
+            {
+                return RemoveCollaboratorFunc(repositoryId, username);
+            }
+        }
+    }
+}

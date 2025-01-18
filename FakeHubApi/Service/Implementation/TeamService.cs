@@ -1,9 +1,12 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
+using Org.BouncyCastle.Bcpg;
 
 namespace FakeHubApi.Service.Implementation;
 
@@ -11,34 +14,50 @@ public class TeamService(
     IOrganizationService organizationService,
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
-    IUserService userService
+    IUserService userService,
+    IUserContextService userContext,
+    IHarborService harborService,
+    IRedisCacheService _cacheService
 ) : ITeamService
 {
     public async Task<ResponseBase> Add(TeamDto model)
     {
         var team = mapperManager.TeamDtoToTeamMapper.Map(model);
         var organization = await organizationService.GetOrganization(model.OrganizationName);
+        var repository = await repositoryManager.RepositoryRepository.GetByIdAsync((int)model.Repository.Id);
 
         var response = ResponseBase.SuccessResponse();
-        var (success, errorMessage) = await ValidateNewTeam(model, organization);
+        var (success, errorMessage) = await ValidateNewTeam(model, organization, repository);
         if (!success)
             response = ResponseBase.ErrorResponse(errorMessage);
         else
         {
             team.Organization = organization!;
+            team.Repository = repository!;
             await repositoryManager.TeamRepository.AddAsync(team);
         }
+
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organization.Name}");
+
         return response;
     }
 
     public async Task<ResponseBase> Get(string organizationName, string teamName)
     {
+        var cachedTask = await _cacheService.GetCacheValueAsync<TeamDto>($"Team:{organizationName}:{teamName}");
+        if (cachedTask != null)
+        {
+            return ResponseBase.SuccessResponse(cachedTask);
+        }
         var team = await repositoryManager.TeamRepository.GetTeam(organizationName, teamName);
         if (team == null)
             return ResponseBase.ErrorResponse("Team not found.");
         var teamDto = mapperManager.TeamDtoToTeamMapper.ReverseMap(team);
         teamDto.Owner = team.Organization.Owner.UserName!;
         teamDto.Users = team.Users.Select(mapperManager.UserToUserDtoMapper.Map);
+
+        await _cacheService.SetCacheValueAsync($"Team:{organizationName}:{teamName}", teamDto);
+
         return ResponseBase.SuccessResponse(teamDto);
     }
 
@@ -60,6 +79,10 @@ public class TeamService(
             team!.Description = model.Description;
             await repositoryManager.TeamRepository.UpdateAsync(team);
         }
+
+        await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organization.Name}");
+
         return response;
     }
 
@@ -77,9 +100,14 @@ public class TeamService(
             response = ResponseBase.ErrorResponse(errorMessage);
         else
         {
+            await harborService.removeMembersByRole($"{organizationName}-{team!.Repository.Name}", mapTeamRoleToHarborRole(team!.TeamRole));
             organization!.Teams.Remove(team!);
             await repositoryManager.TeamRepository.UpdateAsync(team!);
         }
+
+        await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
+
         return response;
     }
 
@@ -112,9 +140,23 @@ public class TeamService(
                         continue;
                     team!.Users.Add(user);
                     addedUsers.Add(user);
+
+                    var harborProjectMember = new HarborProjectMember
+                    {
+                        MemberUser = new HarborProjectMemberUser
+                        {
+                            UserId = user.HarborUserId,
+                            Username = user.UserName
+                        },
+                        RoleId = mapTeamRoleToHarborRole(team!.TeamRole)
+                    };
+                    await harborService.addMember($"{organizationName}-{team.Repository.Name}", harborProjectMember);
                 }
                 await repositoryManager.TeamRepository.UpdateAsync(team!);
                 response.Result = addedUsers.Select(mapperManager.UserToUserDtoMapper.Map);
+                await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+                await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
+
             }
         }
         return response;
@@ -122,8 +164,8 @@ public class TeamService(
 
 
     public async Task<ResponseBase> DeleteUser(
-        string organizationName, 
-        string teamName, 
+        string organizationName,
+        string teamName,
         string username)
     {
         try
@@ -143,7 +185,9 @@ public class TeamService(
             if (team == null)
                 return ResponseBase.ErrorResponse("Team not in organization");
 
-            if (!await organizationService.IsLoggedInUserOwner(team.Organization))
+            var currentUser = await userContext.GetCurrentUserAsync();
+            var isCurrentUserLeavingTeam = string.Equals(currentUser.UserName, username, StringComparison.OrdinalIgnoreCase);
+            if (!isCurrentUserLeavingTeam && !(team.Organization?.OwnerId == currentUser.Id))
                 return ResponseBase.ErrorResponse("You are not the owner of this organization");
                 
             var deleteRelation = team.Users.FirstOrDefault(u =>
@@ -153,9 +197,14 @@ public class TeamService(
             if (deleteRelation == null)
                 return ResponseBase.ErrorResponse("User is not member of team");
 
+            await harborService.removeMemberFromTeam($"{organizationName}-{team.Repository.Name}", username, isCurrentUserLeavingTeam);
+
             team.Users.Remove(deleteRelation);
 
             await repositoryManager.TeamRepository.UpdateAsync(team);
+
+            await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+            await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
 
             return ResponseBase.SuccessResponse(user);
         }
@@ -202,7 +251,7 @@ public class TeamService(
         return response;
     }
 
-    private async Task<(bool, string)> ValidateNewTeam(TeamDto model, Organization? organization)
+    private async Task<(bool, string)> ValidateNewTeam(TeamDto model, Organization? organization, Model.Entity.Repository? repository)
     {
         var response = (true, string.Empty);
         if (organization == null)
@@ -211,6 +260,8 @@ public class TeamService(
             response = (false, "You are not the owner of this organization.");
         else if (!IsTeamNameUnique(organization, model.Name))
             response = (false, "Team name is not unique.");
+        else if (!IsTeamRoleUniqueInsideRepository(organization, repository, model.TeamRole))
+            response = (false, "Team role is not unique within the repository.");
         return response;
     }
 
@@ -238,5 +289,23 @@ public class TeamService(
     private bool IsTeamNameUnique(Organization organization, string teamName)
     {
         return organization.Teams.All(x => x.Name != teamName);
+    }
+
+    private bool IsTeamRoleUniqueInsideRepository(Organization organization, Model.Entity.Repository repository, string teamRole)
+    {
+        return organization.Teams
+            .Where(x => x.RepositoryId == repository.Id)
+            .All(x => x.TeamRole.ToString() != teamRole);
+    }
+
+    private int mapTeamRoleToHarborRole(TeamRole teamRole)
+    {
+        return teamRole switch
+        {
+            TeamRole.Admin => (int)HarborRoles.Admin,
+            TeamRole.ReadOnly => (int)HarborRoles.Guest,
+            TeamRole.ReadWrite => (int)HarborRoles.Developer,
+            _ => (int)HarborRoles.Guest
+        };
     }
 }

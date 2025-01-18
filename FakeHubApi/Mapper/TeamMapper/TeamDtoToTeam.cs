@@ -3,7 +3,8 @@ using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Mapper.TeamMapper;
 
-public class TeamDtoToTeam : BaseMapper<TeamDto, Team>
+public class TeamDtoToTeam(IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryMapper, IBaseMapper<User, UserDto> userMapper)
+ : BaseMapper<TeamDto, Team>
 {
     public override Team Map(TeamDto source)
     {
@@ -11,7 +12,7 @@ public class TeamDtoToTeam : BaseMapper<TeamDto, Team>
         {
             Name = source.Name,
             Description = source.Description,
-            TeamRole = Enum.Parse<TeamRole>(source.TeamRole),
+            TeamRole = Enum.Parse<TeamRole>(source.TeamRole)
         };
     }
 
@@ -23,6 +24,8 @@ public class TeamDtoToTeam : BaseMapper<TeamDto, Team>
             Description = source.Description,
             CreatedAt = source.CreatedAt,
             TeamRole = source.TeamRole.ToString(),
+            Repository = repositoryMapper.ReverseMap(source.Repository),
+            Users =  source.Users.Select(userMapper.Map).ToList()
         };
     }
 }
