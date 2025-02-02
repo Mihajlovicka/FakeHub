@@ -18,7 +18,7 @@ export const IconSize = {
 })
 export class UserBadgeComponent implements OnChanges {
   @Input() userBadge: UserBadge = UserBadge.None;
-  @Input() showNone: boolean = false;
+  @Input() editable: boolean = false;
   @Input() showInfo: boolean = true;
   @Input() iconSize: string = IconSize.Large;
   public isVerifiedUserBadge: boolean = false;

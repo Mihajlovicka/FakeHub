@@ -1,11 +1,11 @@
 <div class="content-container">
     <div class="header-container">
         <h1 class="title">{{ title }}</h1>
-        <button *ngIf="isSuperAdmin && fetchAdmins()" class="add-button" (click)="goToAdminRegistration()">+</button>
+        <button *ngIf="isSuperAdminLoggedIn && fetchAdmins()" class="add-button" (click)="goToAdminRegistration()">+</button>
     </div>
     <div class="orgs-container">
         @for (user of users; track user.username) {
-        <div class="container">
+        <div class="container" (click)="onUserClick(user)">
           <a class="link-container">
             <div class="avatar-container">
               <div class="avatar">
@@ -17,18 +17,13 @@
         <div class="details-container">
           <div class="link-header">
             <span class="ellipsis">{{ user.username }}</span>
-            <!-- ADD BADGE SHOW -->
+            <app-user-badge *ngIf="!(isSuperAdminLoggedIn && fetchAdmins())" [userBadge]="user.badge" [showInfo]="false" [editable]="true" [iconSize]="'small-icon'" (click)="openUserBadgeModal(user); $event.stopPropagation()"></app-user-badge>
           </div>
           <div class="multi-line-ellipsis">
         {{
             'Email: ' + user.email
         }}
         </div>
-        <div class="link-footer">
-          <span class="footer-text">
-            {{ "Manage user ..." }}
-          </span>
-          </div>
         </div>
       </a>
     </div>

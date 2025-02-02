@@ -1,5 +1,6 @@
 .container {
     display: flex;
+    justify-content: center;
 }
 
 .link-container:hover {
@@ -48,7 +49,6 @@
     -webkit-line-clamp: 2;
     overflow: hidden;
     text-overflow: ellipsis;
-    width: 100%;
     padding-bottom: 3px;
     margin-top: 10px;
     font-size: 14px;
@@ -135,7 +135,6 @@ span.footer-text {
 }
 
 .link-container {
-    width: 100%;
     max-width: 800px;
     box-shadow: 1px 1px 6px 0 lightgray;
     border-radius: 10px;
