@@ -62,12 +62,19 @@ public class UserServiceTests
             Username = user.UserName,
             Email = user.Email
         };
+        var userRoles = new List<string>
+        {
+            "USER"
+        };
         _mockUserManager
             .Setup(um => um.FindByNameAsync(username))
             .ReturnsAsync(user);
         _mapperManagerMock
             .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
             .Returns(userProfileDto);
+        _mockUserManager
+            .Setup(um => um.GetRolesAsync(user))
+            .ReturnsAsync(userRoles);
 
         var result = await _userService.GetUserProfileByUsernameAsync(username);
 

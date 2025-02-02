@@ -11,21 +11,21 @@
     <div class="info-container">
       <div class="username-container">
         <span class="username">{{ user.username }}</span>
-        <div [ngClass]="{ 'editable-badge': isAdmin || isSuperAdmin, 'badge-btn': true }" (click)="openBadgeDialog()">
-          <app-user-badge [userBadge]="user.badge" [showNone]="(isAdmin || isSuperAdmin) && !isLoggedInUserProfile"></app-user-badge>
+        <div [ngClass]="{ 'editable-badge': isAdminLoggedIn || isSuperAdminLoggedIn, 'badge-btn': true }">
+          <app-user-badge [userBadge]="user.badge" [editable]="editable"  (click)="editable ? openBadgeDialog() : null"></app-user-badge>
         </div>
         <button *ngIf="isLoggedInUserProfile" class="edit-icon-btn" (click)="goToSettings()">
           <i class="fa-solid fa-pen icons"></i>
         </button>
       </div>
-      <div *ngIf="((isAdmin || isSuperAdmin) && !isLoggedInUserProfile) || isUser" class="community-info">
+      <div *ngIf="((isAdminLoggedIn || isSuperAdminLoggedIn) && !isLoggedInUserProfile) || isUserLoggedIn" class="community-info">
         <div class="community">
           <i class="fa-regular fa-user icons"></i>
           <span class="joined">Community User</span>
         </div>
         <div *ngIf="isJoinedDateValid" class="date-info">
           <i class="fa-regular fa-calendar icons"></i>
-          <span class="joined">Joined {{ formatedDateString }}</span>
+          <span class="joined">Joined {{ formattedDateString }}</span>
         </div>
       </div>
     </div>
@@ -76,7 +76,7 @@
   </div>
 </div>
 
-<div *ngIf="user?.username == ''">
+<div *ngIf="!user?.username">
   <div class="no-user-container">
     <p class="no-user-message">User not found.</p>
   </div>

@@ -23,29 +23,40 @@ export class ProfileComponent implements OnInit{
   private router: Router = inject(Router);
   private readonly dialog = inject(MatDialog);
 
-  public showAddMemberButton: boolean = true;
   public user: UserProfileResponseDto = new UserProfileResponseDto();
   public activeLink: number = 1;  
   public isLoggedInUserProfile: boolean = false;
-  public isAdmin: boolean = false;
-  public isSuperAdmin: boolean = false;
-  public isUser: boolean = false;
+  public isAdminLoggedIn: boolean = false;
+  public isSuperAdminLoggedIn: boolean = false;
+  public isUserLoggedIn: boolean = false;
   public isJoinedDateValid = false;
-  public formatedDateString = "";
+  public formattedDateString = "";
   public capitalizedLetterAvatar = "";
 
-  public ngOnInit(): void {
-    const usernameParam = this.route.snapshot.paramMap.get('username') ?? "";
-    this.isAdmin = this.userService.isAdminLoggedIn();
-    this.isSuperAdmin = this.userService.isSuperAdminLoggedIn();
-    this.isUser = this.userService.isUserLoggedIn();
+  get editable(): boolean {
+    return (this.isAdminLoggedIn || this.isSuperAdminLoggedIn) && this.user.role === 'USER';
+  }
 
-    this.isLoggedInUserProfile = this.userService.getUserNameFromToken() == usernameParam;
+  ngOnInit(): void {
+    const usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
+    this.checkUserPermissions();
+    this.loadUserProfile(usernameParam);
+  }
 
-    this.userService.getUserProfileByUsername(usernameParam).subscribe(user => {
+  private checkUserPermissions(): void {
+    this.isAdminLoggedIn = this.userService.isAdminLoggedIn();
+    this.isSuperAdminLoggedIn = this.userService.isSuperAdminLoggedIn();
+    this.isUserLoggedIn = this.userService.isUserLoggedIn();
+    this.isLoggedInUserProfile = this.userService.getUserNameFromToken() === this.route.snapshot.paramMap.get('username');
+  }
+
+  private loadUserProfile(username: string): void {
+    this.userService.getUserProfileByUsername(username).subscribe(user => {
+      console.log("useeer", user);
+      
       this.user = user ?? new UserProfileResponseDto();
       this.isJoinedDateValid = this.helperService.isDateValid(this.user.createdAt);
-      this.formatedDateString = this.isJoinedDateValid ? this.helperService.formatDate(this.user.createdAt) : '';
+      this.formattedDateString = this.isJoinedDateValid ? this.helperService.formatDate(this.user.createdAt) : '';
       this.capitalizedLetterAvatar = this.helperService.capitalizeFirstLetter(user?.username ?? "");
     });
   }
@@ -59,7 +70,7 @@ export class ProfileComponent implements OnInit{
   }
 
   public openBadgeDialog(): void {
-    if(this.isAdmin) {
+    if(this.isAdminLoggedIn || this.isSuperAdminLoggedIn) {
       const dialogRef = this.dialog.open(UserBadgeModalComponent, {
         data: {currentBadge: this.user?.badge ?? UserBadge.None},
       });
@@ -76,7 +87,7 @@ export class ProfileComponent implements OnInit{
     const changeUserBadge = new ChangeUserBadgeRequest(Number(selectedBadge), this.user.username);
     this.userService.changeUserBadge(changeUserBadge).subscribe((result) => {
       if(result?.username) {
-        this.user = result;
+        this.user.badge = result.badge;
       }
     });
   }

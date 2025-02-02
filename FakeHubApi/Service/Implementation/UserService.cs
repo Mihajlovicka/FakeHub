@@ -30,7 +30,10 @@ public class UserService(
                 return ResponseBase.ErrorResponse("User not found");
             }
 
+            var userRole = await userManager.GetRolesAsync(user);
+
             var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
+            responseUser.Role = userRole.FirstOrDefault();
 
             return ResponseBase.SuccessResponse(responseUser);
         }
