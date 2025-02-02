@@ -379,7 +379,103 @@ public class OrganizationControllerIntegrationTests
 
         Assert.That(responseObjStringObject.Username, Is.EqualTo(username));
     }
+    
+    [Test, Order(13)]
+    public async Task DeactivateOrganization_Fails_UserWithoutPermission()
+    {
+        const string name = "Organization1";
+        var loginRequest = new LoginRequestDto { Email = "testtest@example.com", Password = "Password123!" };
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
+        if (!loginResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await loginResponse.Content.ReadAsStringAsync();
+            Assert.Fail($"Login failed with status code {loginResponse.StatusCode}: {errorContent}");
+        }
+
+        var responseObj = await loginResponse.Content.ReadFromJsonAsync<ResponseBase>();
+        var loginResponseDtoString = responseObj?.Result?.ToString() ?? string.Empty;
+        var loginResponseDtoObject = JsonConvert.DeserializeObject<LoginResponseDto>(loginResponseDtoString);
+        var token = loginResponseDtoObject?.Token ?? string.Empty;
+
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.DeleteAsync($"/api/organization/{name}/deactivate");
+        var deactivateResponseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deactivateResponseObj?.Success, Is.False);
+            Assert.That(deactivateResponseObj?.ErrorMessage, Is.EqualTo("You are not authorized to deactivate this organization."));
+        });
+    }
+    
+    [Test, Order(14)]
+    public async Task DeactivateOrganization_Success()
+    {
+        var name = "Organization1";
+
+        // Ensure the owner is used for this request
+        var token = await GetTokenFromSuccessfulUserLogin(
+            new LoginRequestDto { Email = "owner@example.com", Password = "Password123!" } // Ensure this user has deactivation permissions
+        );
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.DeleteAsync($"/api/organization/{name}/deactivate");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Deactivation failed with status code {response.StatusCode}: {errorContent}");
+        }
+
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Null);
+        });
+    }
+    
+    [Test, Order(15)]
+    public async Task DeactivateOrganization_Fails_NotFound()
+    {
+        var name = "NonExistentOrganization";
+        var response = await _client.DeleteAsync($"/api/organization/{name}/deactivate");
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.False);
+            Assert.That(responseObj?.ErrorMessage, Is.EqualTo("Organization not found."));
+        });
+    }
+    
+    [Test, Order(16)]
+    public async Task GetByUserIdNamesPair_Success()
+    {
+        var token = await GetTokenFromSuccessfulUserLogin(
+            new LoginRequestDto { Email = "owner@example.com", Password = "Password123!" } // Ensure this user has the necessary permissions
+        );
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.GetAsync("/api/organization/user/names");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"GetByUserIdNamesPair failed with status code {response.StatusCode}: {errorContent}");
+        }
+
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseObj?.Success, Is.True);
+            var jsonString = responseObj?.Result?.ToString() ?? string.Empty;
+            var responsePairs = JsonConvert.DeserializeObject<List<KeyValuePair<int, string>>>(jsonString);
+            Assert.That(responsePairs, Is.Not.Null);
+            Assert.That(responsePairs.Count, Is.GreaterThan(0)); // Adjust as per your test data
+        });
+    }
+    
     private async Task SetupDbData()
     {
         using var scope = _factory.Services.CreateScope();

@@ -58,7 +58,12 @@ public class OrganizationService(
 
         if (existingOrganization.OwnerId != user.Id)
             return ResponseBase.ErrorResponse(
-                "You are not authorized to update this organization."
+                "You are not authorized to deactivate this organization."
+            );
+
+        if (!existingOrganization.Active)
+            return ResponseBase.ErrorResponse(
+                "Organization is already deactivated."
             );
 
         existingOrganization.Active = false;
@@ -226,11 +231,12 @@ public class OrganizationService(
         var user = await userContext.GetCurrentUserAsync();
         var organizations = await repositoryManager.OrganizationRepository.GetByUser(user.Id);
         return ResponseBase.SuccessResponse(
-            organizations.Select(x => new IdNamePairDto()
+            organizations?.Select(x => new IdNamePairDto()
             {
                 Id = x.Id,
                 Name = x.Name
             })
+            ?? []
         );
     }
 }
