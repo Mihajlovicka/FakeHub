@@ -7,6 +7,7 @@ using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
 using Microsoft.AspNetCore.Identity;
 using Moq;
+using MySqlX.XDevAPI.Common;
 
 namespace FakeHubApi.Tests.Organization.Tests;
 
@@ -578,7 +579,7 @@ public class OrganizationServiceTests
             Assert.That(result.Success, Is.True);
             Assert.That(result.Result, Is.Not.Null);
             Assert.That(result.ErrorMessage, Is.Empty);
-            Assert.That((UserDto)result.Result, Is.EqualTo(responseUser));
+            Assert.That((UserDto)result.Result!, Is.EqualTo(responseUser));
         });
     }
     
@@ -586,7 +587,7 @@ public class OrganizationServiceTests
     public async Task GetOrganizationById_ShouldReturnOrganization_WhenOrganizationExists()
     {
         // Arrange
-        int orgId = 1;
+        const int orgId = 1;
         var organization = new Model.Entity.Organization { Id = orgId, Name = "Test Org" };
         _repositoryManagerMock
             .Setup(r => r.OrganizationRepository.GetByIdAsync(orgId))
@@ -596,14 +597,14 @@ public class OrganizationServiceTests
         var result = await _organizationService.GetOrganizationById(orgId);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.That(result, Is.Not.Null);
     }
 
     [Test]
     public async Task GetOrganizationById_ShouldReturnNull_WhenOrganizationDoesNotExist()
     {
         // Arrange
-        int orgId = 2;
+        const int orgId = 2;
         _repositoryManagerMock
             .Setup(r => r.OrganizationRepository.GetByIdAsync(orgId))
             .ReturnsAsync((Model.Entity.Organization?)null);
@@ -612,6 +613,161 @@ public class OrganizationServiceTests
         var result = await _organizationService.GetOrganizationById(orgId);
 
         // Assert
-        Assert.Null(result);
+        Assert.That(result, Is.Null);
+    }
+    
+    [Test]
+    public async Task DeactivateOrganizationAsync_SuccessfullyDeactivatesOrganization()
+    {
+        const string orgName = "organizationName";
+        var loggedInUser = new User { Id = 1, UserName = "ownerUser" };
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Owner = loggedInUser,
+            OwnerId = loggedInUser.Id,
+            Active = true,
+            Teams =
+            [
+                new Model.Entity.Team { Active = true },
+                new Model.Entity.Team { Active = true }
+            ],
+            UserOrganizations =
+            [
+                new UserOrganization { Active = true },
+                new UserOrganization { Active = true }
+            ]
+        };
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
+        _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.GetByName(orgName)).ReturnsAsync(organization);
+        _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.UpdateAsync(organization)).Returns(Task.CompletedTask);
+
+        var result = await _organizationService.DeactivateOrganization(orgName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.True);
+            Assert.That(result.ErrorMessage, Is.Empty);
+            Assert.That(organization.Active, Is.False);
+            Assert.That(organization.Teams.All(t => !t.Active), Is.True);
+            Assert.That(organization.UserOrganizations.All(uo => !uo.Active), Is.True);
+        });
+    }
+    
+    [Test]
+    public async Task DeactivateOrganizationAsync_FailsIfUserNotAuthorized()
+    {
+        const string orgName = "organizationName";
+        var loggedInUser = new User { Id = 2, UserName = "notOwnerUser" };
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Owner = new User { Id = 1, UserName = "ownerUser" },
+            OwnerId = 1,
+            Active = true
+        };
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
+        _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.GetByName(orgName)).ReturnsAsync(organization);
+
+        var result = await _organizationService.DeactivateOrganization(orgName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("You are not authorized to deactivate this organization."));
+            Assert.That(organization.Active, Is.True, "Organization should remain active");
+        });
+    }
+
+    [Test]
+    public async Task DeactivateOrganizationAsync_FailsIfAlreadyDeactivated()
+    {
+        const string orgName = "organizationName";
+        var loggedInUser = new User { Id = 1, UserName = "ownerUser" };
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Owner = loggedInUser,
+            OwnerId = loggedInUser.Id,
+            Active = false
+        };
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
+        _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.GetByName(orgName)).ReturnsAsync(organization);
+
+        var result = await _organizationService.DeactivateOrganization(orgName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Organization is already deactivated."));
+            Assert.That(organization.Active, Is.False, "Organization should remain deactivated");
+        });
+    }
+    
+    [Test]
+    public async Task GetByUserIdNamePair_ShouldReturnOrganizations_WhenUserHasOrganizations()
+    {
+        const string orgName = "organizationName";
+        var loggedInUser = new User { Id = 1, UserName = "ownerUser" };
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Owner = loggedInUser,
+            OwnerId = loggedInUser.Id,
+            Active = true
+        };
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
+        _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.GetByUser(loggedInUser.Id)).ReturnsAsync(new List<Model.Entity.Organization> { organization });
+
+        // Act
+        var result = await _organizationService.GetByUserIdNamePair();
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            var data = result.Result as IEnumerable<IdNamePairDto>;
+
+            Assert.That(data, Is.Not.Null);
+            Assert.That(result.Success, Is.True);
+
+            var firstOrganization = data.First();
+            Assert.That(organization.Id, Is.EqualTo(firstOrganization.Id));
+            Assert.That(organization.Name, Is.EqualTo(firstOrganization.Name));
+        });
+    }
+
+    
+    [Test]
+    public async Task GetByUserIdNamePair_ShouldReturnEmptyList_WhenUserHasNoOrganizations()
+    {
+        const string orgName = "organizationName";
+        var loggedInUser = new User { Id = 1, UserName = "logged" };
+        var ownerUser = new User { Id = 45, UserName = "owner" };
+        var organization = new Model.Entity.Organization
+        {
+            Name = orgName,
+            Owner = ownerUser,
+            OwnerId = ownerUser.Id,
+            Active = true
+        };
+
+        _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
+        _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.GetByUser(ownerUser.Id)).ReturnsAsync([]);
+
+        // Act
+        var result = await _organizationService.GetByUserIdNamePair();
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            var data = result.Result as IEnumerable<IdNamePairDto>;
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(data.Count, Is.EqualTo(0));
+        });
     }
 }
