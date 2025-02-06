@@ -9,7 +9,7 @@ namespace FakeHubApi.Controllers;
 [ApiController]
 public class RepositoryController(IRepositoryService repositoryService) : ControllerBase
 {
-    [Authorize(Roles = "USER")]
+    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
     [HttpPost]
     public async Task<IActionResult> Register([FromBody] RepositoryDto model)
     {

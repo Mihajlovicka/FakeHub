@@ -75,7 +75,7 @@ export const routes: Routes = [
   {
     path: 'repository',
     canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER] },
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] },
     children: [
       {
         path: 'add',

@@ -93,7 +93,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             var currentUser = new User { Id = 99 };
 
             _repositoryMapperMock.Setup(m => m.Map(repositoryDto)).Returns(repository);
-            _userContextServiceMock.Setup(m => m.GetCurrentUserAsync()).ReturnsAsync(currentUser);
+            _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "USER"));
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.GetByOwnerAndName(It.IsAny<RepositoryOwnedBy>(), It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync((Model.Entity.Repository)null);
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
@@ -102,7 +102,55 @@ namespace FakeHubApi.Tests.Repositories.Tests
 
             Assert.That(response.Success, Is.True);
             _repositoryMapperMock.Verify(m => m.Map(repositoryDto), Times.Once);
-            _userContextServiceMock.Verify(m => m.GetCurrentUserAsync(), Times.Once);
+            _userContextServiceMock.Verify(m => m.GetCurrentUserWithRoleAsync(), Times.Once);
+        }
+
+        [Test]
+        public async Task Save_WhenUserIsAdmin_ReturnsSuccessResponse()
+        {
+            var repositoryDto = new RepositoryDto { OwnerId = -2, Name = "AdminRepository", OwnedBy = RepositoryOwnedBy.Admin };
+            var repository = new Model.Entity.Repository { OwnerId = -2, Name = "AdminRepository", OwnedBy = RepositoryOwnedBy.Admin };
+            var currentUser = new User { Id = 1 };
+
+            _repositoryMapperMock.Setup(m => m.Map(repositoryDto)).Returns(repository);
+            _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "ADMIN"));
+            _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
+            _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+
+            var response = await _repositoryService.Save(repositoryDto);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Success, Is.True);
+                Assert.That(response.ErrorMessage, Is.Empty);
+                Assert.That(repository.Badge, Is.EqualTo(Badge.DockerOfficialImage));
+                Assert.That(repository.OwnerId, Is.EqualTo(1));
+                Assert.That(repository.OwnedBy, Is.EqualTo(RepositoryOwnedBy.Admin));
+            });
+        }
+
+        [Test]
+        public async Task Save_WhenUserIsSuperAdmin_ReturnsSuccessResponse()
+        {
+            var repositoryDto = new RepositoryDto { OwnerId = -2, Name = "SuperAdminRepository", OwnedBy = RepositoryOwnedBy.SuperAdmin };
+            var repository = new Model.Entity.Repository { OwnerId = -2, Name = "SuperAdminRepository", OwnedBy = RepositoryOwnedBy.SuperAdmin };
+            var currentUser = new User { Id = 11 };
+
+            _repositoryMapperMock.Setup(m => m.Map(repositoryDto)).Returns(repository);
+            _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "SUPERADMIN"));
+            _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
+            _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+
+            var response = await _repositoryService.Save(repositoryDto);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Success, Is.True);
+                Assert.That(response.ErrorMessage, Is.Empty);
+                Assert.That(repository.Badge, Is.EqualTo(Badge.DockerOfficialImage));
+                Assert.That(repository.OwnerId, Is.EqualTo(11));
+                Assert.That(repository.OwnedBy, Is.EqualTo(RepositoryOwnedBy.SuperAdmin));
+            });
         }
     }
 }

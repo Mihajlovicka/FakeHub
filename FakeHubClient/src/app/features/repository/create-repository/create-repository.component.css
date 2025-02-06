@@ -38,3 +38,11 @@
   .radio-button-title{
     margin-left: 13px;
   }
+
+  .mat-mdc-radio-button.mat-accent {
+    --mdc-radio-selected-icon-color: var(--primary-color);
+    --mdc-radio-selected-hover-icon-color: var(--primary-color);
+    --mdc-radio-selected-focus-icon-color: var(--primary-color);
+    --mdc-radio-selected-pressed-icon-color: var(--primary-color);
+    --mat-radio-checked-ripple-color: var(--primary-color);
+  }

@@ -15,7 +15,9 @@ public class Repository
     
     public bool IsPrivate { get; set; }
     
-    public RepositoryOwnedBy OwnedBy { get; set;  }
+    public RepositoryOwnedBy OwnedBy { get; set; }
     
     public int OwnerId { get; set; } //this could be id of either user or organization hence the owned by type
+
+    public Badge Badge { get; set; }
 }

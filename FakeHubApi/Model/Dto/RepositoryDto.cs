@@ -8,6 +8,7 @@ public class RepositoryDto
     public string Name { get; set; }
     public string Description { get; set; }
     public bool IsPrivate { get; set; }
-    public RepositoryOwnedBy OwnedBy { get; set;  }
+    public RepositoryOwnedBy OwnedBy { get; set; }
     public int OwnerId { get; set; }
+    public Badge Badge { get; set; }
 }

@@ -29,5 +29,6 @@ export class UserProfileResponseDto {
 export enum UserBadge {
   None = 0,
   VerifiedPublisher = 1,
-  SponsoredOSS = 2
+  SponsoredOSS = 2,
+  DockerOfficialImage = 3
 }
