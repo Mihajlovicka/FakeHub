@@ -4,6 +4,7 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Identity;
 
 namespace FakeHubApi.Service.Implementation;
 
@@ -17,8 +18,19 @@ public class RepositoryService(
     public async Task<ResponseBase> Save(RepositoryDto repositoryDto)
     {
         var repository = repositoryMapper.Map(repositoryDto);
+        var (currentUser, currentUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
 
-        if (repositoryDto.OwnerId == -1) repository.OwnerId = (await userContextService.GetCurrentUserAsync()).Id;
+        if(currentUserRole == "ADMIN" || currentUserRole == "SUPERADMIN")
+        {
+            repository.Badge = Badge.DockerOfficialImage;
+            repository.OwnerId = currentUser.Id;
+            repository.OwnedBy = currentUserRole == "ADMIN" ? RepositoryOwnedBy.Admin : RepositoryOwnedBy.SuperAdmin;
+        } 
+        else if (repositoryDto.OwnerId == -1)
+        {
+            repository.OwnerId = currentUser.Id;
+        }
+
         var (success, errorMessage) = await ValidateRepository(repository);
         if (!success) return ResponseBase.ErrorResponse(errorMessage);
         else

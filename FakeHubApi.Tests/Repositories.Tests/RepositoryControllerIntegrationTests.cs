@@ -20,6 +20,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         private CustomWebApplicationFactory _factory;
         private string _regularUserToken;
         private string _adminToken;
+        private string _superAdminToken;
 
         [OneTimeSetUp]
         public async Task Setup()
@@ -54,26 +55,64 @@ namespace FakeHubApi.Tests.Repositories.Tests
             var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
-        
+
         [Test, Order(2)]
-        public async Task Register_WithInvalidRole_ReturnsForbidden()
+        public async Task Register_WithAdminUserToken_ReturnsOk()
         {
             var repositoryDto = new RepositoryDto
             {
-                Name = "Test Repo",
-                Description = "Test repository description.",
-                IsPrivate = false,
-                OwnedBy = RepositoryOwnedBy.User,
-                OwnerId = 1
+                Name = "Admin Repository",
+                Description = "Admin repository description.",
+                IsPrivate = true
             };
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
-
             var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            var responseRepositoryString = responseObj?.Result?.ToString() ?? string.Empty;
+
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseRepositoryString, Is.Not.Empty);
+
+            var responseRepositoryObject = JsonConvert.DeserializeObject<Model.Entity.Repository>(responseRepositoryString);
+
+            Assert.That(responseRepositoryObject?.Badge, Is.EqualTo(Badge.DockerOfficialImage));
+            Assert.That(responseRepositoryObject?.OwnedBy, Is.EqualTo(RepositoryOwnedBy.Admin));
+            Assert.That(responseRepositoryObject?.OwnerId, Is.GreaterThanOrEqualTo(0));
         }
-        
+
         [Test, Order(3)]
+        public async Task Register_WithSuperAdminUserToken_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "SuperAdmin Repository",
+                Description = "SuperAdmin repository description.",
+                IsPrivate = true
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _superAdminToken);
+            var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            var responseRepositoryString = responseObj?.Result?.ToString() ?? string.Empty;
+
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseRepositoryString, Is.Not.Empty);
+
+            var responseRepositoryObject = JsonConvert.DeserializeObject<Model.Entity.Repository>(responseRepositoryString);
+
+            Assert.That(responseRepositoryObject?.Badge, Is.EqualTo(Badge.DockerOfficialImage));
+            Assert.That(responseRepositoryObject?.OwnedBy, Is.EqualTo(RepositoryOwnedBy.SuperAdmin));
+            Assert.That(responseRepositoryObject?.OwnerId, Is.GreaterThanOrEqualTo(0));
+        }
+
+        [Test, Order(4)]
         public async Task Register_WithValidUserToken_AndSuccessfulSave_ReturnsOk()
         {
             var repositoryDto = new RepositoryDto
@@ -111,7 +150,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(responseObj!.Success, Is.True);
         }
 
-        [Test, Order(4)]
+        [Test, Order(5)]
         public async Task Register_WithValidUserToken_AndUnsuccessfulSave_ReturnsBadRequest()
         {
             var repositoryDto = new RepositoryDto
@@ -168,6 +207,10 @@ namespace FakeHubApi.Tests.Repositories.Tests
             {
                 await roleManager.CreateAsync(new IdentityRole<int> { Name = "ADMIN" });
             }
+            if (!await roleManager.RoleExistsAsync("SUPERADMIN"))
+            {
+                await roleManager.CreateAsync(new IdentityRole<int> { Name = "SUPERADMIN" });
+            }
 
             var regularUser = await userManager.FindByEmailAsync("user@fakehub.com");
             if (regularUser == null)
@@ -198,6 +241,21 @@ namespace FakeHubApi.Tests.Repositories.Tests
                     await userManager.AddToRoleAsync(adminUser, "ADMIN");
                 }
             }
+
+            var superAdminUser = await userManager.FindByEmailAsync("superadmin@fakehub.com");
+            if (superAdminUser == null)
+            {
+                superAdminUser = new User
+                {
+                    Email = "superadmin@fakehub.com",
+                    UserName = "superadmin@fakehub.com"
+                };
+                var result = await userManager.CreateAsync(superAdminUser, "Password123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(superAdminUser, "SUPERADMIN");
+                }
+            }
         }
         
         private async Task InitializeTokens()
@@ -215,6 +273,13 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Password = "Password123!"
             };
             _adminToken = await GetTokenFromSuccessfulUserLogin(adminUserLogin);
+
+            var superAdminUserLogin = new LoginRequestDto
+            {
+                Email = "superadmin@fakehub.com",
+                Password = "Password123!"
+            };
+            _superAdminToken = await GetTokenFromSuccessfulUserLogin(superAdminUserLogin);
         }
         
         private async Task<string> GetTokenFromSuccessfulUserLogin(LoginRequestDto loginRequestDto)

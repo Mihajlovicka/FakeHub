@@ -12,7 +12,8 @@ public class RepositoryDtoToRepositoryMapper() : BaseMapper<RepositoryDto, Model
             Description = source.Description,
             IsPrivate = source.IsPrivate,
             OwnedBy = source.OwnedBy,
-            OwnerId = source.OwnerId
+            OwnerId = source.OwnerId,
+            Badge = source.Badge
         };
 
         if (source.Id != null) repository.Id = (int)source.Id;
@@ -29,7 +30,8 @@ public class RepositoryDtoToRepositoryMapper() : BaseMapper<RepositoryDto, Model
             Description = destination.Description,
             IsPrivate = destination.IsPrivate,
             OwnedBy = destination.OwnedBy,
-            OwnerId = destination.OwnerId
+            OwnerId = destination.OwnerId,
+            Badge = destination.Badge
         };
     }
 }
