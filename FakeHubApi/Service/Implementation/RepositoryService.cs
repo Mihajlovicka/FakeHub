@@ -12,7 +12,8 @@ public class RepositoryService(
     IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryMapper,
     IOrganizationService organizationService,
     IRepositoryManager repositoryManager,
-    IUserContextService userContextService
+    IUserContextService userContextService,
+    IUserService userService
 ) : IRepositoryService
 {
     public async Task<ResponseBase> Save(RepositoryDto repositoryDto)
@@ -54,5 +55,71 @@ public class RepositoryService(
         var repository = await repositoryManager.RepositoryRepository.GetByOwnerAndName(ownedBy, ownerId, repositoryName);
 
         return repository == null;
+    }
+
+    public async Task<ResponseBase> GetAllRepositoriesForCurrentUser()
+    {
+        var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
+
+        var repositories = await GetRepositoriesByRole(user.Id, role);
+
+        var repositoryDtos = repositories.Select(repositoryMapper.ReverseMap).ToList();
+
+        var updatedDtos = await GetFullNames(repositoryDtos);
+
+        return ResponseBase.SuccessResponse(updatedDtos);
+    }
+
+    public async Task<ResponseBase> GetAllVisibleRepositoriesForUser(string username)
+    {
+        var userResponse = await userService.GetUserByUsernameAsync(username);
+        if (!userResponse.Success)
+            return ResponseBase.ErrorResponse(userResponse.ErrorMessage);
+
+        var user = userResponse.Result as User;
+
+        var (loggedInUser, role) = await userContextService.GetCurrentUserWithRoleAsync();
+
+        bool showOnlyPublic = role == "USER" && user?.Id != loggedInUser.Id;
+
+        var filteredRepositories = await repositoryManager.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, showOnlyPublic);
+
+        var repositoryDtos = filteredRepositories.Select(repositoryMapper.ReverseMap).ToList();
+
+        var updatedDtos = await GetFullNames(repositoryDtos);
+
+        return ResponseBase.SuccessResponse(updatedDtos);
+    }
+
+    private async Task<IEnumerable<Model.Entity.Repository>> GetRepositoriesByRole(int userId, string role)
+    {
+        return role == "USER"
+            ? await repositoryManager.RepositoryRepository.GetUserRepositoriesByOwnerId(userId)
+            : await repositoryManager.RepositoryRepository.GetAllAsync();
+    }
+
+    private async Task<List<RepositoryDto>> GetFullNames(List<RepositoryDto> repositoryDtos)
+    {
+        var updatedDtos = new List<RepositoryDto>();
+
+        foreach (var repositoryDto in repositoryDtos)
+        {
+            switch(repositoryDto.OwnedBy)
+            {
+                case RepositoryOwnedBy.Organization:
+                    repositoryDto.FullName = $"{(await repositoryManager.OrganizationRepository.GetByIdAsync(repositoryDto.OwnerId))?.Name ?? "UnknownOrg"}/{repositoryDto.Name}";
+                    break;
+                case RepositoryOwnedBy.User:
+                    repositoryDto.FullName = $"{(await repositoryManager.UserRepository.GetByIdAsync(repositoryDto.OwnerId))?.UserName ?? "UnknownUser"}/{repositoryDto.Name}";
+                    break;
+                default:
+                    repositoryDto.FullName = repositoryDto.Name;
+                    break;
+            }
+
+            updatedDtos.Add(repositoryDto);
+        }
+
+        return updatedDtos;
     }
 }

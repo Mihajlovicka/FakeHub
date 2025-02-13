@@ -7,6 +7,7 @@ namespace FakeHubApi.Service.Contract;
 public interface IUserService
 {
     Task<ResponseBase> GetUserProfileByUsernameAsync(string username);
+    Task<ResponseBase> GetUserByUsernameAsync(string username);
     Task<ResponseBase> ChangePassword(ChangePasswordRequestDto changePasswordRequestDto);
     Task<ResponseBase> ChangeEmailAsync(ChangeEmailRequestDto changeEmailRequestDto);
     Task<ResponseBase> ChangeUserBadgeAsync(ChangeUserBadgeRequestDto changeUserBadgeRequestDto);

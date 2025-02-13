@@ -55,7 +55,7 @@
   </div>
   <div class="docker-images-container">
     <div *ngFor="let dockerImage of dockerImages">
-      <app-docker-image [dockerImage]="dockerImage"></app-docker-image>
+      <app-docker-image [title]="dockerImage?.title" [updatedAt]="dockerImage?.title == 'Ubuntu' ? '12.01.2025': undefined" [description]="dockerImage?.description" [footerText]="'Public'"></app-docker-image>
     </div>
   </div>
 </div>

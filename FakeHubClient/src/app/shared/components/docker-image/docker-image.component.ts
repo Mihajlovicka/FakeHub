@@ -10,7 +10,12 @@ import { DockerImage } from '../../../core/model/docker-image';
   styleUrl: './docker-image.component.css'
 })
 export class DockerImageComponent {
-  @Input() dockerImage?: DockerImage;
+  @Input() title?: string;
+  @Input() description?: string;
+  @Input() updatedAt?: Date | string;
+  @Input() badge?: string;
+  @Input() isPrivate?: boolean;
+  @Input() footerText?: string = "";
 
   public formatNumber(value: number): string {
     if (value >= 1000000) {
@@ -19,6 +24,14 @@ export class DockerImageComponent {
         return this.formatLargeNumber(value, 1000, 'K');
     }
     return value.toString();
+  }
+
+  public isDateValid(dateString: string | Date | undefined): boolean {
+    if(!dateString || dateString == undefined) return false;
+
+    const date = new Date(dateString);
+    const minValidDate = new Date(1, 0, 1);
+    return date > minValidDate;
   }
 
   private formatLargeNumber (value: number, divisor: number, suffix: string): string {

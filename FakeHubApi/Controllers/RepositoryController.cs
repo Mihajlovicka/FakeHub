@@ -20,4 +20,28 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
         }
         return BadRequest(response);
     }
+
+    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAllRepositoriesForCurrentUser()
+    {
+        var response = await repositoryService.GetAllRepositoriesForCurrentUser();
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
+    [HttpGet("all/{username}")]
+    public async Task<IActionResult> GetAllVisibleRepositoriesForUser([FromRoute] string username)
+    {
+        var response = await repositoryService.GetAllVisibleRepositoriesForUser(username);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

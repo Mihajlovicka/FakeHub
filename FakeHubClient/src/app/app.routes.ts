@@ -70,7 +70,7 @@ export const routes: Routes = [
   {
     path: 'repositories',
     component: RepositoriesListViewComponent,
-    data: { requiredRole: [UserRole.USER] }
+    data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] }
   },
   {
     path: 'repository',

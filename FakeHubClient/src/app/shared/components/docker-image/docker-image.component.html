@@ -1,24 +1,25 @@
 <div class="container">
   <a class="link-container">
     <div class="link-header">
-      <img [src]="dockerImage?.logoIcon" class="logo" />
-      <span class="ellipsis">{{ dockerImage?.title }}</span>
-      <i class="fa fa-check-circle"></i>
+      <span class="ellipsis">{{ title }}</span>
     </div>
 
     <div class="multi-line-ellipsis">
-      {{ dockerImage?.description }}
+      <p class="description">{{ description }}</p>
+      <p *ngIf="isDateValid(updatedAt)" class="created">
+        Updated: {{ updatedAt | date : "mediumDate" }}
+      </p>
     </div>
 
     <div class="link-footer">
-      <i class="fa fa-star-o footer-text"> </i>
+      <!-- TODO: For staring repo -->
+      <!-- <i class="fa fa-star-o footer-text"> </i>
       <span class="footer-text">{{
-        formatNumber(dockerImage?.likesCount ?? 0)
-      }}</span>
-      <i class="fa fa-download footer-text"></i>
-      <span class="footer-text"> {{
-        formatNumber(dockerImage?.downloadsCount ?? 0)
-      }}</span>
+        formatNumber(likesCount ?? 0)
+      }}</span> -->
+      <span *ngIf="footerText != ''" class="footer-text">
+        {{ footerText }}</span
+      >
     </div>
   </a>
 </div>

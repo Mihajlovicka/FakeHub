@@ -11,4 +11,6 @@ public class RepositoryDto
     public RepositoryOwnedBy OwnedBy { get; set; }
     public int OwnerId { get; set; }
     public Badge Badge { get; set; }
+    public string? FullName {  get; set; }
+    public DateTime? UpdatedAt { get; set; } = null;
 }

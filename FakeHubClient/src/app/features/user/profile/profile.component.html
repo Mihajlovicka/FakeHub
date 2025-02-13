@@ -1,31 +1,50 @@
-
 <div *ngIf="user?.username != ''">
   <div class="profile-container">
     <div class="avatar-container">
       <div class="avatar">
-        <span class="avatar-letter">{{
-            capitalizedLetterAvatar
-        }}</span>
+        <span class="avatar-letter">{{ capitalizedLetterAvatar }}</span>
       </div>
     </div>
     <div class="info-container">
       <div class="username-container">
         <span class="username">{{ user.username }}</span>
-        <div [ngClass]="{ 'editable-badge': isAdminLoggedIn || isSuperAdminLoggedIn, 'badge-btn': true }">
-          <app-user-badge [userBadge]="user.badge" [editable]="editable"  (click)="editable ? openBadgeDialog() : null"></app-user-badge>
+        <div
+          [ngClass]="{
+            'editable-badge': isAdminLoggedIn || isSuperAdminLoggedIn,
+            'badge-btn': true
+          }"
+        >
+          <app-user-badge
+            [userBadge]="user.badge"
+            [editable]="editable"
+            (click)="editable ? openBadgeDialog() : null"
+          ></app-user-badge>
         </div>
-        <button *ngIf="isLoggedInUserProfile" class="edit-icon-btn" (click)="goToSettings()">
+        <button
+          *ngIf="isLoggedInUserProfile"
+          class="edit-icon-btn"
+          (click)="goToSettings()"
+        >
           <i class="fa-solid fa-pen icons"></i>
         </button>
       </div>
-      <div *ngIf="((isAdminLoggedIn || isSuperAdminLoggedIn) && !isLoggedInUserProfile) || isUserLoggedIn" class="community-info">
+      <div
+        *ngIf="
+          ((isAdminLoggedIn || isSuperAdminLoggedIn) &&
+            !isLoggedInUserProfile) ||
+          isUserLoggedIn
+        "
+        class="community-info"
+      >
         <div class="community">
           <i class="fa-regular fa-user icons"></i>
           <span class="joined">Community User</span>
         </div>
-        <div *ngIf="isJoinedDateValid" class="date-info">
+        <div class="date-info">
           <i class="fa-regular fa-calendar icons"></i>
-          <span class="joined">Joined {{ formattedDateString }}</span>
+          <p *ngIf="isDateValid(user.createdAt)" class="joined">
+            Joined {{ user.createdAt | date : "mediumDate" }}
+          </p>
         </div>
       </div>
     </div>
@@ -61,9 +80,24 @@
     class="content"
     [ngClass]="{ 'content-center': activeLink === 2 || activeLink === 3 }"
   >
-    <div *ngIf="activeLink === 1" class="search-container">
-      <input type="text" placeholder="Search Repositories" />
-      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <div *ngIf="activeLink === 1">
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <input type="text" placeholder="Search Repositories" />
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        </div>
+      </div>
+
+      <div class="repositories-container">
+        @for (repository of repositories; track repository.id) {
+        <app-docker-image
+          [title]="repository?.fullName"
+          [updatedAt]="repository?.updatedAt"
+          [description]="repository?.description"
+          [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
+        ></app-docker-image>
+        }
+      </div>
     </div>
 
     <div *ngIf="activeLink === 2">

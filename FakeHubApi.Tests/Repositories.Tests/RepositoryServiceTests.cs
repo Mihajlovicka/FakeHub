@@ -1,6 +1,7 @@
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
+using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
@@ -14,6 +15,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         private Mock<IOrganizationService> _organizationServiceMock;
         private Mock<IRepositoryManager> _repositoryManagerMock;
         private Mock<IUserContextService> _userContextServiceMock;
+        private Mock<IUserService> _userServiceMock;
         private IRepositoryService _repositoryService;
 
         [SetUp]
@@ -23,12 +25,14 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _organizationServiceMock = new Mock<IOrganizationService>();
             _repositoryManagerMock = new Mock<IRepositoryManager>();
             _userContextServiceMock = new Mock<IUserContextService>();
+            _userServiceMock = new Mock<IUserService>();
 
             _repositoryService = new RepositoryService(
                 _repositoryMapperMock.Object,
                 _organizationServiceMock.Object,
                 _repositoryManagerMock.Object,
-                _userContextServiceMock.Object
+                _userContextServiceMock.Object,
+                _userServiceMock.Object
             );
         }
 
@@ -150,6 +154,269 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(repository.Badge, Is.EqualTo(Badge.DockerOfficialImage));
                 Assert.That(repository.OwnerId, Is.EqualTo(11));
                 Assert.That(repository.OwnedBy, Is.EqualTo(RepositoryOwnedBy.SuperAdmin));
+            });
+        }
+
+        [Test]
+        public async Task GetAllRepositoriesForCurrentUser_UserRole_ReturnsSuccessResponse()
+        {
+            var user = new User { UserName = "User", Id = 1 };
+            var role = "USER";
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = user.Id, Name = "UserRepo1", OwnedBy = RepositoryOwnedBy.User },
+                new() { Id = 2, OwnerId = user.Id, Name = "UserRepo2", OwnedBy = RepositoryOwnedBy.User }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy
+            }).ToList();
+
+            _userContextServiceMock
+                .Setup(m => m.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((user, role));
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, false))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(m => m.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync(user);
+
+            var response = await _repositoryService.GetAllRepositoriesForCurrentUser();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("UserRepo1"));
+                Assert.That(resultDtos![1].Name, Is.EqualTo("UserRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("User/UserRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("User/UserRepo2"));
+            });
+        }
+
+
+        [Test]
+        public async Task GetAllRepositoriesForCurrentUser_AdminRole_ReturnsSuccessResponse()
+        {
+            var user = new User { UserName = "Admin", Id = 1 };
+            var role = "ADMIN";
+            var repositories = new List<Model.Entity.Repository>
+            {
+                 new() { Id = 1, OwnerId = user.Id, Name = "AdminRepo1", OwnedBy = RepositoryOwnedBy.Admin },
+                 new() { Id = 2, OwnerId = user.Id, Name = "AdminRepo2", OwnedBy = RepositoryOwnedBy.Admin }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy
+            }).ToList();
+
+            _userContextServiceMock
+                .Setup(m => m.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((user, role));
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetAllAsync())
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            var response = await _repositoryService.GetAllRepositoriesForCurrentUser();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("AdminRepo1"));
+                Assert.That(resultDtos![1].Name, Is.EqualTo("AdminRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("AdminRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("AdminRepo2"));
+            });
+        }
+
+        [Test]
+        public async Task GetAllRepositoriesForCurrentUser_NoRepositories_ReturnsEmptyList()
+        {
+            var user = new User { UserName = "UserWithoutRepos", Id = 1 };
+            var role = "USER";
+
+            _userContextServiceMock
+                .Setup(m => m.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((user, role));
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, false))
+                .ReturnsAsync(new List<Model.Entity.Repository>());
+
+            _repositoryManagerMock
+                .Setup(m => m.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync(user);
+
+            var response = await _repositoryService.GetAllRepositoriesForCurrentUser();
+
+            Assert.That(response, Is.Not.Null);
+            Assert.That(response.Success, Is.True);
+
+            var resultDtos = response.Result as List<RepositoryDto>;
+            Assert.That(resultDtos, Is.Not.Null);
+            Assert.That(resultDtos, Is.Empty);
+        }
+
+        [Test]
+        public async Task GetAllRepositoriesForCurrentUser_OrganizationRepositories_ReturnsSuccessResponse()
+        {
+            var user = new User { UserName = "OrgUser", Id = 2 };
+            var role = "USER";
+            var organization = new Model.Entity.Organization { Name = "MyOrg", Id = 10 };
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = organization.Id, Name = "OrgRepo1", OwnedBy = RepositoryOwnedBy.Organization },
+                new() { Id = 2, OwnerId = organization.Id, Name = "OrgRepo2", OwnedBy = RepositoryOwnedBy.Organization }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy
+            }).ToList();
+
+            _userContextServiceMock
+                .Setup(m => m.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((user, role));
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, false))
+                .ReturnsAsync(repositories);
+
+            _repositoryManagerMock
+                .Setup(m => m.OrganizationRepository.GetByIdAsync(organization.Id))
+                .ReturnsAsync(organization);
+
+            _repositoryMapperMock
+                .Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            var response = await _repositoryService.GetAllRepositoriesForCurrentUser();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("OrgRepo1"));
+                Assert.That(resultDtos![1].Name, Is.EqualTo("OrgRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("MyOrg/OrgRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("MyOrg/OrgRepo2"));
+            });
+        }
+
+        [Test]
+        public async Task GetAllVisibleRepositoriesForUser_InvalidUsername_ReturnsErrorResponse()
+        {
+            var invalidUsername = "NonExistingUsername";
+
+            var userResponseBase = new ResponseBase { Result = null, Success = false };
+
+            _userServiceMock
+                .Setup(us => us.GetUserByUsernameAsync(invalidUsername))
+                .ReturnsAsync(userResponseBase);
+
+            var response = await _repositoryService.GetAllVisibleRepositoriesForUser(invalidUsername);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Success, Is.False);
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Result, Is.Null);
+            });
+        }
+
+        [Test]
+        public async Task GetAllVisibleRepositoriesForUser_NotCurrentUserProfile_ReturnsSuccessResponse()
+        {
+            var user = new User { UserName = "User", Id = 2 };
+            var userResponseBase = new ResponseBase { Result = user, Success = true };
+            var currentUser = new User { UserName = "CurrentUser", Id = 3 };
+            var role = "USER";
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = user.Id, Name = "PublicUserRepo1", OwnedBy = RepositoryOwnedBy.User, IsPrivate = false },
+                new() { Id = 2, OwnerId = user.Id, Name = "PublicUserRepo2", OwnedBy = RepositoryOwnedBy.User, IsPrivate = false }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy,
+                IsPrivate = repo.IsPrivate
+            }).ToList();
+
+            _userServiceMock
+                .Setup(us => us.GetUserByUsernameAsync(user.UserName))
+                .ReturnsAsync(userResponseBase);
+
+            _userContextServiceMock
+                .Setup(m => m.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, role));
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, true))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(m => m.UserRepository.GetByIdAsync(user.Id))
+                .ReturnsAsync(user);
+
+            var response = await _repositoryService.GetAllVisibleRepositoriesForUser(user.UserName);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("PublicUserRepo1"));
+                Assert.That(resultDtos![1].Name, Is.EqualTo("PublicUserRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("User/PublicUserRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("User/PublicUserRepo2"));
+                Assert.That(resultDtos, Is.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
             });
         }
     }

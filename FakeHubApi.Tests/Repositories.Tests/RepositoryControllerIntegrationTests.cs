@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Mysqlx.Crud;
 using Newtonsoft.Json;
 
 namespace FakeHubApi.Tests.Repositories.Tests
@@ -19,6 +20,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         private HttpClient _client;
         private CustomWebApplicationFactory _factory;
         private string _regularUserToken;
+        private string _regularUser1Token;
         private string _adminToken;
         private string _superAdminToken;
 
@@ -91,7 +93,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             {
                 Name = "SuperAdmin Repository",
                 Description = "SuperAdmin repository description.",
-                IsPrivate = true
+                IsPrivate = false
             };
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _superAdminToken);
@@ -113,6 +115,110 @@ namespace FakeHubApi.Tests.Repositories.Tests
         }
 
         [Test, Order(4)]
+        public async Task GetRepositories_WithoutToken_ReturnsUnauthorized()
+        {
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.GetAsync("/api/repositories/all");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(5)]
+        public async Task GetRepositories_AsUser_ReturnsEmptyList()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+            var response = await _client.GetAsync("/api/repositories/all");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.EqualTo(0));
+        }
+
+        [Test, Order(6)]
+        public async Task GetRepositories_AsAdmin_ReturnsAllRepositories()
+        {
+            using var scope = _factory.Services.CreateScope();
+            await using var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var repositoriesCount = db.Repositories.Count();
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+            var response = await _client.GetAsync("/api/repositories/all");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.EqualTo(repositoriesCount));
+        }
+
+        [Test, Order(7)]
+        public async Task GetVisibleRepositories_AsUser_ReturnsPublicAdminRepositories()
+        {
+            var username = "superadmin@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/all/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Is.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+        }
+
+        [Test, Order(8)]
+        public async Task GetVisibleRepositories_AsCurrentUser_ReturnsAllUserRepositories()
+        {
+            var username = "user@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/all/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Has.Some.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.Some.Matches<RepositoryDto>(r => r.IsPrivate == true));
+        }
+
+        [Test, Order(9)]
+        public async Task GetVisibleRepositories_AsAdmin_ReturnsAllUserRepositories()
+        {
+            var username = "user@fakehub.com";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+            var response = await _client.GetAsync($"/api/repositories/all/{username}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Has.Some.Matches<RepositoryDto>(repo => repo.IsPrivate));
+        }
+
+        [Test, Order(10)]
         public async Task Register_WithValidUserToken_AndSuccessfulSave_ReturnsOk()
         {
             var repositoryDto = new RepositoryDto
@@ -150,7 +256,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(responseObj!.Success, Is.True);
         }
 
-        [Test, Order(5)]
+        [Test, Order(11)]
         public async Task Register_WithValidUserToken_AndUnsuccessfulSave_ReturnsBadRequest()
         {
             var repositoryDto = new RepositoryDto
@@ -256,6 +362,45 @@ namespace FakeHubApi.Tests.Repositories.Tests
                     await userManager.AddToRoleAsync(superAdminUser, "SUPERADMIN");
                 }
             }
+
+            var regularUser1 = await userManager.FindByEmailAsync("user1@fakehub.com");
+            if (regularUser1 == null)
+            {
+                regularUser1 = new User
+                {
+                    Email = "user1@fakehub.com",
+                    UserName = "user1@fakehub.com"
+                };
+                var result = await userManager.CreateAsync(regularUser1, "Password123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(regularUser1, "USER");
+                }
+            }
+
+            var repository1 = new Model.Entity.Repository
+            {
+                Id = 1,
+                Name = "Repository1",
+                Description = "Repository1 description",
+                IsPrivate = true,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+            };
+
+            var repository2 = new Model.Entity.Repository
+            {
+                Id = 2,
+                Name = "Repository2",
+                Description = "Repository2 description",
+                IsPrivate = false,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+            };
+
+            await db.Repositories.AddAsync(repository1);
+            await db.Repositories.AddAsync(repository2);
+            await db.SaveChangesAsync();
         }
         
         private async Task InitializeTokens()
@@ -266,6 +411,13 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Password = "Password123!"
             };
             _regularUserToken = await GetTokenFromSuccessfulUserLogin(regularUserLogin);
+
+            var regularUser1Login = new LoginRequestDto
+            {
+                Email = "user1@fakehub.com",
+                Password = "Password123!"
+            };
+            _regularUser1Token = await GetTokenFromSuccessfulUserLogin(regularUser1Login);
 
             var adminUserLogin = new LoginRequestDto
             {
@@ -299,9 +451,25 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Func<RepositoryDto, Task<ResponseBase>> SaveFunc { get; set; } =
                 dto => Task.FromResult(new ResponseBase { Success = true });
 
+            public Func<Task<ResponseBase>> GetAllRepositoriesForCurrentUserFunc { get; set; } =
+                () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
+
+            public Func<Task<ResponseBase>> GetAllVisibleRepositoriesForUserFunc { get; set; } =
+                () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
+
             public Task<ResponseBase> Save(RepositoryDto model)
             {
                 return SaveFunc(model);
+            }
+
+            public Task<ResponseBase> GetAllRepositoriesForCurrentUser()
+            {
+                return GetAllRepositoriesForCurrentUserFunc();
+            }
+
+            public Task<ResponseBase> GetAllVisibleRepositoriesForUser(string username)
+            {
+                return GetAllVisibleRepositoriesForUserFunc();
             }
         }
 
