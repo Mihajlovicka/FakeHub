@@ -72,6 +72,7 @@
 .nav-link:hover {
   text-decoration: underline white;
   text-decoration-thickness: 2px;
+  cursor: pointer;
 }
 
 .btn-hover {

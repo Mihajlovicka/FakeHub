@@ -1,5 +1,4 @@
 using FakeHubApi.Model.Dto;
-using FakeHubApi.Model.Entity;
 namespace FakeHubApi.Mapper.RepositoryMapper;
 
 public class RepositoryDtoToRepositoryMapper() : BaseMapper<RepositoryDto, Model.Entity.Repository>
@@ -13,14 +12,15 @@ public class RepositoryDtoToRepositoryMapper() : BaseMapper<RepositoryDto, Model
             IsPrivate = source.IsPrivate,
             OwnedBy = source.OwnedBy,
             OwnerId = source.OwnerId,
-            Badge = source.Badge
+            Badge = source.Badge,
+            UpdatedAt = DateTime.UtcNow
         };
 
         if (source.Id != null) repository.Id = (int)source.Id;
 
         return repository;
     }
-    
+
     public override RepositoryDto ReverseMap(Model.Entity.Repository destination)
     {
         return new RepositoryDto()
@@ -31,7 +31,9 @@ public class RepositoryDtoToRepositoryMapper() : BaseMapper<RepositoryDto, Model
             IsPrivate = destination.IsPrivate,
             OwnedBy = destination.OwnedBy,
             OwnerId = destination.OwnerId,
-            Badge = destination.Badge
+            Badge = destination.Badge,
+            FullName = "",
+            UpdatedAt = destination.UpdatedAt
         };
     }
 }

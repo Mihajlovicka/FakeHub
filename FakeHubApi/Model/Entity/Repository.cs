@@ -20,4 +20,6 @@ public class Repository
     public int OwnerId { get; set; } //this could be id of either user or organization hence the owned by type
 
     public Badge Badge { get; set; }
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

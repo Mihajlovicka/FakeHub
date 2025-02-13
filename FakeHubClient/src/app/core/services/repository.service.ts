@@ -18,6 +18,14 @@ private http: HttpClient = inject(HttpClient);
   }
 
   public save(data: Repository): Observable<any | null> {
-      return this.http.post<Repository>(Path.Repositories, data);
-    }
+    return this.http.post<Repository>(Path.Repositories, data);
+  }
+
+  public GetAllRepositoriesForCurrentUser(): Observable<Repository[]> {
+    return this.http.get<Repository[]>(`${Path.Repositories}/all`);
+  }
+
+  public GetAllVisibleRepositoriesForUser(username: string): Observable<Repository[]> {
+    return this.http.get<Repository[]>(`${Path.Repositories}/all/${username}`);
+  }
 }

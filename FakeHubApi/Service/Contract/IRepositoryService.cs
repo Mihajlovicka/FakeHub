@@ -6,4 +6,6 @@ namespace FakeHubApi.Service.Contract;
 public interface IRepositoryService
 {
     Task<ResponseBase> Save(RepositoryDto repository);
+    Task<ResponseBase> GetAllRepositoriesForCurrentUser();
+    Task<ResponseBase> GetAllVisibleRepositoriesForUser(string username);
 }

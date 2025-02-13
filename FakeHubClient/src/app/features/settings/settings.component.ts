@@ -3,14 +3,12 @@ import { UserService } from '../../core/services/user.service';
 import { UserProfileResponseDto } from '../../core/model/user';
 import {ActivatedRoute, Router} from '@angular/router';
 import { HelperService } from '../../core/services/helper.service';
-import {NgIf} from "@angular/common";
+import {CommonModule, NgIf} from "@angular/common";
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [
-    NgIf
-  ],
+  imports: [NgIf, CommonModule],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css'
 })
@@ -23,7 +21,6 @@ export class SettingsComponent implements OnInit {
   public user: UserProfileResponseDto = new UserProfileResponseDto();
   public username: string = '';
   public profileLabel: string = '';
-  public formatedDate: string = '';
   public isLoggedInUserProfile: boolean = false;
   public isAdminLoggedIn: boolean = false;
   public isSuperAdminLoggedIn: boolean = false;
@@ -35,7 +32,6 @@ export class SettingsComponent implements OnInit {
     this.userService.getUserProfileByUsername(this.username).subscribe(user => {
       this.user = user ?? new UserProfileResponseDto();
       this.profileLabel = this.helperService.capitalizeFirstLetter(this.user.username);
-      this.formatedDate = this.helperService.formatDate(this.user.createdAt);
       this.isAdminLoggedIn = this.userService.isAdminLoggedIn();
       this.isSuperAdminLoggedIn = this.userService.isSuperAdminLoggedIn();
       this.isUserLoggedIn = this.userService.isUserLoggedIn();

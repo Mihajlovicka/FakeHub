@@ -8,17 +8,21 @@ import { UserBadgeComponent } from '../../../shared/components/user-badge/user-b
 import { UserBadgeModalComponent } from '../../../shared/components/user-badge/user-badge-modal/user-badge-modal.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ChangeUserBadgeRequest } from '../../../core/model/change-badge-to-user-request';
+import { RepositoryService } from '../../../core/services/repository.service';
+import { Repository } from '../../../core/model/repository';
+import { DockerImageComponent } from '../../../shared/components/docker-image/docker-image.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, UserBadgeComponent],
+  imports: [CommonModule, UserBadgeComponent, DockerImageComponent],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css'
 })
 export class ProfileComponent implements OnInit{
   private helperService: HelperService = inject(HelperService);
   private userService: UserService = inject(UserService);
+  private readonly repositoryService: RepositoryService = inject(RepositoryService);
   private route: ActivatedRoute = inject(ActivatedRoute);
   private router: Router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -29,9 +33,8 @@ export class ProfileComponent implements OnInit{
   public isAdminLoggedIn: boolean = false;
   public isSuperAdminLoggedIn: boolean = false;
   public isUserLoggedIn: boolean = false;
-  public isJoinedDateValid = false;
-  public formattedDateString = "";
   public capitalizedLetterAvatar = "";
+  public repositories: Repository[] = [];
 
   get editable(): boolean {
     return (this.isAdminLoggedIn || this.isSuperAdminLoggedIn) && this.user.role === 'USER';
@@ -41,6 +44,12 @@ export class ProfileComponent implements OnInit{
     const usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
     this.checkUserPermissions();
     this.loadUserProfile(usernameParam);
+
+    this.repositoryService.GetAllVisibleRepositoriesForUser(usernameParam).subscribe({
+      next: repos => {
+        this.repositories = repos;
+      }
+    });
   }
 
   private checkUserPermissions(): void {
@@ -52,11 +61,7 @@ export class ProfileComponent implements OnInit{
 
   private loadUserProfile(username: string): void {
     this.userService.getUserProfileByUsername(username).subscribe(user => {
-      console.log("useeer", user);
-      
       this.user = user ?? new UserProfileResponseDto();
-      this.isJoinedDateValid = this.helperService.isDateValid(this.user.createdAt);
-      this.formattedDateString = this.isJoinedDateValid ? this.helperService.formatDate(this.user.createdAt) : '';
       this.capitalizedLetterAvatar = this.helperService.capitalizeFirstLetter(user?.username ?? "");
     });
   }
@@ -90,5 +95,11 @@ export class ProfileComponent implements OnInit{
         this.user.badge = result.badge;
       }
     });
+  }
+
+  public isDateValid(dateString: string | Date): boolean {
+    const date = new Date(dateString);
+    const minValidDate = new Date(1, 0, 1);
+    return date > minValidDate;
   }
 }

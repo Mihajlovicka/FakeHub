@@ -48,7 +48,6 @@
 
 .edit-icon-btn:hover {
   background-color: lightgray;
-  
 }
 
 .community-info {
@@ -78,6 +77,7 @@
 .joined {
   font-size: 0.8rem;
   color: #666;
+  margin: auto;
 }
 
 .links-container {
@@ -106,9 +106,10 @@
 
 .content {
   display: flex;
+  flex-direction: column;
   margin-left: 2rem;
-  align-items: center;
-  height: 100px;
+  align-items: start;
+  height: auto;
 }
 
 .content-center {
@@ -134,14 +135,22 @@ input:focus {
 }
 
 .search-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 1rem;
+  margin-top: 1rem;
+}
+
+.search-input-wrapper {
   position: relative;
   display: flex;
-  justify-content: center;
   align-items: center;
+  width: 17rem;
 }
 
 .search-container input {
-  padding: 5px;
+  padding: 10px 35px 10px 10px;
   width: 17rem;
   font-size: 0.9rem;
   border-radius: 5px;
@@ -187,4 +196,11 @@ input:focus {
 }
 .editable-badge:hover {
   opacity: 0.8;
+}
+
+.repositories-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 2rem;
 }

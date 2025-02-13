@@ -8,6 +8,8 @@ export interface Repository {
     ownerId: number;
     ownedBy: RepositoryOwnedBy;
     badge: UserBadge;
+    updatedAt: Date;
+    fullName: string;
 }
 
 export enum RepositoryOwnedBy {

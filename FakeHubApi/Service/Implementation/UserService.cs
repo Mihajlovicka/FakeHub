@@ -43,6 +43,28 @@ public class UserService(
         }
     }
 
+    public async Task<ResponseBase> GetUserByUsernameAsync(string username)
+    {
+        if (string.IsNullOrEmpty(username))
+            return ResponseBase.ErrorResponse("Username is empty");
+
+        try
+        {
+            var user = await userManager.FindByNameAsync(username);
+
+            if (user == null)
+            {
+                return ResponseBase.ErrorResponse("User not found");
+            }
+
+            return ResponseBase.SuccessResponse(user);
+        }
+        catch (Exception ex)
+        {
+            return ResponseBase.ErrorResponse(ex.Message);
+        }
+    }
+
     public async Task<ResponseBase> ChangePassword(
         ChangePasswordRequestDto changePasswordRequestDto
     )
