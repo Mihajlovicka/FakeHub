@@ -341,6 +341,85 @@ public class TeamControllerIntegrationTests
 
         Assert.That(responseObject.Username, Is.EqualTo(username));
     }
+    
+    [Test, Order(13)]
+    public async Task DeleteTeamFromOrganization_ValidRequest_ReturnsOk()
+    {
+        const string organizationName = "Test Team Organization";
+        const string teamName = "Test Team 2";
+        
+        var response = await _client.DeleteAsync($"/api/organization/team/{organizationName}/{teamName}");
+        
+        response.EnsureSuccessStatusCode();
+        var responseBase = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(responseBase?.Success, Is.True);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseBase?.ErrorMessage, Is.Empty);
+        });
+    }
+
+    [Test, Order(14)]
+    public async Task DeleteTeamFromOrganization_TeamDoesNotExist_ReturnsBadRequest()
+    {
+        const string organizationName = "Test Team Organization";
+        const string teamName = "Nonexistent Team";
+    
+        var response = await _client.DeleteAsync($"/api/organization/team/{organizationName}/{teamName}");
+    
+        Assert.Multiple(async () =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            var responseBase = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseBase?.Success, Is.False);
+            Assert.That(responseBase?.ErrorMessage, Is.EqualTo("Team not found in organization."));
+        });
+    }
+
+    [Test, Order(15)]
+    public async Task DeleteTeamFromOrganization_NotAuthorized_ReturnsBadRequest()
+    {
+        const string organizationName = "Test Team Organization";
+        const string teamName = "Test Team 2";
+    
+        var token = await GetTokenFromSuccessfulUserLogin(
+            new LoginRequestDto { Email = "testtest@example.com", Password = "Password123!" }
+        );
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            token
+        );
+    
+        var response = await _client.DeleteAsync($"/api/organization/team/{organizationName}/{teamName}");
+    
+        Assert.Multiple(async () =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            var responseBase = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseBase?.Success, Is.False);
+            Assert.That(responseBase?.ErrorMessage, Is.EqualTo("You are not the owner of this organization."));
+        });   
+    }
+
+    [Test, Order(16)]
+    public async Task DeleteTeamFromOrganization_OrganizationNotFound_ReturnsBadRequest()
+    {
+        const string organizationName = "Nonexistent Organization";
+        const string teamName = "Test Team 2";
+    
+        var response = await _client.DeleteAsync($"/api/organization/team/{organizationName}/{teamName}");
+    
+        Assert.Multiple(async () =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            var responseBase = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseBase?.Success, Is.False);
+            Assert.That(responseBase?.ErrorMessage, Is.EqualTo("Organization not found."));
+        });
+    }
+
 
     private async Task SetupData()
     {

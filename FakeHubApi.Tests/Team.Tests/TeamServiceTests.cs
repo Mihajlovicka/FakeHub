@@ -5,7 +5,6 @@ using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
-using Microsoft.AspNetCore.Identity;
 using Moq;
 
 namespace FakeHubApi.Tests.Team.Tests;
@@ -480,6 +479,101 @@ public class TeamServiceTests
             Assert.That(result.Result, Is.Not.Null);
             Assert.That(result.ErrorMessage, Is.Empty);
             Assert.That((UserDto)result.Result, Is.EqualTo(userDto));
+        });
+    }
+    
+    [Test]
+public async Task DeleteTeamFromOrganization_TeamExists_ReturnsSuccessResponse()
+{
+    const string organizationName = "Test Organization";
+    const string teamName = "Test Team";
+    var organization = new Model.Entity.Organization
+    {
+        Name = organizationName,
+        Teams = new List<Model.Entity.Team>
+        {
+            new Model.Entity.Team { Name = teamName }
+        }
+    };
+    _organizationServiceMock
+        .Setup(m => m.GetOrganization(organizationName))
+        .ReturnsAsync(organization);
+    _repositoryManagerMock
+        .Setup(m => m.TeamRepository.UpdateAsync(It.IsAny<Model.Entity.Team>()))
+        .Returns(Task.FromResult(new Model.Entity.Team { Name = teamName }));
+    _organizationServiceMock
+        .Setup(m => m.IsLoggedInUserOwner(organization))
+        .Returns(Task.FromResult(true));
+
+    var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+    Assert.Multiple(() =>
+    {
+        Assert.That(result.Success, Is.True);
+        Assert.That(organization.Teams.Any(t => t.Name == teamName), Is.False);
+    });
+}
+
+    [Test]
+    public async Task DeleteTeamFromOrganization_TeamDoesNotExist_ReturnsErrorResponse()
+    {
+        const string organizationName = "Test Organization";
+        const string teamName = "Nonexistent Team";
+        var organization = new Model.Entity.Organization { Name = organizationName };
+        _organizationServiceMock
+            .Setup(m => m.GetOrganization(organizationName))
+            .ReturnsAsync(organization);
+
+        var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("You are not the owner of this organization."));
+        });
+    }
+
+    [Test]
+    public async Task DeleteTeamFromOrganization_NotAuthorized_ReturnsErrorResponse()
+    {
+        const string organizationName = "Test Organization";
+        const string teamName = "Test Team";
+        var organization = new Model.Entity.Organization
+        {
+            Name = organizationName,
+            Teams = new List<Model.Entity.Team> { new Model.Entity.Team { Name = teamName } }
+        };
+        _organizationServiceMock
+            .Setup(m => m.GetOrganization(organizationName))
+            .ReturnsAsync(organization);
+        _organizationServiceMock
+            .Setup(m => m.IsLoggedInUserOwner(It.IsAny<Model.Entity.Organization>()))
+            .Returns(Task.FromResult(false));
+
+        var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("You are not the owner of this organization."));
+        });
+    }
+
+    [Test]
+    public async Task DeleteTeamFromOrganization_OrganizationNotFound_ReturnsErrorResponse()
+    {
+        const string organizationName = "Nonexistent Organization";
+        const string teamName = "Test Team";
+        _organizationServiceMock
+            .Setup(m => m.GetOrganization(organizationName))
+            .ReturnsAsync((Model.Entity.Organization)null);
+
+        var result = await _teamService.DeleteTeamFromOrganization(organizationName, teamName);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.ErrorMessage, Is.EqualTo("Organization not found."));
         });
     }
 }
