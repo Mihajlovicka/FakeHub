@@ -1,13 +1,11 @@
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
-using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
 using Microsoft.AspNetCore.Identity;
 using Moq;
-using MySqlX.XDevAPI.Common;
 
 namespace FakeHubApi.Tests.Organization.Tests;
 
