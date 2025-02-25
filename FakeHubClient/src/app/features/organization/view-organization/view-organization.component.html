@@ -62,4 +62,18 @@
       <app-teams (deleteTeamEvent)="OnTeamDeleted($event)" [teams]="organization.teams || []" [organizationName]="organization.name" [isOwner]="isOwner()"></app-teams>
     </ng-template>
   </mat-tab>
+  <mat-tab label="Repositories">
+    <ng-template matTabContent>
+      <div class="repositories-container">
+        @for (repository of repositories; track repository.id) {
+        <app-docker-image
+          [title]="repository?.name"
+          [updatedAt]="repository?.updatedAt"
+          [description]="repository?.description"
+          [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
+        ></app-docker-image>
+        }
+      </div>
+    </ng-template>
+  </mat-tab>
 </mat-tab-group>

@@ -44,4 +44,17 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
         }
         return BadRequest(response);
     }
+
+    [Authorize(Roles = "USER")]
+    [HttpGet("organization/{orgName}")]
+    public async Task<IActionResult> GetAllRepositoriesForOrganization([FromRoute] string orgName)
+    {
+        var response = await repositoryService.GetAllRepositoriesForOrganization(orgName);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
 }

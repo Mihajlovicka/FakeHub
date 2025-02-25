@@ -37,4 +37,14 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
 
         return ownedRepositories.Concat(organizationRepositories);
     }
+
+    public async Task<IEnumerable<Model.Entity.Repository>> GetOrganizationRepositoriesByOrganizationId(int organizationId)
+    {
+        var ownedRepositories = await _context.Repositories
+           .Where(r => r.OwnedBy == RepositoryOwnedBy.Organization && r.OwnerId == organizationId)
+           .ToListAsync();
+
+        return ownedRepositories;
+    }
+
 }

@@ -22,6 +22,9 @@ import { AddMemberToOrganizationModalComponent } from "../add-member-to-organiza
 import { ViewOrganizationsMembersComponent } from "../view-organizations-members/view-organizations-members.component";
 import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
 import { Team } from "../../../core/model/team";
+import { Repository } from "../../../core/model/repository";
+import { RepositoryService } from "../../../core/services/repository.service";
+import { DockerImageComponent } from "../../../shared/components/docker-image/docker-image.component";
 
 @Component({
   selector: "app-view-organization",
@@ -35,6 +38,7 @@ import { Team } from "../../../core/model/team";
     MatTabsModule,
     TeamsComponent,
     ViewOrganizationsMembersComponent,
+    DockerImageComponent
   ],
   templateUrl: "./view-organization.component.html",
   styleUrl: "./view-organization.component.css",
@@ -42,6 +46,7 @@ import { Team } from "../../../core/model/team";
 export class ViewOrganizationComponent implements OnInit, OnDestroy {
   private readonly service: OrganizationService = inject(OrganizationService);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
+  private readonly repositoryService: RepositoryService = inject(RepositoryService);
   private readonly userService: UserService = inject(UserService);
   private readonly router: Router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -54,6 +59,7 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     description: "",
     imageBase64: "",
   };
+  public repositories: Repository[] = [];
 
   public isOwner(): boolean {
     return (
@@ -173,7 +179,13 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   public ngOnInit(): void {
     const name = this.activatedRoute.snapshot.paramMap.get("name");
     if (name) {
-      this.loadAsync(name);
+      this.loadAsync(name).then(() => {
+        this.repositoryService.GetAllRepositoriesForOrganization(this.organization.name).subscribe({
+          next: repos => {
+            this.repositories = repos;
+          }
+        });
+      });
     }
   }
 

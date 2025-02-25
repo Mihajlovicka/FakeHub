@@ -419,5 +419,98 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(resultDtos, Is.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
             });
         }
+
+        [Test]
+        public async Task GetAllRepositoriesForOrganization_ValidOrganizationName_ReturnsSuccessResponse()
+        {
+            var orgName = "Organization";
+            var organization = new Model.Entity.Organization { Name = orgName, Id = 1 };
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = organization.Id, Name = "OrgRepo1", OwnedBy = RepositoryOwnedBy.Organization, IsPrivate = false },
+                new() { Id = 2, OwnerId = organization.Id, Name = "OrgRepo2", OwnedBy = RepositoryOwnedBy.Organization, IsPrivate = false }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy
+            }).ToList();
+
+            _organizationServiceMock
+                .Setup(o => o.GetOrganization(orgName))
+                .ReturnsAsync(organization);
+
+            _repositoryManagerMock
+                .Setup(or => or.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(organization.Id))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            var response = await _repositoryService.GetAllRepositoriesForOrganization(orgName);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("OrgRepo1"));
+                Assert.That(resultDtos![1].Name, Is.EqualTo("OrgRepo2"));
+                Assert.That(resultDtos, Is.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+                Assert.That(resultDtos, Is.All.Matches<RepositoryDto>(r => r.OwnedBy == RepositoryOwnedBy.Organization));
+            });
+        }
+
+        [Test]
+        public async Task GetAllRepositoriesForOrganization_InvalidOrganizationName_ReturnsErrorResponse()
+        {
+            var orgName = "NonExistentOrg";
+
+            _organizationServiceMock
+                .Setup(o => o.GetOrganization(orgName))
+                .ReturnsAsync((Model.Entity.Organization)null);
+
+            var response = await _repositoryService.GetAllRepositoriesForOrganization(orgName);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Result, Is.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Organization not found"));
+            });
+        }
+
+        [Test]
+        public async Task GetAllRepositoriesForOrganization_NoRepositories_ReturnsSuccessResponse()
+        {
+            var orgName = "Organization";
+            var organization = new Model.Entity.Organization { Name = orgName, Id = 1 };
+
+            _organizationServiceMock
+                .Setup(o => o.GetOrganization(orgName))
+                .ReturnsAsync(organization);
+
+            _repositoryManagerMock
+                .Setup(or => or.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(organization.Id))
+                .ReturnsAsync(new List<Model.Entity.Repository>());
+
+            var response = await _repositoryService.GetAllRepositoriesForOrganization(orgName);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Empty);
+            });
+        }
     }
 }
