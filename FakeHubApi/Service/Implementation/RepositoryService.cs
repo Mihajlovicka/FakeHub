@@ -91,6 +91,23 @@ public class RepositoryService(
         return ResponseBase.SuccessResponse(updatedDtos);
     }
 
+    public async Task<ResponseBase> GetAllRepositoriesForOrganization(string orgName)
+    {
+        var organization = await organizationService.GetOrganization(orgName);
+
+        if (organization == null)
+        {
+            return ResponseBase.ErrorResponse("Organization not found");
+        }
+
+        var orgRepositories = await repositoryManager.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(organization.Id);
+
+        var repositoryDtos = orgRepositories.Select(repositoryMapper.ReverseMap).ToList();
+
+        return ResponseBase.SuccessResponse(repositoryDtos);
+
+    }
+
     private async Task<IEnumerable<Model.Entity.Repository>> GetRepositoriesByRole(int userId, string role)
     {
         return role == "USER"

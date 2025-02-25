@@ -185,3 +185,9 @@ input:focus {
   margin: 2.5rem;
 }
 
+.repositories-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 2rem;
+}

@@ -28,4 +28,8 @@ private http: HttpClient = inject(HttpClient);
   public GetAllVisibleRepositoriesForUser(username: string): Observable<Repository[]> {
     return this.http.get<Repository[]>(`${Path.Repositories}/all/${username}`);
   }
+
+  public GetAllRepositoriesForOrganization(orgName: string): Observable<Repository[]> {
+    return this.http.get<Repository[]>(`${Path.Repositories}/organization/${orgName}`);
+  }
 }

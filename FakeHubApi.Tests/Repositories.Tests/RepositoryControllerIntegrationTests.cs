@@ -6,6 +6,7 @@ using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -219,6 +220,51 @@ namespace FakeHubApi.Tests.Repositories.Tests
         }
 
         [Test, Order(10)]
+        public async Task GetAllRepositoriesForOrganization_ValidOrgName_ReturnsOk()
+        {
+            var orgName = "Organization1";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/organization/{orgName}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories!.Count, Is.GreaterThan(0));
+        }
+
+        [Test, Order(11)]
+        public async Task GetAllRepositoriesForOrganization_InvalidOrgName_ReturnsBadRequest()
+        {
+            var orgName = "NonExistentOrg";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/organization/{orgName}");
+
+            Assert.That(response.IsSuccessStatusCode, Is.False);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test, Order(12)]
+        public async Task GetAllRepositoriesForOrganization_NoRepositories_ReturnsOk()
+        {
+            var orgName = "Organization2";
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.GetAsync($"/api/repositories/organization/{orgName}");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Empty);
+        }
+
+        [Test, Order(13)]
         public async Task Register_WithValidUserToken_AndSuccessfulSave_ReturnsOk()
         {
             var repositoryDto = new RepositoryDto
@@ -256,7 +302,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(responseObj!.Success, Is.True);
         }
 
-        [Test, Order(11)]
+        [Test, Order(14)]
         public async Task Register_WithValidUserToken_AndUnsuccessfulSave_ReturnsBadRequest()
         {
             var repositoryDto = new RepositoryDto
@@ -378,6 +424,26 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 }
             }
 
+            var organization1 = new Model.Entity.Organization
+            {
+                Id = 1,
+                Name = "Organization1",
+                Description = "Organization1 description",
+                IsActive = true,
+                OwnerId = regularUser.Id,
+                Owner = regularUser,
+            };
+
+            var organization2 = new Model.Entity.Organization
+            {
+                Id = 2,
+                Name = "Organization2",
+                Description = "Organization2 description",
+                IsActive = true,
+                OwnerId = regularUser.Id,
+                Owner = regularUser,
+            };
+
             var repository1 = new Model.Entity.Repository
             {
                 Id = 1,
@@ -398,8 +464,21 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 OwnedBy = RepositoryOwnedBy.User,
             };
 
+            var repository3 = new Model.Entity.Repository
+            {
+                Id = 3,
+                Name = "Repository3",
+                Description = "Repository3 description",
+                IsPrivate = false,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.Organization,
+            };
+
+            await db.Organizations.AddAsync(organization1);
+            await db.Organizations.AddAsync(organization2);
             await db.Repositories.AddAsync(repository1);
             await db.Repositories.AddAsync(repository2);
+            await db.Repositories.AddAsync(repository3);
             await db.SaveChangesAsync();
         }
         
@@ -457,6 +536,9 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Func<Task<ResponseBase>> GetAllVisibleRepositoriesForUserFunc { get; set; } =
                 () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
 
+            public Func<Task<ResponseBase>> GetAllRepositoriesForOrganizationFunc { get; set; } =
+                () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
+
             public Task<ResponseBase> Save(RepositoryDto model)
             {
                 return SaveFunc(model);
@@ -470,6 +552,11 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Task<ResponseBase> GetAllVisibleRepositoriesForUser(string username)
             {
                 return GetAllVisibleRepositoriesForUserFunc();
+            }
+
+            public Task<ResponseBase> GetAllRepositoriesForOrganization(string name)
+            {
+                return GetAllRepositoriesForOrganizationFunc();
             }
         }
 
