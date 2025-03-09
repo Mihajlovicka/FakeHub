@@ -52,7 +52,7 @@ export class CreateRepositoryComponent implements OnInit {
   public repositoryForm: FormGroup = new FormGroup({
     name: new FormControl("", [Validators.required, Validators.maxLength(100)]),
     description: new FormControl("", [Validators.maxLength(500)]),
-    isPrivate: new FormControl(true),
+    isPrivate: new FormControl({ value: false, disabled: this.isAdminLoggedIn ||  this.isSuperAdminLoggedIn}, Validators.required),
     ownerId: new FormControl({ value: null, disabled: this.isAdminLoggedIn ||  this.isSuperAdminLoggedIn}, Validators.required),
   });
 
@@ -78,7 +78,6 @@ export class CreateRepositoryComponent implements OnInit {
       data.ownedBy = data.ownerId === -1 ? RepositoryOwnedBy.USER : RepositoryOwnedBy.ORGANIZATION;
 
     this.repositoryService.save(data).subscribe((res) => {
-      console.log(res);
       this.router.navigate(["/repositories"]);
     });
   }

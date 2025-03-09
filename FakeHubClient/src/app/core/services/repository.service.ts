@@ -2,7 +2,7 @@ import { HttpClient } from "@angular/common/http";
 import { inject, Injectable } from "@angular/core";
 import { BehaviorSubject, Observable } from "rxjs";
 import { Repository } from "../model/repository";
-import { Path } from "../constant/path";
+import { Path, getRepository } from "../constant/path";
 
 @Injectable({
   providedIn: "root",
@@ -21,15 +21,19 @@ private http: HttpClient = inject(HttpClient);
     return this.http.post<Repository>(Path.Repositories, data);
   }
 
-  public GetAllRepositoriesForCurrentUser(): Observable<Repository[]> {
+  public getAllRepositoriesForCurrentUser(): Observable<Repository[]> {
     return this.http.get<Repository[]>(`${Path.Repositories}/all`);
   }
 
-  public GetAllVisibleRepositoriesForUser(username: string): Observable<Repository[]> {
+  public getAllVisibleRepositoriesForUser(username: string): Observable<Repository[]> {
     return this.http.get<Repository[]>(`${Path.Repositories}/all/${username}`);
   }
 
   public GetAllRepositoriesForOrganization(orgName: string): Observable<Repository[]> {
     return this.http.get<Repository[]>(`${Path.Repositories}/organization/${orgName}`);
+  }
+  
+  public getRepository(id: number): Observable<Repository>{
+    return this.http.get<Repository>(getRepository(id));
   }
 }

@@ -9,4 +9,5 @@ public interface IRepositoryService
     Task<ResponseBase> GetAllRepositoriesForCurrentUser();
     Task<ResponseBase> GetAllVisibleRepositoriesForUser(string username);
     Task<ResponseBase> GetAllRepositoriesForOrganization(string orgName);
+    Task<ResponseBase> GetRepository(int repositoryId);
 }

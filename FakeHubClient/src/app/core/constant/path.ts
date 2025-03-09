@@ -48,3 +48,6 @@ export function deleteTeamFromOrganization(organizationName: string, teamName: s
 export function deleteTeamMember(organizationName: string, teamName: string, username: string): string {
   return teamApi + organizationName + '/' + teamName + '/delete-user/' + username;
 }
+export function getRepository(id: number): string {
+  return Path.Repositories + "/" + id;
+}

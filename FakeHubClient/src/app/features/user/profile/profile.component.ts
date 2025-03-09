@@ -41,11 +41,12 @@ export class ProfileComponent implements OnInit{
     return (this.isAdminLoggedIn || this.isSuperAdminLoggedIn) && this.user.role === 'USER';
   }
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
+    const usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
     this.checkUserPermissions();
     this.loadUserProfile(this.usernameParam);
 
-    this.repositoryService.GetAllVisibleRepositoriesForUser(this.usernameParam).subscribe({
+    this.repositoryService.getAllVisibleRepositoriesForUser(usernameParam).subscribe({
       next: repos => {
         this.repositories = repos;
       }
@@ -112,5 +113,9 @@ export class ProfileComponent implements OnInit{
     const date = new Date(dateString);
     const minValidDate = new Date(1, 0, 1);
     return date > minValidDate;
+  }
+
+  public navigateToRepository(id: number | undefined){
+    if(id) this.router.navigate(["/repository/", id]);
   }
 }

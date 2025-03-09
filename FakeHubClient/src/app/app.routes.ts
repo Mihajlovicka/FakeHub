@@ -20,6 +20,7 @@ import { EditTeamComponent } from './features/team/edit-team/edit-team.component
 import { UsersListViewComponent } from "./features/user/users-list-view/users-list-view.component";
 import { RepositoriesListViewComponent } from './features/repository/repositories-list-view/repositories-list-view.component';
 import { CreateRepositoryComponent } from './features/repository/create-repository/create-repository.component';
+import { ViewRepositoryComponent } from './features/repository/view-repository/view-repository.component';
 
 export const routes: Routes = [
   {
@@ -80,6 +81,10 @@ export const routes: Routes = [
       {
         path: 'add',
         component: CreateRepositoryComponent
+      },
+      {
+        path: ':repositoryId',
+        component: ViewRepositoryComponent
       }
     ]
   },

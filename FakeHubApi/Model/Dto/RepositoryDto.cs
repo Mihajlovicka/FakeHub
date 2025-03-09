@@ -9,6 +9,7 @@ public class RepositoryDto
     public string Description { get; set; }
     public bool IsPrivate { get; set; }
     public RepositoryOwnedBy OwnedBy { get; set; }
+    public string OwnerUsername { get; set; } = "";
     public int OwnerId { get; set; }
     public Badge Badge { get; set; }
     public string? FullName {  get; set; }
