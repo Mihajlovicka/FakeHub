@@ -91,6 +91,7 @@
       <div class="repositories-container">
         @for (repository of repositories; track repository.id) {
         <app-docker-image
+          (click)="navigateToRepository(repository.id)"
           [title]="repository?.fullName"
           [updatedAt]="repository?.updatedAt"
           [description]="repository?.description"

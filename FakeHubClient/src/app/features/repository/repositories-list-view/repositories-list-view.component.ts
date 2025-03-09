@@ -23,8 +23,12 @@ export class RepositoriesListViewComponent {
     this.router.navigate(["/repository/add"]);
   }
 
-  ngOnInit(): void {
-    this.repositoryService.GetAllRepositoriesForCurrentUser().subscribe({
+  public navigateToRepository(id: number | undefined){
+    if(id) this.router.navigate(["/repository/", id]);
+  }
+
+  public ngOnInit(): void {
+    this.repositoryService.getAllRepositoriesForCurrentUser().subscribe({
       next: repos => {
         this.repositories = repos;
       }

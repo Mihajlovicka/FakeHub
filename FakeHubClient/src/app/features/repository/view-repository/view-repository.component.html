@@ -1,0 +1,40 @@
+<div class="profile-container">
+  <div class="avatar">
+      <span class="avatar-letter">{{ capitalizedLetterAvatar }}</span>
+  </div>
+  <div class="profile-details">
+      <div class="username-container">
+          <span class="username">{{ repository.name }}</span>
+          @if (isOwner()) {
+              <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Edit repository">
+                  <mat-icon>edit</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu">
+                  <button mat-menu-item> <span>Edit</span> </button>
+                  <button mat-menu-item> <span>Add Collaborator</span> </button>
+                  <button mat-menu-item> <span>Delete repository</span> </button>
+              </mat-menu>
+          }
+      </div>
+      @if (!isOwner()) {
+          <div class="community-info">
+              <i class="fa-regular fa-user icons"></i>
+              <span class="joined">Owner: {{ repository.ownerUsername }}</span>
+          </div>
+      }
+      <div class="community-info">
+          <span class="joined">{{ repository.description }}</span>
+      </div>
+  </div>
+  <div class="docker-commands">
+      <h3><strong>Docker commands</strong></h3>
+      <span class="docker-commands"> To push a new tag to this repository: </span><br>
+      <span class="command-view"> docker push {{repository.fullName}}:tagname </span>
+  </div>
+</div>
+<mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
+  <mat-tab label="Images?"></mat-tab>
+  <mat-tab label="Collaborators"></mat-tab>
+  <mat-tab label="Tags"></mat-tab>
+  <mat-tab label="Webhooks?"></mat-tab>
+</mat-tab-group>

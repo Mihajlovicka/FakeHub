@@ -12,7 +12,14 @@
         [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
         [ownedBy]="repository?.ownedBy"
         [badge]="repository?.badge"
+        (click)="navigateToRepository(repository.id)"
       ></app-docker-image>
       }
+      @empty {
+        <div class="no-repos">
+      <p>There are no repositories</p>
+    </div>
+  
+        }
     </div>
 </div>

@@ -10,6 +10,7 @@ export interface Repository {
     badge: UserBadge;
     updatedAt: Date;
     fullName: string;
+    ownerUsername: string;
 }
 
 export enum RepositoryOwnedBy {

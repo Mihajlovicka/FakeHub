@@ -594,6 +594,11 @@ namespace FakeHubApi.Tests.Repositories.Tests
             {
                 return GetAllRepositoriesForOrganizationFunc();
             }
+
+            public Task<ResponseBase> GetRepository(int repositoryId)
+            {
+                return null;
+            }
         }
 
     }

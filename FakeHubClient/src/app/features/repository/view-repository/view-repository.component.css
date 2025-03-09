@@ -1,0 +1,64 @@
+.profile-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Keeps space between left content (profile) and right (docker commands) */
+  gap: 2rem; /* Reduced gap between profile and docker commands */
+  padding: 4rem;
+  background: #f0f8ff54;
+  box-shadow: inset 3px -3px 4px #43434317;
+}
+
+.avatar {
+  width: 150px;
+  height: 150px;
+  background-color: var(--primary-color);
+  color: white;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 500;
+}
+
+.username-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.username {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.community-info {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.joined {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.icons {
+  font-size: 1rem;
+  color: var(--primary-color);
+}
+
+.docker-commands {
+  width:20%;
+  margin-right: 5%;
+  margin-left: auto;
+}
+
+.docker-commands span {
+  font-size: 1 rem;
+}
+
+.command-view{
+  color: rgb(129, 144, 238);
+}
