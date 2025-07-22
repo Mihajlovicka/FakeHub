@@ -27,7 +27,12 @@ public class RepositoryService(
             repository.OwnerId = currentUser.Id;
             repository.OwnedBy = currentUserRole == "ADMIN" ? RepositoryOwnedBy.Admin : RepositoryOwnedBy.SuperAdmin;
         } 
-        else if (repositoryDto.OwnerId == -1)
+        else if(currentUserRole == "USER" && currentUser.Badge != Badge.None)
+        {
+            repository.Badge = currentUser.Badge;
+        }
+
+        if (repositoryDto.OwnerId == -1)
         {
             repository.OwnerId = currentUser.Id;
         }

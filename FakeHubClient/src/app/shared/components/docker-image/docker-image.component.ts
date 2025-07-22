@@ -1,11 +1,12 @@
-import { Component, Input  } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DockerImage } from '../../../core/model/docker-image';
+import { Component, Input } from '@angular/core';
+import { UserBadge } from '../../../core/model/user';
+import { RepositoryBadgeComponent } from '../repository-badge/repository-badge.component';
 
 @Component({
   selector: 'app-docker-image',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RepositoryBadgeComponent],
   templateUrl: './docker-image.component.html',
   styleUrl: './docker-image.component.css'
 })
@@ -13,9 +14,10 @@ export class DockerImageComponent {
   @Input() title?: string;
   @Input() description?: string;
   @Input() updatedAt?: Date | string;
-  @Input() badge?: string;
+  @Input() badge?: UserBadge;
   @Input() isPrivate?: boolean;
   @Input() footerText?: string = "";
+  @Input() ownedBy?: number;
 
   public formatNumber(value: number): string {
     if (value >= 1000000) {

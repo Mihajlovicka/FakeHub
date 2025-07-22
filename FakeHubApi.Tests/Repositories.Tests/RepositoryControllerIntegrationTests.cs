@@ -265,6 +265,42 @@ namespace FakeHubApi.Tests.Repositories.Tests
         }
 
         [Test, Order(13)]
+        public async Task Register_RepositoryBadgeEqualsUserBadge_ReturnsOk()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var userProfileResponse = await _client.GetAsync($"/api/users/user@fakehub.com");
+            userProfileResponse.EnsureSuccessStatusCode();
+
+            var userProfileObj = await userProfileResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var userProfileString = userProfileObj?.Result?.ToString() ?? string.Empty;
+            var userProfile = JsonConvert.DeserializeObject<UserDto>(userProfileString);
+
+            Assert.That(userProfile, Is.Not.Null);
+            var userBadge = userProfile!.Badge;
+
+            var repoName = $"RepoBadgeEqualsUserBadge_{Guid.NewGuid().ToString().Substring(0, 8)}";
+            var repositoryDto = new RepositoryDto
+            {
+                Name = repoName,
+                Description = "Repo for badge equals user badge test.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+            var response = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            var responseRepositoryString = responseObj?.Result?.ToString() ?? string.Empty;
+
+            Assert.That(responseRepositoryString, Is.Not.Empty);
+            var responseRepositoryObject = JsonConvert.DeserializeObject<Model.Entity.Repository>(responseRepositoryString);
+            Assert.That(responseRepositoryObject, Is.Not.Null);
+            Assert.That(responseRepositoryObject?.Badge, Is.EqualTo(userBadge));
+        }
+
+        [Test, Order(14)]
         public async Task Register_WithValidUserToken_AndSuccessfulSave_ReturnsOk()
         {
             var repositoryDto = new RepositoryDto
@@ -302,7 +338,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(responseObj!.Success, Is.True);
         }
 
-        [Test, Order(14)]
+        [Test, Order(15)]
         public async Task Register_WithValidUserToken_AndUnsuccessfulSave_ReturnsBadRequest()
         {
             var repositoryDto = new RepositoryDto
