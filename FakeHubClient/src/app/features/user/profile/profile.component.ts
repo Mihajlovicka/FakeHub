@@ -9,7 +9,7 @@ import { UserBadgeModalComponent } from '../../../shared/components/user-badge/u
 import { MatDialog } from '@angular/material/dialog';
 import { ChangeUserBadgeRequest } from '../../../core/model/change-badge-to-user-request';
 import { RepositoryService } from '../../../core/services/repository.service';
-import { Repository } from '../../../core/model/repository';
+import { Repository, RepositoryOwnedBy } from '../../../core/model/repository';
 import { DockerImageComponent } from '../../../shared/components/docker-image/docker-image.component';
 
 @Component({
@@ -26,6 +26,7 @@ export class ProfileComponent implements OnInit{
   private route: ActivatedRoute = inject(ActivatedRoute);
   private router: Router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
 
   public user: UserProfileResponseDto = new UserProfileResponseDto();
   public activeLink: number = 1;  
@@ -41,11 +42,10 @@ export class ProfileComponent implements OnInit{
   }
 
   ngOnInit(): void {
-    const usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
     this.checkUserPermissions();
-    this.loadUserProfile(usernameParam);
+    this.loadUserProfile(this.usernameParam);
 
-    this.repositoryService.GetAllVisibleRepositoriesForUser(usernameParam).subscribe({
+    this.repositoryService.GetAllVisibleRepositoriesForUser(this.usernameParam).subscribe({
       next: repos => {
         this.repositories = repos;
       }
@@ -66,6 +66,15 @@ export class ProfileComponent implements OnInit{
     });
   }
 
+  private updateRepositoriesBadge(selectedBadge: string): void {
+    this.repositories = this.repositories.map(repo => {
+      if (repo.ownedBy === RepositoryOwnedBy.USER) {
+        return { ...repo, badge: Number(selectedBadge) };
+      }
+      return repo;
+    });
+  }
+
   public setActiveLink(linkNumber: number) {
     this.activeLink = linkNumber;  
   }
@@ -83,6 +92,8 @@ export class ProfileComponent implements OnInit{
       dialogRef.afterClosed().subscribe(selectedBadge => {
         if (selectedBadge !== undefined) {
            this.changeUserBadge(selectedBadge);
+
+          this.updateRepositoriesBadge(selectedBadge);
         }
       });
     }

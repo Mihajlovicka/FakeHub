@@ -1,0 +1,74 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+  position: relative;
+}
+
+.container:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.docker-official {
+  color: #1bb87a;
+}
+
+.verified-publisher {
+  color: #0190f7;
+}
+
+.sponsored-oss {
+  color: #c91312;
+}
+
+.relative-container {
+  position: relative;
+}
+
+.small-icon {
+  padding: 0;
+}
+.small-icon .relative-container mat-icon {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.medium-icon .relative-container mat-icon {
+  font-size: 20px;
+}
+
+.large-icon .relative-container mat-icon {
+  font-size: 24px;
+}
+
+.tooltip {
+  visibility: hidden;
+  position: absolute;
+  bottom: 120%;
+  width: 9rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: lightgray;
+  color: white;
+  padding: 5px;
+  border-radius: 5px;
+  font-size: 14px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid lightgray;
+} 

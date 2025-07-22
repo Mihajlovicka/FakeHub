@@ -95,7 +95,9 @@
           [updatedAt]="repository?.updatedAt"
           [description]="repository?.description"
           [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
-        ></app-docker-image>
+          [ownedBy]="repository?.ownedBy"
+          [badge]="repository?.badge"
+          ></app-docker-image>
         }
       </div>
     </div>

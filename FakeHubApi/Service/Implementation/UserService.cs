@@ -187,6 +187,16 @@ public class UserService(
                 return ResponseBase.ErrorResponse("Failed to update badge");
             }
 
+            var userRepositories = await repositoryManager.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, false);
+            foreach (var repo in userRepositories)
+            {
+                if (repo.OwnedBy == RepositoryOwnedBy.User)
+                {
+                    repo.Badge = user.Badge;
+                    await repositoryManager.RepositoryRepository.UpdateAsync(repo);
+                }
+            }
+
             var userProfileResponseDto = mapperManager.UserToUserDtoMapper.Map(user);
 
             return ResponseBase.SuccessResponse(userProfileResponseDto);

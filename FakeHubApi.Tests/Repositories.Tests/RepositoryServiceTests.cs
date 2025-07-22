@@ -158,6 +158,28 @@ namespace FakeHubApi.Tests.Repositories.Tests
         }
 
         [Test]
+        public async Task Save_WhenUserIsUserWithBadge_RepositoryBadgeEqualsUserBadge()
+        {
+            var repositoryDto = new RepositoryDto { OwnerId = 1, Name = "UserRepo", OwnedBy = RepositoryOwnedBy.User };
+            var repository = new Model.Entity.Repository { OwnerId = 1, Name = "UserRepo", OwnedBy = RepositoryOwnedBy.User };
+            var currentUser = new User { Id = 1, Badge = Badge.SponsoredOSS };
+
+            _repositoryMapperMock.Setup(m => m.Map(repositoryDto)).Returns(repository);
+            _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "USER"));
+            _repositoryManagerMock.Setup(m => m.RepositoryRepository.GetByOwnerAndName(It.IsAny<RepositoryOwnedBy>(), It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync((Model.Entity.Repository)null);
+            _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
+            _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+
+            var response = await _repositoryService.Save(repositoryDto);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Success, Is.True);
+                Assert.That(repository.Badge, Is.EqualTo(Badge.SponsoredOSS));
+            });
+        }
+
+        [Test]
         public async Task GetAllRepositoriesForCurrentUser_UserRole_ReturnsSuccessResponse()
         {
             var user = new User { UserName = "User", Id = 1 };

@@ -442,6 +442,60 @@ public class UserControllerIntegrationTests
         });
     }
 
+    [Test, Order(24)]
+    public async Task ChangeUserBadge_PropagatesToRepositories_ReturnsOk()
+    {
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+        var repoName = $"BadgePropagationRepo_{Guid.NewGuid().ToString().Substring(0, 8)}";
+        var repoDto = new RepositoryDto
+        {
+            Name = repoName,
+            Description = "Repo for badge propagation test.",
+            IsPrivate = false,
+            OwnedBy = RepositoryOwnedBy.User,
+            OwnerId = -1
+        };
+        var createRepoResponse = await _client.PostAsJsonAsync("/api/repositories", repoDto);
+        createRepoResponse.EnsureSuccessStatusCode();
+        var createRepoObj = await createRepoResponse.Content.ReadFromJsonAsync<ResponseBase>();
+        
+        var repoString = createRepoObj?.Result?.ToString() ?? string.Empty;
+        Assert.That(repoString, Is.Not.Empty);
+
+        var repoObject = JsonConvert.DeserializeObject<ResponseBase>(repoString);
+        Assert.That(repoObject, Is.Not.Null);
+
+        var changeUserBadgeRequestDto = new ChangeUserBadgeRequestDto
+        {
+            Badge = Badge.VerifiedPubisher,
+            Username = "test3@example.com"
+        };
+        var response = await _client.PostAsJsonAsync("/api/users/change-user-badge", changeUserBadgeRequestDto);
+        response.EnsureSuccessStatusCode();
+        var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+        var changeUserBadgeResponseDtoString = responseObj?.Result?.ToString() ?? string.Empty;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(responseObj?.Success, Is.True);
+            Assert.That(responseObj?.Result, Is.Not.Null);
+            Assert.That(changeUserBadgeResponseDtoString, Is.Not.Empty);
+        });
+
+        var changeUserBadgeResponseDtoObject = JsonConvert.DeserializeObject<UserDto>(changeUserBadgeResponseDtoString);
+        Assert.That(changeUserBadgeResponseDtoObject, Is.Not.Null);
+        Assert.That(changeUserBadgeResponseDtoObject?.Badge, Is.EqualTo(changeUserBadgeRequestDto.Badge));
+
+        var getReposResponse = await _client.GetAsync($"/api/repositories/all/test3@example.com");
+        getReposResponse.EnsureSuccessStatusCode();
+        var getReposObj = await getReposResponse.Content.ReadFromJsonAsync<ResponseBase>();
+        var reposList = JsonConvert.DeserializeObject<List<RepositoryDto>>(getReposObj?.Result?.ToString() ?? "[]");
+        Assert.That(reposList, Is.Not.Null);
+        Assert.That(reposList!.All(r => r.Badge == changeUserBadgeRequestDto.Badge), Is.True);
+    }
+
     
     private async Task SetupDbData()
     {
@@ -500,6 +554,18 @@ public class UserControllerIntegrationTests
         await db.Users.AddAsync(user3);
         await db.SaveChangesAsync();
         await userManager.AddToRolesAsync(user3, new[] { "USER" });
+
+        var repo = new Model.Entity.Repository
+        {
+            Name = "InitialRepoForUser3",
+            Description = "Initial repo for test3@example.com",
+            IsPrivate = false,
+            OwnedBy = RepositoryOwnedBy.User,
+            OwnerId = user3.Id,
+            Badge = Badge.None
+        };
+        await db.Repositories.AddAsync(repo);
+        await db.SaveChangesAsync();
     }
 
     private string ExtractEmailFromJwt(string token)
