@@ -14,6 +14,8 @@ import { CommonModule } from "@angular/common";
 import { MatSelectModule } from "@angular/material/select";
 import { TeamService } from "../../../core/services/team.service";
 import { TeamRole } from "../../../core/model/team";
+import { Repository } from "../../../core/model/repository";
+import { RepositoryService } from "../../../core/services/repository.service";
 
 @Component({
   selector: "app-add-team",
@@ -33,16 +35,19 @@ import { TeamRole } from "../../../core/model/team";
 })
 export class AddTeamComponent implements OnInit {
   private readonly service: TeamService = inject(TeamService);
+  private readonly repositoryService: RepositoryService = inject(RepositoryService);
   private readonly router: Router = inject(Router);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
 
   public organizationName: string = "";
   public teamRoles: string[] = Object.values(TeamRole);
+  public repositories: Repository[] = [];
 
   public teamForm: FormGroup = new FormGroup({
     name: new FormControl("", [Validators.required, Validators.maxLength(100)]),
     description: new FormControl("", [Validators.maxLength(500)]),
     teamRole: new FormControl("ReadOnly", [Validators.required]),
+    repository: new FormControl(null, [Validators.required]),
   });
 
   public onSubmit(): void {
@@ -64,5 +69,15 @@ export class AddTeamComponent implements OnInit {
     if (name) {
       this.organizationName = name;
     }
+    this.repositoryService.GetAllRepositoriesForOrganization(this.organizationName).subscribe({
+      next: (repos) => {
+        this.repositories = repos;
+        if (this.repositories.length > 0) {
+          this.teamForm.controls["repository"].setValue(
+            this.repositories[0]
+          );
+        }
+      }
+    });
   }
 }

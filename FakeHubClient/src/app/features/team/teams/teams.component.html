@@ -4,7 +4,7 @@
     <div class="team-container">
       <div class="team-details-container" (click)="goToTeam(team.name)">
         <div class="link-header">
-          <span class="ellipsis">{{ team.name }}</span>
+          <span class="ellipsis">{{ team.repository?.name}}/{{ team.name }}</span>
         </div>
         @if(isOwner){
       <button class="delete-button" (click)="openDeleteTeamModal(team)">
@@ -15,6 +15,9 @@
           }}{{ team.description.length > 50 ? "..." : "" }}
         </div>
         <div class="link-footer">
+           <span class="footer-text"
+            > {{ team.teamRole }} ({{ team.users?.length || 0 }})</span
+          >
           <span class="footer-text"
             >Created at: {{ team.createdAt | date : "mediumDate" }}</span
           >

@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -13,7 +14,8 @@ public class UserService(
     IMapperManager mapperManager,
     IJwtTokenGenerator jwtTokenGenerator,
     IUserContextService userContextService,
-    IRepositoryManager repositoryManager
+    IRepositoryManager repositoryManager,
+    IHarborService harborService
 ) : IUserService
 {
     public async Task<ResponseBase> GetUserProfileByUsernameAsync(string username)
@@ -103,6 +105,12 @@ public class UserService(
             );
         }
 
+        var res = await harborService.updatePassword(user.HarborUserId, new HarborUserPassword
+        {
+            OldPassword = changePasswordRequestDto.OldPassword,
+            NewPassword = changePasswordRequestDto.NewPassword,
+        });
+
         var roles = await userManager.GetRolesAsync(user);
         var token = jwtTokenGenerator.GenerateToken(user, roles);
         return ResponseBase.SuccessResponse(new LoginResponseDto { Token = token });
@@ -155,6 +163,12 @@ public class UserService(
                     ?? "Update current user failed"
             );
         }
+
+        var resHarbor =  await harborService.updateUser(user.HarborUserId, new HarborUserUpdate
+        {
+            Email = changeEmailRequestDto.NewEmail,
+            Realname = user.UserName,
+        });
 
         var roles = await userManager.GetRolesAsync(user);
         var newToken = jwtTokenGenerator.GenerateToken(user, roles);

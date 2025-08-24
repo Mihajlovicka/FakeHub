@@ -66,7 +66,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
             {
                 Name = "Admin Repository",
                 Description = "Admin repository description.",
-                IsPrivate = true
+                IsPrivate = true,
+                OwnerId = 1
             };
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
@@ -94,7 +95,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
             {
                 Name = "SuperAdmin Repository",
                 Description = "SuperAdmin repository description.",
-                IsPrivate = false
+                IsPrivate = false,
+                OwnerId = -1
             };
 
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _superAdminToken);

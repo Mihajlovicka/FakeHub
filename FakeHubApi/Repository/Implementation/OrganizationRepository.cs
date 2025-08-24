@@ -14,6 +14,7 @@ public class OrganizationRepository(AppDbContext context)
             .Organizations.Include(x => x.Owner)
             .Include(x => x.Teams)
                 .ThenInclude(t => t.Users)
+            .Include("Teams.Repository")
             .Include(x => x.Users)
             .FirstOrDefaultAsync(x => x.Name == name && x.Active);
 
