@@ -79,6 +79,8 @@
   text-align: right;
   margin-top: 10px;
   font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
 }
 
 .footer-text {

@@ -1,3 +1,4 @@
+import { Repository } from "./repository";
 import { UserProfileResponseDto } from "./user";
 
 export interface Team {
@@ -5,6 +6,7 @@ export interface Team {
   description: string;
   createdAt: Date;
   teamRole: TeamRole;
+  repository?: Repository;
   owner?: string;
   users?: UserProfileResponseDto[];
 }

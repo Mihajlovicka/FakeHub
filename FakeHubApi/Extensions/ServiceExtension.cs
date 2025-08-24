@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Filters;
 using FakeHubApi.Mapper;
 using FakeHubApi.Mapper.OrganizationMapper;
@@ -22,8 +23,15 @@ public static class ServiceExtensions
     )
     {
         services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
+        services.Configure<HarborSettings>(configuration.GetSection("Harbor"));
 
-        // Service-related scoped services
+        services.AddHttpClient<HarborService>()
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                UseCookies = false,  // This completely disables cookie handling
+                AllowAutoRedirect = false  // Recommended for API clients
+                // ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            });
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IDockerImageService, DockerImageService>();
@@ -32,6 +40,7 @@ public static class ServiceExtensions
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IRepositoryService, RepositoryService>();
+        services.AddSingleton<IHarborService, HarborService>();
 
         // Mapper-related scoped services
         services.AddScoped<

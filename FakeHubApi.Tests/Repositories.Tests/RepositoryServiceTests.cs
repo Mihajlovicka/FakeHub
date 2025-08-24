@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -17,6 +18,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         private Mock<IUserContextService> _userContextServiceMock;
         private Mock<IUserService> _userServiceMock;
         private IRepositoryService _repositoryService;
+        private Mock<IHarborService> _harborServiceMock;
 
         [SetUp]
         public void Setup()
@@ -26,19 +28,23 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock = new Mock<IRepositoryManager>();
             _userContextServiceMock = new Mock<IUserContextService>();
             _userServiceMock = new Mock<IUserService>();
+            _harborServiceMock = new Mock<IHarborService>();
 
             _repositoryService = new RepositoryService(
                 _repositoryMapperMock.Object,
                 _organizationServiceMock.Object,
                 _repositoryManagerMock.Object,
                 _userContextServiceMock.Object,
-                _userServiceMock.Object
+                _userServiceMock.Object,
+                _harborServiceMock.Object
             );
         }
 
         [Test]
         public async Task Save_RepositoryWithUniqueName_SuccessResponse()
         {
+            var currentUser = new User { Id = 99 , UserName = "TestUser", HarborUserId = 1001 };
+            var organization = new Model.Entity.Organization { Id = 1, Name = "Test Organization" };
             var repositoryDto = new RepositoryDto { OwnerId = 1, Name = "TestRepo", OwnedBy = RepositoryOwnedBy.User };
             var repository = new Model.Entity.Repository { OwnerId = 1, Name = "TestRepo", OwnedBy = RepositoryOwnedBy.User };
 
@@ -46,6 +52,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.GetByOwnerAndName(It.IsAny<RepositoryOwnedBy>(), It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync((Model.Entity.Repository)null);
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+            _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
+            _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "USER"));
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -112,6 +120,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         [Test]
         public async Task Save_WhenUserIsAdmin_ReturnsSuccessResponse()
         {
+            var organization = new Model.Entity.Organization { Id = 1, Name = "Test Organization" };
             var repositoryDto = new RepositoryDto { OwnerId = -2, Name = "AdminRepository", OwnedBy = RepositoryOwnedBy.Admin };
             var repository = new Model.Entity.Repository { OwnerId = -2, Name = "AdminRepository", OwnedBy = RepositoryOwnedBy.Admin };
             var currentUser = new User { Id = 1 };
@@ -120,6 +129,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "ADMIN"));
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+            _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -136,6 +146,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         [Test]
         public async Task Save_WhenUserIsSuperAdmin_ReturnsSuccessResponse()
         {
+            var organization = new Model.Entity.Organization { Id = 1, Name = "Test Organization" };
             var repositoryDto = new RepositoryDto { OwnerId = -2, Name = "SuperAdminRepository", OwnedBy = RepositoryOwnedBy.SuperAdmin };
             var repository = new Model.Entity.Repository { OwnerId = -2, Name = "SuperAdminRepository", OwnedBy = RepositoryOwnedBy.SuperAdmin };
             var currentUser = new User { Id = 11 };
@@ -144,6 +155,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "SUPERADMIN"));
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+            _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -160,6 +172,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         [Test]
         public async Task Save_WhenUserIsUserWithBadge_RepositoryBadgeEqualsUserBadge()
         {
+            var organization = new Model.Entity.Organization { Id = 1, Name = "Test Organization" };
             var repositoryDto = new RepositoryDto { OwnerId = 1, Name = "UserRepo", OwnedBy = RepositoryOwnedBy.User };
             var repository = new Model.Entity.Repository { OwnerId = 1, Name = "UserRepo", OwnedBy = RepositoryOwnedBy.User };
             var currentUser = new User { Id = 1, Badge = Badge.SponsoredOSS };
@@ -169,6 +182,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.GetByOwnerAndName(It.IsAny<RepositoryOwnedBy>(), It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync((Model.Entity.Repository)null);
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+            _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
 
             var response = await _repositoryService.Save(repositoryDto);
 

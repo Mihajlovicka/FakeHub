@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -12,7 +13,8 @@ public class RepositoryService(
     IOrganizationService organizationService,
     IRepositoryManager repositoryManager,
     IUserContextService userContextService,
-    IUserService userService
+    IUserService userService,
+    IHarborService harborService
 ) : IRepositoryService
 {
     public async Task<ResponseBase> Save(RepositoryDto repositoryDto)
@@ -43,6 +45,12 @@ public class RepositoryService(
             await repositoryManager.RepositoryRepository.AddAsync(repository);
         }
 
+        var projectName = repositoryDto.OwnerId == -1 ? currentUser.UserName : (await organizationService.GetOrganizationById(repositoryDto.OwnerId)).Name;
+        projectName += "-" + repository.Name;
+
+        await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = projectName, Public = !repositoryDto.IsPrivate });
+        await harborService.addMember(projectName, new HarborProjectMember { RoleId = (int)HarborRoles.Admin, MemberUser = new HarborProjectMemberUser { UserId = currentUser.HarborUserId, Username = currentUser.UserName } });
+        
         return ResponseBase.SuccessResponse(repositoryMapper.ReverseMap(repository));
     }
 

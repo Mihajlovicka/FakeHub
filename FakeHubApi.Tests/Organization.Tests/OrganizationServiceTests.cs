@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -18,6 +19,7 @@ public class OrganizationServiceTests
     private Mock<UserManager<User>> _userManagerMock;
 
     private Mock<IUserService> _userServiceMock;
+    private Mock<IHarborService> _harborServiceMock;
 
     private Mock<ICrudRepository<Model.Entity.Organization>> _organizationRepositoryMock;
 
@@ -29,6 +31,7 @@ public class OrganizationServiceTests
         _userContextServiceMock = new Mock<IUserContextService>();
         _organizationRepositoryMock = new Mock<ICrudRepository<Model.Entity.Organization>>();
         _userServiceMock = new Mock<IUserService>();
+        _harborServiceMock = new Mock<IHarborService>();
 
         _userManagerMock = new Mock<UserManager<User>>(
             new Mock<IUserStore<User>>().Object,
@@ -47,7 +50,8 @@ public class OrganizationServiceTests
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
             _userContextServiceMock.Object,
-            _userServiceMock.Object
+            _userServiceMock.Object,
+            _harborServiceMock.Object
         );
     }
 

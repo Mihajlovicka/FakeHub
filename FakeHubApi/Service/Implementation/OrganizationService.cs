@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -13,7 +14,8 @@ public class OrganizationService(
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
     IUserContextService userContext,
-    IUserService userService
+    IUserService userService,
+    IHarborService harborService
 ) : IOrganizationService
 {
     public async Task<ResponseBase> Add(OrganizationDto model)
@@ -26,6 +28,9 @@ public class OrganizationService(
 
         organization.Owner = user;
         await repositoryManager.OrganizationRepository.AddAsync(organization);
+
+        await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = organization.Name });
+
         return ResponseBase.SuccessResponse();
     }
 

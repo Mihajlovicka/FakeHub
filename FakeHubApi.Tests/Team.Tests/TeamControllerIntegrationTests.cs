@@ -44,12 +44,21 @@ public class TeamControllerIntegrationTests
     [Test, Order(1)]
     public async Task AddTeam()
     {
+        var repositoryDto = new RepositoryDto
+        {
+            Id = 2,
+            Name = "Test Repository 2",
+            Description = "Test Repository Description 2",
+            IsPrivate = false,
+            OwnerId = 1
+        };
         var teamDto = new TeamDto
         {
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = repositoryDto
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization/team", teamDto);
@@ -66,12 +75,21 @@ public class TeamControllerIntegrationTests
     [Test, Order(2)]
     public async Task AddTeam_Fails_NameNotUnique()
     {
+        var repositoryDto = new RepositoryDto
+        {
+            Id = 2,
+            Name = "Test Repository 2",
+            Description = "Test Repository Description 2",
+            IsPrivate = false,
+            OwnerId = 1
+        };
         var teamDto = new TeamDto
         {
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = repositoryDto
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization/team", teamDto);
@@ -87,6 +105,14 @@ public class TeamControllerIntegrationTests
     [Test, Order(3)]
     public async Task AddTeam_Fails_NotAuthorized()
     {
+        var repositoryDto = new RepositoryDto
+        {
+            Id = 2,
+            Name = "Test Repository 2",
+            Description = "Test Repository Description 2",
+            IsPrivate = false,
+            OwnerId = 1
+        };
         var token = await GetTokenFromSuccessfulUserLogin(
             new LoginRequestDto { Email = "testtest@example.com", Password = "Password123!" }
         );
@@ -100,6 +126,7 @@ public class TeamControllerIntegrationTests
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = repositoryDto
         };
 
         var response = await _client.PostAsJsonAsync("/api/organization/team", teamDto);
@@ -215,15 +242,25 @@ public class TeamControllerIntegrationTests
     [Test, Order(8)]
     public async Task EditTeam_NameNotUnique()
     {
+        var repositoryDto = new RepositoryDto
+        {
+            Id = 2,
+            Name = "Test Repository 2",
+            Description = "Test Repository Description 2",
+            IsPrivate = false,
+            OwnerId = 1
+        };
+
         var teamDto = new TeamDto
         {
             Name = "Test Team 3",
             Description = "Test Description",
             OrganizationName = "Test Team Organization",
-            TeamRole = TeamRole.ReadOnly.ToString(),
+            TeamRole = TeamRole.Admin.ToString(),
+            Repository = repositoryDto
         };
 
-        await _client.PostAsJsonAsync("/api/organization/team", teamDto);
+        var resp = await _client.PostAsJsonAsync("/api/organization/team", teamDto);
 
         var teamName = "Test Team 2";
         var organizationName = "Test Team Organization";
@@ -472,6 +509,29 @@ public class TeamControllerIntegrationTests
         };
 
         await db.Organizations.AddAsync(organization);
+
+        var repository = new Model.Entity.Repository
+        {
+            Id = 1,
+            Name = "Test Repository",
+            Description = "Test Repository Description",
+            IsPrivate = false,
+            OwnedBy = RepositoryOwnedBy.User,
+            OwnerId = user.Id
+        };
+
+        var repository2 = new Model.Entity.Repository
+        {
+            Id = 2,
+            Name = "Test Repository 2",
+            Description = "Test Repository Description 2",
+            IsPrivate = false,
+            OwnedBy = RepositoryOwnedBy.Organization,
+            OwnerId = organization.Id
+        };
+
+        await db.Repositories.AddAsync(repository);
+        await db.Repositories.AddAsync(repository2);
         await db.SaveChangesAsync();
     }
 

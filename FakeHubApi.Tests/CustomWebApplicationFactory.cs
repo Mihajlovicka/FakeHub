@@ -16,8 +16,8 @@ internal class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     public CustomWebApplicationFactory()
     {
-        var baseConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Database") 
-                                   ?? "Server=localhost;Port=3306;Database=fake-hub-test;Uid=root;Pwd=admin;";
+        var baseConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Database") ?? "Server=localhost;Database=fake-hub;Uid=root;Pwd=admin;";
+                                    // ?? "Server=localhost;Port=3306;Database=fake-hub-test;Uid=root;Pwd=admin;";
 
         _databaseName = $"fake_hub_test_{Guid.NewGuid()}";
         

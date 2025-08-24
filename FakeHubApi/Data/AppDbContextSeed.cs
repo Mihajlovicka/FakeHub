@@ -1,4 +1,5 @@
-﻿using FakeHubApi.Model.Entity;
+﻿using FakeHubApi.ContainerRegistry;
+using FakeHubApi.Model.Entity;
 using Microsoft.AspNetCore.Identity;
 
 namespace FakeHubApi.Data;
@@ -10,6 +11,7 @@ public static class AppDbContextSeed
         var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+        var harborService = serviceProvider.GetRequiredService<IHarborService>();
         
         foreach (var role in Enum.GetValues<Role>())
         {
@@ -36,9 +38,23 @@ public static class AppDbContextSeed
                 await userManager.CreateAsync(superAdminUser, password);
 
                 await userManager.AddToRoleAsync(superAdminUser, "SUPERADMIN");
+
+                await harborService.createUser(new HarborUser
+                {
+                    Username = superAdminUser.UserName,
+                    Email = superAdminUser.Email,
+                    Password = password,
+                    Realname = superAdminUser.UserName,
+                });
+                    
+                //get user id from harbor
+                var userId = await harborService.getUserId(superAdminUser.UserName);
+
+                superAdminUser.HarborUserId = userId != null ? userId.Value : 0;
+                await userManager.UpdateAsync(superAdminUser);
             }
         }
-        
+
         await SavePassToTxt(configuration);
     }
 

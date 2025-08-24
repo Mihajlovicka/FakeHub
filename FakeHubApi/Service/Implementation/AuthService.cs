@@ -1,4 +1,5 @@
-﻿using FakeHubApi.Mapper;
+﻿using FakeHubApi.ContainerRegistry;
+using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
@@ -11,7 +12,8 @@ namespace FakeHubApi.Service.Implementation;
 public class AuthService(
     UserManager<User> userManager,
     IMapperManager mapperManager,
-    IJwtTokenGenerator jwtTokenGenerator
+    IJwtTokenGenerator jwtTokenGenerator,
+    IHarborService harborService
 ) : IAuthService
 {
     public async Task<ResponseBase> Login(LoginRequestDto loginRequestDto)
@@ -23,7 +25,7 @@ public class AuthService(
         }
 
         if (!await userManager.CheckPasswordAsync(user, loginRequestDto.Password))
-            throw new BadHttpRequestException("Email or password is incorrect");
+            return ResponseBase.ErrorResponse("Email or password is incorrect");
 
         var roles = await userManager.GetRolesAsync(user);
         var token = jwtTokenGenerator.GenerateToken(user, roles);
@@ -62,6 +64,25 @@ public class AuthService(
         }
 
         await userManager.AddToRoleAsync(user, role);
+
+        var resp = await harborService.createUser(new HarborUser
+            {
+                Username = user.UserName,
+                Email = user.Email,
+                Password = registrationRequestDto.Password,
+                Realname = user.UserName,
+            });
+
+        if (resp)
+        {
+            var userId = await harborService.getUserId(user.UserName);
+            if (userId != null)
+            {
+                user.HarborUserId = userId.Value;
+                await userManager.UpdateAsync(user);
+            }
+        }
+        
         return ResponseBase.SuccessResponse();
     }
 }

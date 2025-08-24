@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -15,6 +16,7 @@ public class AuthServiceTests
     private Mock<IJwtTokenGenerator> _mockJwtTokenGenerator;
     private IAuthService _authService;
     private Mock<IUserContextService> _userContextService;
+    private Mock<IHarborService> _harborServiceMock;
 
     [SetUp]
     public void Setup()
@@ -22,7 +24,8 @@ public class AuthServiceTests
         _mapperManagerMock = new Mock<IMapperManager>();
         _mockJwtTokenGenerator = new Mock<IJwtTokenGenerator>();
         _userContextService = new Mock<IUserContextService>();
-        
+        _harborServiceMock = new Mock<IHarborService>();
+
         _mockUserManager = new Mock<UserManager<User>>(
             new Mock<IUserStore<User>>().Object,
             null,
@@ -38,7 +41,8 @@ public class AuthServiceTests
         _authService = new AuthService(
             _mockUserManager.Object,
             _mapperManagerMock.Object,
-            _mockJwtTokenGenerator.Object
+            _mockJwtTokenGenerator.Object,
+            _harborServiceMock.Object
         );
     }
 

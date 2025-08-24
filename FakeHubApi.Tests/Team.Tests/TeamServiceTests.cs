@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -16,7 +17,7 @@ public class TeamServiceTests
     private Mock<IRepositoryManager> _repositoryManagerMock;
     private Mock<IUserService> _userServiceMock;
     private Mock<IUserContextService> _userContextServiceMock;
-
+    private Mock<IHarborService> _harborServiceMock;
     private Mock<IOrganizationService> _organizationServiceMock;
 
     [SetUp]
@@ -26,12 +27,14 @@ public class TeamServiceTests
         _repositoryManagerMock = new Mock<IRepositoryManager>();
         _userServiceMock = new Mock<IUserService>();
         _organizationServiceMock = new Mock<IOrganizationService>();
+        _harborServiceMock = new Mock<IHarborService>();
 
         _teamService = new TeamService(
             _organizationServiceMock.Object,
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
-            _userServiceMock.Object
+            _userServiceMock.Object,
+            _harborServiceMock.Object
         );
     }
 
@@ -44,6 +47,7 @@ public class TeamServiceTests
             Description = "Test Description",
             OrganizationName = "Test Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = new RepositoryDto { Id = 1, Name = "Test Repository" }
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var organization = new Model.Entity.Organization
@@ -73,6 +77,14 @@ public class TeamServiceTests
             .ReturnsAsync(organization);
 
         _repositoryManagerMock
+            .Setup(m => m.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync(new Model.Entity.Repository
+            {
+                Id = 1,
+                Name = "Test Repository"
+            });
+
+        _repositoryManagerMock
             .Setup(m => m.TeamRepository.AddAsync(It.IsAny<Model.Entity.Team>()))
             .Returns(Task.FromResult(team));
 
@@ -88,12 +100,18 @@ public class TeamServiceTests
     [Test]
     public async Task AddTeam_Fails_NameNotUnique()
     {
+        var repository = new Model.Entity.Repository
+        {
+            Id = 1,
+            Name = "Test Repository"
+        };
         var teamDto = new TeamDto
         {
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = new RepositoryDto { Id = 1, Name = "Test Repository" }
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var organization = new Model.Entity.Organization
@@ -123,6 +141,10 @@ public class TeamServiceTests
             .ReturnsAsync(organization);
 
         _repositoryManagerMock
+            .Setup(m => m.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync(repository);
+
+        _repositoryManagerMock
             .Setup(m => m.TeamRepository.AddAsync(It.IsAny<Model.Entity.Team>()))
             .Returns(Task.FromResult(team));
         _mapperManagerMock.Setup(m => m.TeamDtoToTeamMapper.Map(It.IsAny<TeamDto>())).Returns(team);
@@ -139,12 +161,18 @@ public class TeamServiceTests
     [Test]
     public async Task AddTeam_Fails_NotAuthorized()
     {
+        var repository = new Model.Entity.Repository
+        {
+            Id = 1,
+            Name = "Test Repository"
+        };
         var teamDto = new TeamDto
         {
             Name = "Test Team",
             Description = "Test Description",
             OrganizationName = "Test Organization",
             TeamRole = TeamRole.ReadOnly.ToString(),
+            Repository = new RepositoryDto { Id = 1, Name = "Test Repository" }
         };
         var user = new User { Id = 1, UserName = "Test User" };
         var user2 = new User { Id = 2, UserName = "Test User" };
@@ -170,6 +198,10 @@ public class TeamServiceTests
 
         _mapperManagerMock.Setup(m => m.TeamDtoToTeamMapper.Map(It.IsAny<TeamDto>())).Returns(team);
 
+        _repositoryManagerMock
+            .Setup(m => m.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+            .ReturnsAsync(repository);
+            
         _organizationServiceMock
             .Setup(m => m.GetOrganization(It.IsAny<string>()))
             .ReturnsAsync(organization);
