@@ -1,6 +1,7 @@
 using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Filters;
 using FakeHubApi.Mapper;
+using FakeHubApi.Mapper.ArtifactMapper;
 using FakeHubApi.Mapper.OrganizationMapper;
 using FakeHubApi.Mapper.RepositoryMapper;
 using FakeHubApi.Mapper.TeamMapper;
@@ -58,6 +59,7 @@ public static class ServiceExtensions
         >();
         services.AddScoped<IMapperManager, MapperManager>();
         services.AddScoped<IBaseMapper<RepositoryDto, Model.Entity.Repository>, RepositoryDtoToRepositoryMapper>();
+        services.AddScoped<IBaseMapper<HarborArtifact, ArtifactDto>, HarborArtifactToArtifactDtoMapper>();
 
         // Repository-related scoped services
         services.AddScoped<IUserRepository, UserRepository>();

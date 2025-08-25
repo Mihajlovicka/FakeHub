@@ -21,6 +21,7 @@ public interface IHarborService
     Task<bool> removeMembersByRole(string projectName, int role);
     Task<bool> removeMembers(string projectName, IEnumerable<int> memberIds);
     Task<bool> removeMemberFromTeam(string projectName, string username);
+    Task<List<HarborArtifact>> GetTags(string projectName, string repositoryName);
 
 }
 
@@ -30,7 +31,10 @@ public class HarborService : IHarborService
     private readonly HarborSettings _settings;
     private const string Users = "users/";
     private const string Projects = "projects/";
+    private const string Repositories = "repositories/";
     private const string Members = "members/";
+    private const string Artifacts = "artifacts";
+
     private readonly ILogger<HarborService> _logger;
     private string _csrfToken = string.Empty;
 
@@ -199,7 +203,11 @@ public class HarborService : IHarborService
         return true;
     }
 
-
+    public async Task<List<HarborArtifact>> GetTags(string projectName, string repositoryName)
+    {
+        var (success, artifacts, _, _) = await SendRequestAsync<List<HarborArtifact>>(HttpMethod.Get, $"{Projects}{projectName}/{Repositories}{repositoryName}/{Artifacts}?page=1&page_size=10&with_tag=true&with_label=false&with_scan_overview=false&with_sbom_overview=false&with_immutable_status=false&with_accessory=false");
+        return success ? artifacts : new List<HarborArtifact>();
+    }
 }
 
 
@@ -293,4 +301,40 @@ public class HarborProjectMemberUser
 
     [JsonPropertyName("username")]
     public string Username { get; set; } = string.Empty;
+}
+
+public class HarborTag
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; }
+
+    [JsonPropertyName("push_time")]
+    public DateTime? PushTime { get; set; } = null;
+
+    [JsonPropertyName("pull_time")]
+    public DateTime? PullTime { get; set; } = null;
+}
+
+public class HarborArtifact
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("tags")]
+    public List<HarborTag> Tags { get; set; } = new List<HarborTag>();
+
+    [JsonPropertyName("repository_name")]
+    public string RepositoryName { get; set; } = string.Empty;
+
+    [JsonPropertyName("extra_attrs")]
+    public ExtraAttrs ExtraAttrs { get; set; } = new ExtraAttrs();
+}
+
+public class ExtraAttrs
+{
+    [JsonPropertyName("os")]
+    public string Os { get; set; } = string.Empty;
 }

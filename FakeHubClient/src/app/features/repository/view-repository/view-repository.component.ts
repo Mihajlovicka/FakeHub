@@ -10,6 +10,7 @@ import { RepositoryService } from '../../../core/services/repository.service';
 import { Subscription, take } from 'rxjs';
 import { HelperService } from '../../../core/services/helper.service';
 import { UserService } from '../../../core/services/user.service';
+import { TagsComponent } from "../../tag/tags/tags.component";
 
 @Component({
   selector: 'app-view-repository',
@@ -20,8 +21,9 @@ import { UserService } from '../../../core/services/user.service';
     MatMenuModule,
     MatButtonModule,
     RouterModule,
-    MatTabsModule
-  ],
+    MatTabsModule,
+    TagsComponent
+],
   templateUrl: './view-repository.component.html',
   styleUrl: './view-repository.component.css'
 })

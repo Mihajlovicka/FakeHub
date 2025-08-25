@@ -1,3 +1,4 @@
+import { Artifact } from "./tag";
 import { UserBadge } from "./user";
 
 export interface Repository {
@@ -11,6 +12,7 @@ export interface Repository {
     updatedAt: Date;
     fullName: string;
     ownerUsername: string;
+    artifacts: Artifact[];
 }
 
 export enum RepositoryOwnedBy {
