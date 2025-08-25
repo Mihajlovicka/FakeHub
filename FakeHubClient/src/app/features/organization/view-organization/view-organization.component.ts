@@ -180,7 +180,7 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     const name = this.activatedRoute.snapshot.paramMap.get("name");
     if (name) {
       this.loadAsync(name).then(() => {
-        this.repositoryService.GetAllRepositoriesForOrganization(this.organization.name).subscribe({
+        this.repositoryService.getAllRepositoriesForOrganization(this.organization.name).subscribe({
           next: repos => {
             this.repositories = repos;
           }

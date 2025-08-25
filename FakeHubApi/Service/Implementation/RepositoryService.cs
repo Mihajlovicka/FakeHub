@@ -1,4 +1,3 @@
-using System.Collections;
 using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
@@ -6,7 +5,6 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
-using Microsoft.AspNetCore.Mvc;
 
 namespace FakeHubApi.Service.Implementation;
 
@@ -24,15 +22,16 @@ public class RepositoryService(
         var repository = mapperManager.RepositoryDtoToRepositoryMapper.Map(repositoryDto);
         var (currentUser, currentUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
 
-        if (currentUserRole is "ADMIN" or "SUPERADMIN")
+        switch (currentUserRole)
         {
-            repository.Badge = Badge.DockerOfficialImage;
-            repository.OwnerId = currentUser.Id;
-            repository.OwnedBy = currentUserRole == "ADMIN" ? RepositoryOwnedBy.Admin : RepositoryOwnedBy.SuperAdmin;
-        }
-        else if (currentUserRole == "USER" && currentUser.Badge != Badge.None)
-        {
-            repository.Badge = currentUser.Badge;
+            case "ADMIN" or "SUPERADMIN":
+                repository.Badge = Badge.DockerOfficialImage;
+                repository.OwnerId = currentUser.Id;
+                repository.OwnedBy = currentUserRole == "ADMIN" ? RepositoryOwnedBy.Admin : RepositoryOwnedBy.SuperAdmin;
+                break;
+            case "USER" when currentUser.Badge != Badge.None:
+                repository.Badge = currentUser.Badge;
+                break;
         }
 
         if (repositoryDto.OwnerId == -1)
@@ -142,12 +141,12 @@ public class RepositoryService(
     public async Task<ResponseBase> DeleteRepository(int repositoryId)
     {
         var repository = await repositoryManager.RepositoryRepository.GetByIdAsync(repositoryId);
-        var (currentUser, currentUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
+        var (currentUser, _) = await userContextService.GetCurrentUserWithRoleAsync();
 
         if (repository == null)
             return ResponseBase.ErrorResponse("Repository not found");
 
-        if (!(await GetAdminUsersInRepository(repository)).Any(el => el.UserName == currentUser.UserName))
+        if ((await GetAdminUsersInRepository(repository)).All(el => el.UserName != currentUser.UserName))
             return ResponseBase.ErrorResponse("You do not have permission to delete this repository");
 
         await repositoryManager.RepositoryRepository.DeleteAsync(repositoryId);
@@ -158,14 +157,14 @@ public class RepositoryService(
 
     public async Task<ResponseBase> CanEditRepository(int repositoryId)
     {
-        var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
-        var repository = await GetRepositoryForCurrentUser(repositoryId);
+        var (isAllowed, _) = await IsEditAllowed(repositoryId);
 
-        return ResponseBase.SuccessResponse((await GetAdminUsersInRepository(repository)).Any(el => el.UserName == user.UserName));
+        return ResponseBase.SuccessResponse(isAllowed);
     }
-    public async Task<List<User>> GetAdminUsersInRepository(Model.Entity.Repository repository)
+
+    private async Task<List<User>> GetAdminUsersInRepository(Model.Entity.Repository repository)
     {
-        List<User> users = new List<User>();
+        var users = new List<User>();
         if (repository.OwnedBy == RepositoryOwnedBy.Organization)
         {
             var organization = await repositoryManager.OrganizationRepository.GetById(repository.OwnerId);
@@ -182,6 +181,43 @@ public class RepositoryService(
             if(user != null) users.Add(user);
         }
         return users;
+    }
+    
+    public async Task<ResponseBase> EditRepository(EditRepositoryDto data)
+    {
+        var (isEditAllowed, repository) = await IsEditAllowed(data.Id);
+
+        if (!isEditAllowed || repository is null)
+        {
+            return ResponseBase.ErrorResponse("Repository not found.");
+        }
+
+        repository.Description = data.Description;
+        repository.IsPrivate = data.IsPrivate;
+
+        await repositoryManager.RepositoryRepository.UpdateAsync(repository);
+
+        var updated = await harborService.UpdateProjectVisibility((await GetHarborProjectName(repository)), !repository.IsPrivate);
+        if (!updated)
+        {
+            return ResponseBase.ErrorResponse("Harbor server error.");
+        }
+
+        var updatedDto = await MapModelToDto(repository);
+
+        return ResponseBase.SuccessResponse(updatedDto);
+    }
+
+
+    private async Task<(bool IsAllowed, Model.Entity.Repository? Repository)> IsEditAllowed(int repositoryId)
+    {
+        var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
+        var repository = await GetRepositoryForCurrentUser(repositoryId);
+
+        var isAllowed = repository != null && (await GetAdminUsersInRepository(repository))
+            .Any(el => el.UserName == user.UserName);
+
+        return (isAllowed, repository);
     }
 
     private async Task<RepositoryDto> MapModelToDto(Model.Entity.Repository repository)

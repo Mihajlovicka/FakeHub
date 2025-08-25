@@ -92,4 +92,16 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
         }
         return BadRequest(response);
     }
+    
+    [Authorize(Roles = "ADMIN, SUPERADMIN, USER")]
+    [HttpPut]
+    public async Task<IActionResult> EditRepository([FromBody] EditRepositoryDto data)
+    {
+        var response = await repositoryService.EditRepository(data);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

@@ -21,6 +21,7 @@ import { UsersListViewComponent } from "./features/user/users-list-view/users-li
 import { RepositoriesListViewComponent } from './features/repository/repositories-list-view/repositories-list-view.component';
 import { CreateRepositoryComponent } from './features/repository/create-repository/create-repository.component';
 import { ViewRepositoryComponent } from './features/repository/view-repository/view-repository.component';
+import { EditRepositoryComponent } from './features/repository/edit-repository/edit-repository.component';
 
 export const routes: Routes = [
   {
@@ -81,6 +82,10 @@ export const routes: Routes = [
       {
         path: 'add',
         component: CreateRepositoryComponent
+      },
+      {
+        path: 'edit/:repositoryId',
+        component: EditRepositoryComponent
       },
       {
         path: ':repositoryId',

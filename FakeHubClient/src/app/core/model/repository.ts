@@ -18,3 +18,9 @@ export interface Repository {
 export enum RepositoryOwnedBy {
     ORGANIZATION=0, USER=1, ADMIN=2, SUPERADMIN=3
 }
+
+export interface EditRepositoryDto {
+    id: number;
+    isPrivate: boolean;
+    description: string;
+}

@@ -69,7 +69,7 @@ export class AddTeamComponent implements OnInit {
     if (name) {
       this.organizationName = name;
     }
-    this.repositoryService.GetAllRepositoriesForOrganization(this.organizationName).subscribe({
+    this.repositoryService.getAllRepositoriesForOrganization(this.organizationName).subscribe({
       next: (repos) => {
         this.repositories = repos;
         if (this.repositories.length > 0) {

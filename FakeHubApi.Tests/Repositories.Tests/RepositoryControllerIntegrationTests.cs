@@ -6,12 +6,10 @@ using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Service.Contract;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Mysqlx.Crud;
 using Newtonsoft.Json;
 
 namespace FakeHubApi.Tests.Repositories.Tests
@@ -466,7 +464,126 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(responseObj.ErrorMessage, Is.EqualTo("Repository could not be saved"));
             });
         }
+        
+        [Test, Order(19)]
+        public async Task EditRepository_AsAdmin_SuccessfulEdit_ReturnsOk()
+        {
+            var fakeService = new FakeRepositoryService
+            {
+                EditRepositoryFunc = dto => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                    {
+                        Id = dto.Id,
+                        Description = dto.Description,
+                        IsPrivate = dto.IsPrivate,
+                        OwnedBy = RepositoryOwnedBy.Admin,
+                        OwnerId = 2
+                    })
+                })
+            };
 
+            var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll(typeof(IRepositoryService));
+                    services.AddSingleton<IRepositoryService>(fakeService);
+                });
+            }).CreateClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var editDto = new EditRepositoryDto(1, "Updated Description", false);
+            var editResponse = await client.PutAsJsonAsync("/api/repositories", editDto);
+
+            editResponse.EnsureSuccessStatusCode();
+
+            var editResponseObj = await editResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(editResponseObj, Is.Not.Null);
+            Assert.That(editResponseObj!.Success, Is.True);
+
+            var updatedRepoString = editResponseObj.Result?.ToString() ?? string.Empty;
+            var updatedRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(updatedRepoString);
+
+            Assert.That(updatedRepo, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(updatedRepo!.Description, Is.EqualTo("Updated Description"));
+                Assert.That(updatedRepo.IsPrivate, Is.False);
+            });
+        }
+
+        [Test, Order(20)]
+        public async Task EditRepository_WithoutToken_ReturnsUnauthorized()
+        {
+            var editDto = new EditRepositoryDto(1, "", false);
+
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.PutAsJsonAsync("/api/repositories", editDto);
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(21)]
+        public async Task EditRepository_RepoDoesNotExist_ReturnsBadRequest()
+        {
+            var editDto = new EditRepositoryDto(9999, "Updated Description", true);
+
+            var fakeService = new FakeRepositoryService
+            {
+                EditRepositoryFunc = dto =>
+                {
+                    if (dto.Id == 9999)
+                    {
+                        return Task.FromResult(new ResponseBase
+                        {
+                            Success = false,
+                            ErrorMessage = "Repository not found."
+                        });
+                    }
+
+                    return Task.FromResult(new ResponseBase
+                    {
+                        Success = true,
+                        Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                        {
+                            Id = dto.Id,
+                            Description = dto.Description,
+                            IsPrivate = dto.IsPrivate
+                        })
+                    });
+                }
+            };
+
+            var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll(typeof(IRepositoryService));
+                    services.AddSingleton<IRepositoryService>(fakeService);
+                });
+            }).CreateClient();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+            var response = await client.PutAsJsonAsync("/api/repositories", editDto);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.IsSuccessStatusCode, Is.False);
+                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            });
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(responseObj, Is.Not.Null);
+                Assert.That(responseObj!.Success, Is.False);
+                Assert.That(responseObj.ErrorMessage, Is.EqualTo("Repository not found."));
+            });
+        }
+
+        
         private async Task SetupDbData()
         {
             using var scope = _factory.Services.CreateScope();
@@ -653,17 +770,49 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Func<RepositoryDto, Task<ResponseBase>> SaveFunc { get; set; } =
                 dto => Task.FromResult(new ResponseBase { Success = true });
 
-            public Func<Task<ResponseBase>> GetAllRepositoriesForCurrentUserFunc { get; set; } =
+            private Func<Task<ResponseBase>> GetAllRepositoriesForCurrentUserFunc { get; set; } =
                 () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
 
-            public Func<Task<ResponseBase>> GetAllVisibleRepositoriesForUserFunc { get; set; } =
+            private Func<Task<ResponseBase>> GetAllVisibleRepositoriesForUserFunc { get; set; } =
                 () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
 
-            public Func<Task<ResponseBase>> GetAllRepositoriesForOrganizationFunc { get; set; } =
+            private Func<Task<ResponseBase>> GetAllRepositoriesForOrganizationFunc { get; set; } =
                 () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
 
-            public Func<int, Task<ResponseBase>> DeleteRepositoryFunc { get; set; } =
+            private Func<int, Task<ResponseBase>> DeleteRepositoryFunc { get; set; } =
                 repositoryId => Task.FromResult(new ResponseBase { Success = true });
+
+            public Func<EditRepositoryDto, Task<ResponseBase>> EditRepositoryFunc { get; set; } =
+                dto => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                    {
+                        Id = dto.Id,
+                        Description = dto.Description,
+                        IsPrivate = dto.IsPrivate
+                    })
+                });
+
+            private Func<int, Task<ResponseBase>> GetRepositoryFunc { get; set; } =
+                repositoryId => Task.FromResult(new ResponseBase
+                {
+                    Success = true,
+                    Result = JsonConvert.SerializeObject(new Model.Entity.Repository
+                    {
+                        Id = repositoryId,
+                        Description = "Existing Description",
+                        IsPrivate = false,
+                        OwnedBy = RepositoryOwnedBy.Admin,
+                        OwnerId = 2
+                    })
+                });
+
+            private Func<int, Task<ResponseBase>> CanEditRepositoryFunc { get; set; } =
+                repositoryId => Task.FromResult(new ResponseBase
+                {
+                    Success = true
+                });
 
             public Task<ResponseBase> Save(RepositoryDto model)
             {
@@ -687,7 +836,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
 
             public Task<ResponseBase> GetRepository(int repositoryId)
             {
-                return null;
+                return GetRepositoryFunc(repositoryId);
             }
 
             public Task<ResponseBase> DeleteRepository(int repositoryId)
@@ -696,9 +845,13 @@ namespace FakeHubApi.Tests.Repositories.Tests
             }
             public Task<ResponseBase> CanEditRepository(int repositoryId)
             {
-                return null;
+                return CanEditRepositoryFunc(repositoryId);
+            }
+
+            public Task<ResponseBase> EditRepository(EditRepositoryDto data)
+            {
+                return EditRepositoryFunc(data);
             }
         }
-
     }
 }

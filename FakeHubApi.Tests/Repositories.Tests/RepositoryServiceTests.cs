@@ -689,6 +689,124 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _harborServiceMock.Verify(
                 m => m.deleteProject("adminUser-repo1", repository.Name), Times.Once);
         }
+        
+        [Test]
+        public async Task EditRepository_UserAllowedToEdit_ReturnsUpdatedRepository()
+        {
+            const int repositoryId = 1;
+            var editDto = new EditRepositoryDto(repositoryId, "Updated description", true);
+            
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                Description = "Old description",
+                IsPrivate = false,
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.Admin
+            };
+
+            var currentUser = new User { Id = 10, UserName = "adminUser" };
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "ADMIN"));
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(repository.OwnerId))
+                .ReturnsAsync(currentUser);
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetAllAsync())
+                .ReturnsAsync(new List<Model.Entity.Repository> { repository });
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.UpdateAsync(It.IsAny<Model.Entity.Repository>()))
+                .Returns(Task.CompletedTask);
+
+            _harborServiceMock
+                .Setup(h => h.UpdateProjectVisibility(It.IsAny<string>(), It.IsAny<bool>()))
+                .ReturnsAsync(true);
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns<Model.Entity.Repository>(r => new RepositoryDto
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    Description = r.Description,
+                    IsPrivate = r.IsPrivate,
+                    OwnerId = r.OwnerId,
+                    OwnedBy = r.OwnedBy
+                });
+
+            _repositoryManagerMock
+                .Setup(m => m.UserRepository.GetByIdAsync(repository.OwnerId))
+                .ReturnsAsync(currentUser);
+
+            var response = await _repositoryService.EditRepository(editDto);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var updatedDto = response.Result as RepositoryDto;
+                Assert.That(updatedDto, Is.Not.Null);
+                Assert.That(updatedDto?.Description, Is.EqualTo(editDto.Description));
+                Assert.That(updatedDto is { IsPrivate: true }, Is.EqualTo(editDto.IsPrivate));
+            });
+
+            _repositoryManagerMock.Verify(r => r.RepositoryRepository.UpdateAsync(It.Is<Model.Entity.Repository>(
+                r => r.Description == editDto.Description && r.IsPrivate == editDto.IsPrivate)), Times.Once);
+
+            _harborServiceMock.Verify(h => h.UpdateProjectVisibility(It.IsAny<string>(), false), Times.Once);
+        }
+        
+        [Test]
+        public async Task EditRepository_UserNotAllowedToEdit_ReturnsErrorResponse()
+        {
+            const int repositoryId = 1;
+            var currentUser = new User { Id = 99, UserName = "notAllowedUser" };
+
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                Description = "Old description",
+                IsPrivate = false,
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.Admin
+            };
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(repository.OwnerId))
+                .ReturnsAsync(new User { Id = repository.OwnerId, UserName = "adminUser" });
+
+            var editDto = new EditRepositoryDto(repositoryId, "Updated description", true);
+
+            var response = await _repositoryService.EditRepository(editDto);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Repository not found."));
+            });
+        }
+
 
     }
 }

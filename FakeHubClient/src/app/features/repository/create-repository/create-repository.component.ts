@@ -1,9 +1,11 @@
 import { Component, inject, OnInit } from "@angular/core";
 import {
+  AbstractControl,
   FormControl,
   FormGroup,
   FormsModule,
   ReactiveFormsModule,
+  ValidationErrors,
   Validators,
 } from "@angular/forms";
 import { MatButtonModule } from "@angular/material/button";
@@ -20,6 +22,7 @@ import { RepositoryService } from "../../../core/services/repository.service";
 import { RepositoryOwnedBy } from "../../../core/model/repository";
 import { Router } from "@angular/router";
 import { UserService } from "../../../core/services/user.service";
+import { RepositoryValidationHelper } from "../../../core/helpers/repository-validation.helper";
 
 @Component({
   selector: "app-create-repository",
@@ -50,14 +53,19 @@ export class CreateRepositoryComponent implements OnInit {
   public isSuperAdminLoggedIn: boolean = this.userService.isSuperAdminLoggedIn();
 
   public repositoryForm: FormGroup = new FormGroup({
-    name: new FormControl("", [Validators.required, Validators.maxLength(100)]),
+    name: new FormControl("", [
+      Validators.required,
+      Validators.maxLength(100),
+      RepositoryValidationHelper.noWhitespaceValidator,
+      RepositoryValidationHelper.harborNameValidator
+    ]),
     description: new FormControl("", [Validators.maxLength(500)]),
-    isPrivate: new FormControl({ value: false, disabled: this.isAdminLoggedIn ||  this.isSuperAdminLoggedIn}, Validators.required),
-    ownerId: new FormControl({ value: null, disabled: this.isAdminLoggedIn ||  this.isSuperAdminLoggedIn}, Validators.required),
+    isPrivate: new FormControl({ value: false, disabled: this.isAdminLoggedIn || this.isSuperAdminLoggedIn }, Validators.required),
+    ownerId: new FormControl({ value: null, disabled: this.isAdminLoggedIn || this.isSuperAdminLoggedIn }, Validators.required),
   });
 
   public ownerSelection: IdNamePair[] = [{ id: -1, name: "me" }];
-  
+
   public ngOnInit(): void {
     if (this.isAdminLoggedIn || this.isSuperAdminLoggedIn) {
       this.ownerSelection = [{ id: -2, name: "me" }];
@@ -74,7 +82,7 @@ export class CreateRepositoryComponent implements OnInit {
 
     const data = this.repositoryForm.value;
 
-    if(!(this.isAdminLoggedIn || this.isSuperAdminLoggedIn))
+    if (!(this.isAdminLoggedIn || this.isSuperAdminLoggedIn))
       data.ownedBy = data.ownerId === -1 ? RepositoryOwnedBy.USER : RepositoryOwnedBy.ORGANIZATION;
 
     this.repositoryService.save(data).subscribe((res) => {
