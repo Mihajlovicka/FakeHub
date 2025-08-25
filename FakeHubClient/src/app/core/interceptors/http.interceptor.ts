@@ -21,7 +21,7 @@ export const HttpResponseInterceptor: HttpInterceptorFn = (
   return next(request).pipe(
     map((event: HttpEvent<any>) => {
       if (event instanceof HttpResponse) {
-        return event.clone({ body: event.body.result });
+        return event.clone({ body: event.body?.result });
       }
       return event;
     }),

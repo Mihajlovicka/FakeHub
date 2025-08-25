@@ -7,9 +7,8 @@ import { MatTabsModule } from "@angular/material/tabs";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
 import { Repository } from "../../../core/model/repository";
 import { RepositoryService } from "../../../core/services/repository.service";
-import { Subscription, take } from "rxjs";
+import { filter, Subscription, switchMap, take } from "rxjs";
 import { HelperService } from "../../../core/services/helper.service";
-import { UserService } from "../../../core/services/user.service";
 import { TagsComponent } from "../../tag/tags/tags.component";
 import { RepositoryBadgeComponent } from "../../../shared/components/repository-badge/repository-badge.component";
 import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
@@ -40,18 +39,19 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
     inject(RepositoryService);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly helperService: HelperService = inject(HelperService);
-  private readonly userService: UserService = inject(UserService);
-  private readonly route: Router = inject(Router);
-  private repositorySubscription: Subscription | null = null;
+  private getRepositorySubscription: Subscription | null = null;
+  private canEditRepositorySubscription: Subscription | null = null;
   private routeSubscription: Subscription | null = null;
+  private dialogSubscription: Subscription | null = null;
   private readonly router: Router = inject(Router);
   private readonly dialog = inject(MatDialog);
 
   public ngOnInit() {
     const repoId = this.getRepoId();
     if (repoId) {
-      this.repositorySubscription = this.repositoryService
+      this.canEditRepositorySubscription = this.getRepositorySubscription = this.repositoryService
         .getRepository(repoId)
+        .pipe(take(1))
         .subscribe((data) => {
           if (data) {
             this.repository = data;
@@ -63,19 +63,27 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
-    if (this.repositorySubscription) {
-      this.repositorySubscription.unsubscribe();
+    if (this.getRepositorySubscription) {
+      this.getRepositorySubscription.unsubscribe();
     }
     if (this.routeSubscription) {
       this.routeSubscription.unsubscribe();
     }
+    if (this.canEditRepositorySubscription) {
+      this.canEditRepositorySubscription.unsubscribe();
+    }
+    if (this.dialogSubscription) {
+      this.dialogSubscription.unsubscribe();
+    }
   }
 
   public isOwner(): void {
-    if(this.repository.id){
-      this.repositoryService.canEditRepository(this.repository.id).subscribe((data: boolean) => {
-        this.canUserDelete = data;
-      });
+    if (this.repository.id) {
+      this.canEditRepositorySubscription = this.repositoryService.canEditRepository(this.repository.id)
+        .pipe(take(1))
+        .subscribe((data: boolean) => {
+          this.canUserDelete = data;
+        });
     }
   }
 
@@ -93,27 +101,35 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe((isConfirmed) => {
-      if (isConfirmed && this.repository?.id != null) {
-        this.repositoryService.delete(this.repository.id).subscribe({
-          next: () => {
-            this.router.navigate(["/repositories"]);
-          },
-          error: (err) => {
-            console.error("Error deleting repository:", err);
-          },
-        });
-      }
-    });
+    this.dialogSubscription = dialogRef.afterClosed()
+      .pipe(
+        filter(isConfirmed => isConfirmed && this.repository?.id != null),
+        switchMap(() => this.repositoryService.delete(this.repository.id!)),
+        take(1)
+      )
+      .subscribe({
+        next: () => {
+          this.router.navigate(["/repositories"]);
+        },
+        error: (err) => {
+          throw err;
+        }
+      });
   }
 
-  private getRepoId(): number | undefined{
+  private getRepoId(): number | undefined {
     let id = undefined;
 
-    this.activatedRoute.paramMap.pipe(take(1)).subscribe((route) => {
-      id = route.get("repositoryId");
-    });
+    this.routeSubscription = this.activatedRoute.paramMap
+      .pipe(take(1))
+      .subscribe((route) => {
+        id = route.get("repositoryId");
+      });
 
     return id;
+  }
+
+  public navigateToRepoEdit() {
+    this.router.navigate(["/repository/edit/", this.repository.id]);
   }
 }

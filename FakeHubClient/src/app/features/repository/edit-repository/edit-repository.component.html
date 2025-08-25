@@ -1,7 +1,7 @@
 <div class="centered-container">
   <mat-card class="main-card">
     <mat-card-header class="centered-header">
-      <mat-card-title class="title">Add New Repository</mat-card-title>
+      <mat-card-title class="title">Edit Repository</mat-card-title>
     </mat-card-header>
 
     <mat-card-content>
@@ -16,9 +16,6 @@
             <mat-error> Name cannot exceed 100 characters. </mat-error>}
             @if(repositoryForm.get('name')?.hasError('whitespace')){
             <mat-error> Name cannot contain spaces. </mat-error>}
-            <mat-error *ngIf="repositoryForm.get('name')?.hasError('invalidHarborName')">
-              Repository name not valid.
-            </mat-error>
           </mat-form-field>
         </div>
 
@@ -39,24 +36,12 @@
               <mat-radio-button [value]="true">Private</mat-radio-button>
             </mat-radio-group>
           </div>
-
-          <div class="col">
-            <div class="row">
-              <mat-form-field class="compact-field" appearance="outline">
-                <mat-label>Select owner</mat-label>
-                <mat-select formControlName="ownerId">
-                  <mat-option *ngFor="let owner of ownerSelection" [value]="owner.id">
-                    {{ owner.name }}
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-          </div>
         </div>
 
         <mat-card-actions>
-          <button mat-raised-button color="primary" [disabled]="repositoryForm.invalid" style="width: 100%">
-            Add Repository
+          <button mat-raised-button color="primary" style="width: 100%"
+            [disabled]="isFormUnchanged() || repositoryForm.invalid">
+            Edit Repository
           </button>
         </mat-card-actions>
       </form>

@@ -4,8 +4,8 @@
   </div>
   <div class="profile-details">
     <div class="username-container">
-      <span class="username">{{ repository.name }}</span>
-      <app-repository-badge [iconSize]="'medium-icon'" [ownedBy]="repository.ownedBy" [ownerBadge]="repository.badge" />
+      <span class="username">{{ repository?.name }}</span>
+      <app-repository-badge [iconSize]="'medium-icon'" [ownedBy]="repository?.ownedBy" [ownerBadge]="repository?.badge" />
       @if (canUserDelete) {
       <button
         mat-icon-button
@@ -15,7 +15,7 @@
         <mat-icon>edit</mat-icon>
       </button>
       <mat-menu #menu="matMenu">
-        <button mat-menu-item><span>Edit</span></button>
+        <button mat-menu-item (click)="navigateToRepoEdit()"><span>Edit</span></button>
         <button mat-menu-item><span>Add Collaborator</span></button>
         <button mat-menu-item (click)="openDeleteRepositoryModal()">
           <span>Delete repository</span>
@@ -26,23 +26,23 @@
     @if (!canUserDelete) {
     <div class="community-info">
       <i class="fa-regular fa-user icons"></i>
-      <span class="joined">Owner: {{ repository.ownerUsername }}</span>
+      <span class="joined">Owner: {{ repository?.ownerUsername }}</span>
     </div>
     }
     <div class="community-info">
-      <span class="joined">{{ repository.description }}</span>
+      <span class="joined">{{ repository?.description }}</span>
     </div>
   </div>
   <div class="docker-commands">
       <h3><strong>Docker commands</strong></h3>
       <span class="docker-commands"> To push a new tag to this repository: </span><br>
-      <span class="command-view"> docker push {{repository.fullName}}:tagname </span>
+      <span class="command-view"> docker push {{repository?.fullName}}:tagname </span>
   </div>
 </div>
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
     <mat-tab label="Tags">
     <ng-template matTabContent>
-        <app-tags [artifacts]="repository.artifacts || []"></app-tags>
+        <app-tags [artifacts]="repository?.artifacts || []"></app-tags>
     </ng-template>
   </mat-tab>
   <mat-tab label="Collaborators"></mat-tab>

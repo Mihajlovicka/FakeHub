@@ -2,7 +2,7 @@ using FakeHubApi.Model.Dto;
 
 namespace FakeHubApi.Mapper.RepositoryMapper;
 
-public class RepositoryDtoToRepositoryMapper() : BaseMapper<RepositoryDto, Model.Entity.Repository>
+public class RepositoryDtoToRepositoryMapper : BaseMapper<RepositoryDto, Model.Entity.Repository>
 {
     public override Model.Entity.Repository Map(RepositoryDto source)
     {

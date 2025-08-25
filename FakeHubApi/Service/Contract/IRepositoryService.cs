@@ -12,4 +12,5 @@ public interface IRepositoryService
     Task<ResponseBase> GetRepository(int repositoryId);
     Task<ResponseBase> DeleteRepository(int repositoryId);
     Task<ResponseBase> CanEditRepository(int repositoryId);
+    Task<ResponseBase> EditRepository(EditRepositoryDto data);
 }

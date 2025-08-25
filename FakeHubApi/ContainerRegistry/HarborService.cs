@@ -22,6 +22,7 @@ public interface IHarborService
     Task<bool> removeMembers(string projectName, IEnumerable<int> memberIds);
     Task<bool> removeMemberFromTeam(string projectName, string username);
     Task<List<HarborArtifact>> GetTags(string projectName, string repositoryName);
+    Task<bool> UpdateProjectVisibility(string projectName, bool isPublic);
 
 }
 
@@ -158,7 +159,7 @@ public class HarborService : IHarborService
     public async Task<bool> createUpdateProject(HarborProjectCreate project, string projectName = "", bool isUpdate = false)
     {
         (bool success, _, _, _) = await SendRequestAsync<object>(isUpdate ? HttpMethod.Put : HttpMethod.Post, isUpdate ? $"{Projects}{projectName}" : Projects, project, false);
-        return success;
+        return success; 
     }
 
     public async Task<bool> deleteProject(string projectName, string repositoryName)
@@ -222,6 +223,28 @@ public class HarborService : IHarborService
         var (success, artifacts, _, _) = await SendRequestAsync<List<HarborArtifact>>(HttpMethod.Get, $"{Projects}{projectName}/{Repositories}{repositoryName}/{Artifacts}?page=1&page_size=10&with_tag=true&with_label=false&with_scan_overview=false&with_sbom_overview=false&with_immutable_status=false&with_accessory=false");
         return success ? artifacts : new List<HarborArtifact>();
     }
+    
+    public async Task<bool> UpdateProjectVisibility(string projectName, bool isPublic)
+    {
+        var payload = new HarborProjectCreate
+        {
+            ProjectName = projectName,
+            Metadata = new Dictionary<string, string>
+            {
+                { "public", isPublic ? "true" : "false" }
+            }
+        };
+
+        
+        var (success, _, _, _) = await SendRequestAsync<object>(
+            HttpMethod.Put,
+            $"{Projects}{projectName}",
+            payload,
+            false
+        );
+
+        return success;
+    }
 }
 
 
@@ -263,6 +286,7 @@ public class HarborUser
     [JsonPropertyName("realname")]
     public string Realname { get; set; } = string.Empty;
 
+
     [JsonPropertyName("comment")]
     public string Comment { get; set; } = string.Empty;
 }
@@ -274,6 +298,9 @@ public class HarborProjectCreate
 
     [JsonPropertyName("public")]
     public bool Public { get; set; } = false;
+    
+    [JsonPropertyName("metadata")]
+    public Dictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
 }
 
 
