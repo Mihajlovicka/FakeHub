@@ -1,3 +1,4 @@
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Model.Dto;
@@ -12,6 +13,7 @@ public class RepositoryDto
     public string OwnerUsername { get; set; } = "";
     public int OwnerId { get; set; }
     public Badge Badge { get; set; }
-    public string? FullName {  get; set; }
+    public string? FullName { get; set; }
     public DateTime? UpdatedAt { get; set; } = null;
+    public List<ArtifactDto>? Artifacts { get; set; } = null;
 }

@@ -9,7 +9,7 @@ using FakeHubApi.Service.Contract;
 namespace FakeHubApi.Service.Implementation;
 
 public class RepositoryService(
-    IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryMapper,
+    IMapperManager mapperManager,
     IOrganizationService organizationService,
     IRepositoryManager repositoryManager,
     IUserContextService userContextService,
@@ -19,7 +19,7 @@ public class RepositoryService(
 {
     public async Task<ResponseBase> Save(RepositoryDto repositoryDto)
     {
-        var repository = repositoryMapper.Map(repositoryDto);
+        var repository = mapperManager.RepositoryDtoToRepositoryMapper.Map(repositoryDto);
         var (currentUser, currentUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
 
         if(currentUserRole is "ADMIN" or "SUPERADMIN")
@@ -50,8 +50,8 @@ public class RepositoryService(
 
         await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = projectName, Public = !repositoryDto.IsPrivate });
         await harborService.addMember(projectName, new HarborProjectMember { RoleId = (int)HarborRoles.Admin, MemberUser = new HarborProjectMemberUser { UserId = currentUser.HarborUserId, Username = currentUser.UserName } });
-        
-        return ResponseBase.SuccessResponse(repositoryMapper.ReverseMap(repository));
+
+        return ResponseBase.SuccessResponse(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap(repository));
     }
 
     private async Task<(bool, string)> ValidateRepository(Model.Entity.Repository repositoryDto)
@@ -75,7 +75,7 @@ public class RepositoryService(
 
         var repositories = await GetRepositoriesByRole(user.Id, role);
 
-        var repositoryDtos = repositories.Select(repositoryMapper.ReverseMap).ToList();
+        var repositoryDtos = repositories.Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap).ToList();
 
         var updatedDtos = await GetFullNames(repositoryDtos);
 
@@ -101,7 +101,7 @@ public class RepositoryService(
 
         var filteredRepositories = await repositoryManager.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, showOnlyPublic);
 
-        var repositoryDtos = filteredRepositories.Select(repositoryMapper.ReverseMap).ToList();
+        var repositoryDtos = filteredRepositories.Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap).ToList();
 
         var updatedDtos = await GetFullNames(repositoryDtos);
 
@@ -119,7 +119,7 @@ public class RepositoryService(
 
         var orgRepositories = await repositoryManager.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(organization.Id);
 
-        var repositoryDtos = orgRepositories.Select(repositoryMapper.ReverseMap).ToList();
+        var repositoryDtos = orgRepositories.Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap).ToList();
 
         return ResponseBase.SuccessResponse(repositoryDtos);
 
@@ -128,14 +128,19 @@ public class RepositoryService(
     public async Task<ResponseBase> GetRepository(int repositoryId)
     {
         var repository =  await GetRepositoryForCurrentUser(repositoryId);
-        return repository == null 
-            ? ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.") 
-            : ResponseBase.SuccessResponse(await MapModelToDto(repository));
+        if (repository == null)
+            return ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.");
+
+        var repoDto = await MapModelToDto(repository);
+        var projectName = await GetRepoOwnerUsername(repoDto) + "-" + repository.Name;
+        List<HarborArtifact> artifacts = await harborService.GetTags(projectName, repository.Name);
+        repoDto.Artifacts = artifacts.Select(mapperManager.HarborArtifactToArtifactDtoMapper.Map).ToList();
+        return ResponseBase.SuccessResponse(repoDto);
     }
 
     private async Task<RepositoryDto> MapModelToDto(Model.Entity.Repository repository)
     {
-        var repositoryDto = repositoryMapper.ReverseMap(repository);
+        var repositoryDto = mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap(repository);
         repositoryDto.FullName = await GetFullName(repositoryDto);
         repositoryDto.OwnerUsername = await GetRepoOwnerUsername(repositoryDto) ?? "";
 

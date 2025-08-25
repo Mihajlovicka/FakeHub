@@ -29,12 +29,14 @@
   <div class="docker-commands">
       <h3><strong>Docker commands</strong></h3>
       <span class="docker-commands"> To push a new tag to this repository: </span><br>
-      <span class="command-view"> docker push {{repository.fullName}}:tagname </span>
+      <span class="command-view"> docker push {{repository.artifacts[0].repositoryName}}:tagname </span>
   </div>
 </div>
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
-  <mat-tab label="Images?"></mat-tab>
+    <mat-tab label="Tags">
+    <ng-template matTabContent>
+        <app-tags [artifacts]="repository.artifacts || []"></app-tags>
+    </ng-template>
+  </mat-tab>
   <mat-tab label="Collaborators"></mat-tab>
-  <mat-tab label="Tags"></mat-tab>
-  <mat-tab label="Webhooks?"></mat-tab>
 </mat-tab-group>

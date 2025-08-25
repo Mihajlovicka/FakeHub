@@ -1,0 +1,51 @@
+<div class="search">
+  <form (submit)="$event.preventDefault()">
+    <input
+      type="text"
+      placeholder="Search tags..."
+      name="search"
+      class="search-input"
+      autocomplete="off"
+    />
+    <button type="submit" class="search-button">
+      <img src="icons/search.png" width="25rem" height="25rem" />
+    </button>
+  </form>
+</div>
+<div class="users-content-container">
+  <div class="users-container">
+    @for (artifact of artifacts; track artifact.id) {
+    <div class="user-container">
+      <div class="user-details-container">
+        <div class="link-header">
+          <span class="ellipsis">{{ artifact.tags[0].name }}</span>
+        </div>
+        <div class="os">
+            @if(artifact.extraAttrs.os === 'linux'){
+                <span>🐧</span>
+            }
+            @if(artifact.extraAttrs.os === 'windows'){
+                <span>🪟</span>
+            }
+            {{ artifact.extraAttrs.os }}
+        </div>
+         <div class="multi-line-ellipsis">
+        </div>
+        <div class="link-footer">
+          <span class="footer-text"
+            >Pushed at: {{ artifact.tags[0].pushTime | date : "mediumDate" }}</span
+          >
+          <span class="footer-text"
+            >Last pull: {{ artifact.tags[0].pullTime ? '/' : artifact.tags[0].pullTime | date : "mediumDate" }}</span
+          >
+          <span class="footer-text"
+            >docker pull {{ artifact.repositoryName }}:{{ artifact.tags[0].name }}</span
+          >
+        </div>
+      </div>
+    </div>
+    } @empty {
+    <div class="no-users">There are no tags</div>
+    }
+  </div>
+</div>

@@ -1,4 +1,5 @@
-﻿using FakeHubApi.Model.Dto;
+﻿using FakeHubApi.ContainerRegistry;
+using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 
 namespace FakeHubApi.Mapper;
@@ -8,19 +9,22 @@ public class MapperManager(
     IBaseMapper<User, UserDto> userToUserDto,
     IBaseMapper<OrganizationDto, Organization> organizationDtoToOrganizationMapper,
     IBaseMapper<TeamDto, Team> teamDtoToTeamMapper,
-    IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryDtoToRepositoryMapper
-        ) : IMapperManager
+    IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryDtoToRepositoryMapper,
+    IBaseMapper<HarborArtifact, ArtifactDto> harborArtifactToArtifactDtoMapper
+) : IMapperManager
 {
     public IBaseMapper<
         RegistrationRequestDto,
         User
-    > RegistrationsRequestDtoToUserMapper { get; } =
+    > RegistrationsRequestDtoToUserMapper
+    { get; } =
         registrationsRequestDtoToUserMapper;
 
     public IBaseMapper<
         User,
         UserDto
-    > UserToUserDtoMapper { get; } = userToUserDto;
+    > UserToUserDtoMapper
+    { get; } = userToUserDto;
 
     public IBaseMapper<OrganizationDto, Organization> OrganizationDtoToOrganizationMapper { get; } =
         organizationDtoToOrganizationMapper;
@@ -29,4 +33,7 @@ public class MapperManager(
 
     public IBaseMapper<RepositoryDto, Model.Entity.Repository> RepositoryDtoToRepositoryMapper { get; set; } =
         repositoryDtoToRepositoryMapper;
+
+    public IBaseMapper<HarborArtifact, ArtifactDto> HarborArtifactToArtifactDtoMapper { get; set; } =
+        harborArtifactToArtifactDtoMapper;
 }
