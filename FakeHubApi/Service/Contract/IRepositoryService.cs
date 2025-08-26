@@ -10,4 +10,5 @@ public interface IRepositoryService
     Task<ResponseBase> GetAllVisibleRepositoriesForUser(string username);
     Task<ResponseBase> GetAllRepositoriesForOrganization(string orgName);
     Task<ResponseBase> GetRepository(int repositoryId);
+    Task<ResponseBase> DeleteRepository(int repositoryId);
 }

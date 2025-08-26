@@ -109,6 +109,9 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.GetByOwnerAndName(It.IsAny<RepositoryOwnedBy>(), It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync((Model.Entity.Repository)null);
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
+            _organizationServiceMock
+               .Setup(o => o.GetOrganizationById(99))
+               .ReturnsAsync(new Model.Entity.Organization { Id = 99, Name = "TestUser" });
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -567,6 +570,95 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 var resultDtos = response.Result as List<RepositoryDto>;
                 Assert.That(resultDtos, Is.Empty);
             });
+        }
+
+        [Test]
+        public async Task DeleteRepository_RepositoryNotFound_ReturnsErrorResponse()
+        {
+            int repositoryId = 1;
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositoryId))
+                .ReturnsAsync((Model.Entity.Repository)null);
+
+            var response = await _repositoryService.DeleteRepository(repositoryId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Repository not found"));
+            });
+        }
+
+        [Test]
+        public async Task DeleteRepository_UserWithoutPermission_ReturnsErrorResponse()
+        {
+            int repositoryId = 1;
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                OwnerId = 2,
+                OwnedBy = RepositoryOwnedBy.Admin
+            };
+
+            var currentUser = new User { Id = 1 };
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(m => m.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "ADMIN"));
+
+            var response = await _repositoryService.DeleteRepository(repositoryId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("You do not have permission to delete this repository"));
+            });
+        }
+
+        [Test]
+        public async Task DeleteRepository_UserWithPermission_ReturnsSuccessResponse()
+        {
+            int repositoryId = 1;
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                OwnerId = 10,
+                Name = "repo1"
+            };
+
+            var currentUser = new User { Id = 10, UserName = "adminUser" };
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(m => m.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "ADMIN"));
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.DeleteAsync(repository.Id))
+                .Returns(Task.CompletedTask);
+
+            _harborServiceMock
+                .Setup(m => m.deleteProject("adminUser-repo1", repository.Name))
+                .ReturnsAsync(true);
+
+            var response = await _repositoryService.DeleteRepository(repositoryId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response.Success, Is.True);
+                Assert.That(response.ErrorMessage, Is.Empty);
+            });
+
+            _harborServiceMock.Verify(
+                m => m.deleteProject("adminUser-repo1", repository.Name), Times.Once);
         }
     }
 }

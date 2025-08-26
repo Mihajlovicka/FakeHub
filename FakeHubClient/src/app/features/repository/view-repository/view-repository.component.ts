@@ -1,19 +1,22 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTabsModule } from '@angular/material/tabs';
-import { ActivatedRoute, RouterModule } from '@angular/router';
-import { Repository } from '../../../core/model/repository';
-import { RepositoryService } from '../../../core/services/repository.service';
-import { Subscription, take } from 'rxjs';
-import { HelperService } from '../../../core/services/helper.service';
-import { UserService } from '../../../core/services/user.service';
+import { CommonModule } from "@angular/common";
+import { Component, OnDestroy, OnInit, inject } from "@angular/core";
+import { MatButtonModule } from "@angular/material/button";
+import { MatIconModule } from "@angular/material/icon";
+import { MatMenuModule } from "@angular/material/menu";
+import { MatTabsModule } from "@angular/material/tabs";
+import { ActivatedRoute, Router, RouterModule } from "@angular/router";
+import { Repository } from "../../../core/model/repository";
+import { RepositoryService } from "../../../core/services/repository.service";
+import { Subscription, take } from "rxjs";
+import { HelperService } from "../../../core/services/helper.service";
+import { UserService } from "../../../core/services/user.service";
 import { TagsComponent } from "../../tag/tags/tags.component";
+import { RepositoryBadgeComponent } from "../../../shared/components/repository-badge/repository-badge.component";
+import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
+import { MatDialog } from "@angular/material/dialog";
 
 @Component({
-  selector: 'app-view-repository',
+  selector: "app-view-repository",
   standalone: true,
   imports: [
     CommonModule,
@@ -22,33 +25,37 @@ import { TagsComponent } from "../../tag/tags/tags.component";
     MatButtonModule,
     RouterModule,
     MatTabsModule,
-    TagsComponent
-],
-  templateUrl: './view-repository.component.html',
-  styleUrl: './view-repository.component.css'
+    TagsComponent,
+    RepositoryBadgeComponent
+  ],
+  templateUrl: "./view-repository.component.html",
+  styleUrl: "./view-repository.component.css",
 })
-export class ViewRepositoryComponent implements OnInit, OnDestroy{
+export class ViewRepositoryComponent implements OnInit, OnDestroy {
   public repository!: Repository;
   public capitalizedLetterAvatar: string = "";
 
-  private readonly repositoryService: RepositoryService = inject(RepositoryService);
+  private readonly repositoryService: RepositoryService =
+    inject(RepositoryService);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly helperService: HelperService = inject(HelperService);
   private readonly userService: UserService = inject(UserService);
   private repositorySubscription: Subscription | null = null;
   private routeSubscription: Subscription | null = null;
+  private readonly router: Router = inject(Router);
+  private readonly dialog = inject(MatDialog);
 
-  public ngOnInit(){
+  public ngOnInit() {
     const repoId = this.getRepoId();
-    if(repoId){
-      this.repositorySubscription = this.repositoryService.getRepository(repoId).subscribe(
-        data => {
-          if(data){
-          this.repository = data;
-          this.avatarProfile();
+    if (repoId) {
+      this.repositorySubscription = this.repositoryService
+        .getRepository(repoId)
+        .subscribe((data) => {
+          if (data) {
+            this.repository = data;
+            this.avatarProfile();
           }
-        }
-      );
+        });
     }
   }
 
@@ -56,7 +63,7 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy{
     if (this.repositorySubscription) {
       this.repositorySubscription.unsubscribe();
     }
-    if(this.routeSubscription){
+    if (this.routeSubscription) {
       this.routeSubscription.unsubscribe();
     }
   }
@@ -69,17 +76,39 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy{
   }
 
   public avatarProfile(): void {
-    this.capitalizedLetterAvatar =  this.helperService.capitalizeFirstLetter(this.repository?.name ?? "");
+    this.capitalizedLetterAvatar = this.helperService.capitalizeFirstLetter(
+      this.repository?.name ?? ""
+    );
   }
-  
-  private getRepoId(): number | undefined{
+
+  public openDeleteRepositoryModal(): void {
+  const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+    data: {
+      title: "Delete Repository",
+      description: `Are you sure you want to delete "${this.repository.name}"?`,
+    },
+  });
+
+  dialogRef.afterClosed().subscribe((isConfirmed) => {
+    if (isConfirmed && this.repository?.id != null) {
+      this.repositoryService.delete(this.repository.id).subscribe({
+        next: () => {
+          this.router.navigate(["/repositories"]);
+        },
+        error: (err) => {
+          console.error("Error deleting repository:", err);
+        },
+      });
+    }
+  });
+}
+
+  private getRepoId(): number | undefined {
     let id = undefined;
 
-    this.activatedRoute.paramMap.pipe(take(1)).subscribe(
-      route => {
-        id = route.get("repositoryId");
-      }
-    );
+    this.activatedRoute.paramMap.pipe(take(1)).subscribe((route) => {
+      id = route.get("repositoryId");
+    });
 
     return id;
   }
