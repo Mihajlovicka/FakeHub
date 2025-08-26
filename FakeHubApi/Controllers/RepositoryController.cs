@@ -68,4 +68,16 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
         }
         return BadRequest(response);
     }
+
+    [Authorize(Roles = "ADMIN, SUPERADMIN")]
+    [HttpDelete("{repositoryId:int}")]
+    public async Task<IActionResult> DeleteRepository([FromRoute] int repositoryId)
+    {
+        var response = await repositoryService.DeleteRepository(repositoryId);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

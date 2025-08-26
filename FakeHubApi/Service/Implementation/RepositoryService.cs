@@ -22,13 +22,13 @@ public class RepositoryService(
         var repository = mapperManager.RepositoryDtoToRepositoryMapper.Map(repositoryDto);
         var (currentUser, currentUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
 
-        if(currentUserRole is "ADMIN" or "SUPERADMIN")
+        if (currentUserRole is "ADMIN" or "SUPERADMIN")
         {
             repository.Badge = Badge.DockerOfficialImage;
             repository.OwnerId = currentUser.Id;
             repository.OwnedBy = currentUserRole == "ADMIN" ? RepositoryOwnedBy.Admin : RepositoryOwnedBy.SuperAdmin;
-        } 
-        else if(currentUserRole == "USER" && currentUser.Badge != Badge.None)
+        }
+        else if (currentUserRole == "USER" && currentUser.Badge != Badge.None)
         {
             repository.Badge = currentUser.Badge;
         }
@@ -45,8 +45,7 @@ public class RepositoryService(
             await repositoryManager.RepositoryRepository.AddAsync(repository);
         }
 
-        var projectName = repositoryDto.OwnerId == -1 ? currentUser.UserName : (await organizationService.GetOrganizationById(repositoryDto.OwnerId)).Name;
-        projectName += "-" + repository.Name;
+        var projectName = await GetHarborProjectName(repository, currentUser, currentUserRole);
 
         await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = projectName, Public = !repositoryDto.IsPrivate });
         await harborService.addMember(projectName, new HarborProjectMember { RoleId = (int)HarborRoles.Admin, MemberUser = new HarborProjectMemberUser { UserId = currentUser.HarborUserId, Username = currentUser.UserName } });
@@ -127,7 +126,7 @@ public class RepositoryService(
 
     public async Task<ResponseBase> GetRepository(int repositoryId)
     {
-        var repository =  await GetRepositoryForCurrentUser(repositoryId);
+        var repository = await GetRepositoryForCurrentUser(repositoryId);
         if (repository == null)
             return ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.");
 
@@ -136,6 +135,24 @@ public class RepositoryService(
         List<HarborArtifact> artifacts = await harborService.GetTags(projectName, repository.Name);
         repoDto.Artifacts = artifacts.Select(mapperManager.HarborArtifactToArtifactDtoMapper.Map).ToList();
         return ResponseBase.SuccessResponse(repoDto);
+    }
+
+    public async Task<ResponseBase> DeleteRepository(int repositoryId)
+    {
+        var repository = await repositoryManager.RepositoryRepository.GetByIdAsync(repositoryId);
+        var (currentUser, currentUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
+
+        if (repository == null)
+            return ResponseBase.ErrorResponse("Repository not found");
+
+        if (repository.OwnerId != currentUser.Id)
+            return ResponseBase.ErrorResponse("You do not have permission to delete this repository");
+
+        await repositoryManager.RepositoryRepository.DeleteAsync(repository.Id);
+
+        await harborService.deleteProject(await GetHarborProjectName(repository, currentUser, currentUserRole), repository.Name);
+
+        return ResponseBase.SuccessResponse();
     }
 
     private async Task<RepositoryDto> MapModelToDto(Model.Entity.Repository repository)
@@ -176,7 +193,7 @@ public class RepositoryService(
         var username = await GetRepoOwnerUsername(repositoryDto) ?? defaultUsername;
         return $"{username}/{repositoryDto.Name}";
     }
-    
+
     private async Task<string?> GetRepoOwnerUsername(RepositoryDto repositoryDto)
     {
         string? fullName;
@@ -205,4 +222,12 @@ public class RepositoryService(
 
         return repositories.FirstOrDefault(x => x.Id == repositoryId);
     }
+
+    private async Task<string> GetHarborProjectName(Model.Entity.Repository repository, User user, string userRole)
+    {
+        var projectName = repository.OwnerId == -1 || userRole is "ADMIN" or "SUPERADMIN" ? user.UserName : (await organizationService.GetOrganizationById(repository.OwnerId)).Name;
+        projectName += "-" + repository.Name;
+        return projectName;
+    }
+
 }

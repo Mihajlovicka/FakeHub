@@ -303,6 +303,91 @@ namespace FakeHubApi.Tests.Repositories.Tests
         }
 
         [Test, Order(14)]
+        public async Task DeleteRepository_AsAdminOwner_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RepoToDelete",
+                Description = "Repository for deletion test.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.Admin,
+                OwnerId = 2
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var deleteResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo!.Id}");
+            deleteResponse.EnsureSuccessStatusCode();
+            var deleteResponseObj = await deleteResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(deleteResponseObj, Is.Not.Null);
+            Assert.That(deleteResponseObj!.Success, Is.True);
+            Assert.That(deleteResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        }
+
+        [Test, Order(15)]
+        public async Task DeleteRepository_RepoDoesNotExist_ReturnsBadRequest()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var invalidRepoId = 9999;
+            var response = await _client.DeleteAsync($"/api/repositories/{invalidRepoId}");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(responseObj, Is.Not.Null);
+                Assert.That(responseObj!.Success, Is.False);
+                Assert.That(responseObj.ErrorMessage, Is.EqualTo("Repository not found"));
+            });
+        }
+
+        [Test, Order(16)]
+        public async Task DeleteRepository_AsNonOwner_ReturnsBadRequest()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RepoOtherOwner",
+                Description = "Repository owned by another user.",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.Admin,
+                OwnerId = 3
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _superAdminToken);
+
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _adminToken);
+
+            var deleteResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo!.Id}");
+            Assert.That(deleteResponse.IsSuccessStatusCode, Is.False);
+
+            var deleteResponseObj = await deleteResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(deleteResponseObj, Is.Not.Null);
+                Assert.That(deleteResponseObj!.Success, Is.False);
+                Assert.That(deleteResponseObj.ErrorMessage, Is.EqualTo("You do not have permission to delete this repository"));
+            });
+        }
+
+        [Test, Order(17)]
         public async Task Register_WithValidUserToken_AndSuccessfulSave_ReturnsOk()
         {
             var repositoryDto = new RepositoryDto
@@ -340,7 +425,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(responseObj!.Success, Is.True);
         }
 
-        [Test, Order(15)]
+        [Test, Order(18)]
         public async Task Register_WithValidUserToken_AndUnsuccessfulSave_ReturnsBadRequest()
         {
             var repositoryDto = new RepositoryDto
@@ -577,6 +662,9 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Func<Task<ResponseBase>> GetAllRepositoriesForOrganizationFunc { get; set; } =
                 () => Task.FromResult(new ResponseBase { Success = true, Result = new List<RepositoryDto>() });
 
+            public Func<int, Task<ResponseBase>> DeleteRepositoryFunc { get; set; } =
+                repositoryId => Task.FromResult(new ResponseBase { Success = true });
+
             public Task<ResponseBase> Save(RepositoryDto model)
             {
                 return SaveFunc(model);
@@ -600,6 +688,11 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Task<ResponseBase> GetRepository(int repositoryId)
             {
                 return null;
+            }
+
+            public Task<ResponseBase> DeleteRepository(int repositoryId)
+            {
+                return DeleteRepositoryFunc(repositoryId);
             }
         }
 

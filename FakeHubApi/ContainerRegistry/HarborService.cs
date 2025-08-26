@@ -16,7 +16,7 @@ public interface IHarborService
     Task<int?> getUserId(string username);
     Task<bool?> projectNameExists(string projectName);
     Task<bool> createUpdateProject(HarborProjectCreate project, string projectName = "", bool isUpdate = false);
-    Task<bool> deleteProject(string projectName);
+    Task<bool> deleteProject(string projectName, string repositoryName);
     Task<bool> addMember(string projectName, HarborProjectMember member);
     Task<bool> removeMembersByRole(string projectName, int role);
     Task<bool> removeMembers(string projectName, IEnumerable<int> memberIds);
@@ -161,10 +161,24 @@ public class HarborService : IHarborService
         return success;
     }
 
-    public async Task<bool> deleteProject(string projectName)
+    public async Task<bool> deleteProject(string projectName, string repositoryName)
     {
-        (bool success, _, _, _) = await SendRequestAsync<object>(HttpMethod.Delete, $"{Projects}{projectName}");
-        return success;
+        var (listSuccess, repositories, _, _) = await SendRequestAsync<List<JsonElement>>(HttpMethod.Get, $"{Projects}{projectName}/repositories");
+        if (!listSuccess || repositories == null) return false;
+
+        if(repositories?.Count > 0)
+        {
+            var (deleteRepoSuccess, _, _, _) = await SendRequestAsync<object>(HttpMethod.Delete, $"{Projects}{projectName}/repositories/{repositoryName}");
+            if (!deleteRepoSuccess)
+            {
+                _logger.LogWarning($"Failed to delete repository {repositoryName} in project {projectName}");
+                return false; 
+
+            }
+        }
+
+        var (deleteProjectSuccess, _, _, _) = await SendRequestAsync<object>(HttpMethod.Delete, $"{Projects}{projectName}");
+        return deleteProjectSuccess;
     }
 
     public async Task<bool> addMember(string projectName, HarborProjectMember member)

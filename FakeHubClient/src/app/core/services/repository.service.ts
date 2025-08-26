@@ -36,4 +36,8 @@ private http: HttpClient = inject(HttpClient);
   public getRepository(id: number): Observable<Repository>{
     return this.http.get<Repository>(getRepository(id));
   }
+
+  public delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${Path.Repositories}/${id}`);
+  }
 }
