@@ -143,6 +143,16 @@ span.footer-text {
     outline: none;
 }
 
+.search-select {
+    height: 2rem;
+    width: 20rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin-right: 1%;
+    outline: none;
+}
+
 .search-button {
     padding-bottom: 5px;
     height: 2rem;

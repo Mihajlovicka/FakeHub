@@ -1,20 +1,33 @@
 <div class="search">
-  <form (submit)="$event.preventDefault()">
+  <form (submit)="search(); $event.preventDefault()">
     <input
       type="text"
       placeholder="Search tags..."
       name="search"
       class="search-input"
       autocomplete="off"
+      [(ngModel)]="searchQuery"
     />
     <button type="submit" class="search-button">
       <img src="icons/search.png" width="25rem" height="25rem" />
     </button>
   </form>
+  
+
+  <select
+    name="search-select"
+    class="search-select"
+    [(ngModel)]="selectedSortOption"
+    (change)="sortArtifacts()"
+  >
+      <option *ngFor="let sort of sortBy" [value]="sort.id">
+        {{ sort.name }}
+      </option>
+  </select>
 </div>
 <div class="users-content-container">
   <div class="users-container">
-    @for (artifact of artifacts; track artifact.id) {
+    @for (artifact of filteredArtifacts; track artifact.id) {
     <div class="user-container">
       <div class="user-details-container">
         <div class="link-header">
