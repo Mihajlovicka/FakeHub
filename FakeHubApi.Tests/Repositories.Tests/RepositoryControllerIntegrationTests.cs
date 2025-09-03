@@ -647,7 +647,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             var loginResponseDtoObject = JsonConvert.DeserializeObject<LoginResponseDto>(loginResponseDtoString);
             return loginResponseDtoObject?.Token ?? "";
         }
-        
+
         private class FakeRepositoryService : IRepositoryService
         {
             public Func<RepositoryDto, Task<ResponseBase>> SaveFunc { get; set; } =
@@ -693,6 +693,10 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Task<ResponseBase> DeleteRepository(int repositoryId)
             {
                 return DeleteRepositoryFunc(repositoryId);
+            }
+            public Task<ResponseBase> CanEditRepository(int repositoryId)
+            {
+                return null;
             }
         }
 

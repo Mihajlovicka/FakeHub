@@ -34,12 +34,14 @@ import { MatDialog } from "@angular/material/dialog";
 export class ViewRepositoryComponent implements OnInit, OnDestroy {
   public repository!: Repository;
   public capitalizedLetterAvatar: string = "";
+  public canUserDelete: boolean = false;
 
   private readonly repositoryService: RepositoryService =
     inject(RepositoryService);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly helperService: HelperService = inject(HelperService);
   private readonly userService: UserService = inject(UserService);
+  private readonly route: Router = inject(Router);
   private repositorySubscription: Subscription | null = null;
   private routeSubscription: Subscription | null = null;
   private readonly router: Router = inject(Router);
@@ -54,6 +56,7 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
           if (data) {
             this.repository = data;
             this.avatarProfile();
+            this.isOwner();
           }
         });
     }
@@ -68,11 +71,12 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
     }
   }
 
-  public isOwner(): boolean {
-    return (
-      this.repository.ownerUsername !== null &&
-      this.repository.ownerUsername == this.userService.getUserName()
-    );
+  public isOwner(): void {
+    if(this.repository.id){
+      this.repositoryService.canEditRepository(this.repository.id).subscribe((data: boolean) => {
+        this.canUserDelete = data;
+      });
+    }
   }
 
   public avatarProfile(): void {
@@ -82,28 +86,28 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
   }
 
   public openDeleteRepositoryModal(): void {
-  const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
-    data: {
-      title: "Delete Repository",
-      description: `Are you sure you want to delete "${this.repository.name}"?`,
-    },
-  });
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: "Delete Repository",
+        description: `Are you sure you want to delete "${this.repository.name}"?`,
+      },
+    });
 
-  dialogRef.afterClosed().subscribe((isConfirmed) => {
-    if (isConfirmed && this.repository?.id != null) {
-      this.repositoryService.delete(this.repository.id).subscribe({
-        next: () => {
-          this.router.navigate(["/repositories"]);
-        },
-        error: (err) => {
-          console.error("Error deleting repository:", err);
-        },
-      });
-    }
-  });
-}
+    dialogRef.afterClosed().subscribe((isConfirmed) => {
+      if (isConfirmed && this.repository?.id != null) {
+        this.repositoryService.delete(this.repository.id).subscribe({
+          next: () => {
+            this.router.navigate(["/repositories"]);
+          },
+          error: (err) => {
+            console.error("Error deleting repository:", err);
+          },
+        });
+      }
+    });
+  }
 
-  private getRepoId(): number | undefined {
+  private getRepoId(): number | undefined{
     let id = undefined;
 
     this.activatedRoute.paramMap.pipe(take(1)).subscribe((route) => {

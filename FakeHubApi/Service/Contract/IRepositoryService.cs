@@ -11,4 +11,5 @@ public interface IRepositoryService
     Task<ResponseBase> GetAllRepositoriesForOrganization(string orgName);
     Task<ResponseBase> GetRepository(int repositoryId);
     Task<ResponseBase> DeleteRepository(int repositoryId);
+    Task<ResponseBase> CanEditRepository(int repositoryId);
 }

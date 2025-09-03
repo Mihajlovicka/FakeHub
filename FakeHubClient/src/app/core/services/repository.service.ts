@@ -40,4 +40,8 @@ private http: HttpClient = inject(HttpClient);
   public delete(id: number): Observable<void> {
     return this.http.delete<void>(`${Path.Repositories}/${id}`);
   }
+
+  public canEditRepository(id: number): Observable<boolean>{
+    return this.http.get<boolean>(`${Path.Repositories}/canEdit/${id}`);
+  }
 }
