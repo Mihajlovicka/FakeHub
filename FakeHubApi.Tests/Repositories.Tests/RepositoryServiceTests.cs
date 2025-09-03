@@ -6,6 +6,7 @@ using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
+using Google.Protobuf.WellKnownTypes;
 using Moq;
 
 namespace FakeHubApi.Tests.Repositories.Tests
@@ -43,7 +44,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         [Test]
         public async Task Save_RepositoryWithUniqueName_SuccessResponse()
         {
-            var currentUser = new User { Id = 99 , UserName = "TestUser", HarborUserId = 1001 };
+            var currentUser = new User { Id = 99, UserName = "TestUser", HarborUserId = 1001 };
             var organization = new Model.Entity.Organization { Id = 1, Name = "Test Organization" };
             var repositoryDto = new RepositoryDto { OwnerId = 1, Name = "TestRepo", OwnedBy = RepositoryOwnedBy.User };
             var repository = new Model.Entity.Repository { OwnerId = 1, Name = "TestRepo", OwnedBy = RepositoryOwnedBy.User };
@@ -54,6 +55,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryMapperMock.Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
             _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
             _userContextServiceMock.Setup(m => m.GetCurrentUserWithRoleAsync()).ReturnsAsync((currentUser, "USER"));
+            _repositoryManagerMock.Setup(m => m.UserRepository.GetByIdAsync(currentUser.Id)).ReturnsAsync(currentUser);
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -112,6 +114,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _organizationServiceMock
                .Setup(o => o.GetOrganizationById(99))
                .ReturnsAsync(new Model.Entity.Organization { Id = 99, Name = "TestUser" });
+            _repositoryManagerMock.Setup(m => m.UserRepository.GetByIdAsync(currentUser.Id)).ReturnsAsync(currentUser);
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -133,6 +136,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
             _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
+            _repositoryManagerMock.Setup(m => m.UserRepository.GetByIdAsync(currentUser.Id)).ReturnsAsync(currentUser);
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -159,6 +163,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
             _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
+            _repositoryManagerMock.Setup(m => m.UserRepository.GetByIdAsync(currentUser.Id)).ReturnsAsync(currentUser);
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -186,6 +191,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.AddAsync(It.IsAny<Model.Entity.Repository>())).Returns(Task.CompletedTask);
             _repositoryMapperMock.Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>())).Returns(repositoryDto);
             _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync(organization);
+            _repositoryManagerMock.Setup(m => m.UserRepository.GetByIdAsync(currentUser.Id)).ReturnsAsync(currentUser);
 
             var response = await _repositoryService.Save(repositoryDto);
 
@@ -243,8 +249,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(resultDtos, Has.Count.EqualTo(2));
                 Assert.That(resultDtos![0].Name, Is.EqualTo("UserRepo1"));
                 Assert.That(resultDtos![1].Name, Is.EqualTo("UserRepo2"));
-                Assert.That(resultDtos![0].FullName, Is.EqualTo("User/UserRepo1"));
-                Assert.That(resultDtos![1].FullName, Is.EqualTo("User/UserRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("User-UserRepo1/UserRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("User-UserRepo2/UserRepo2"));
             });
         }
 
@@ -273,6 +279,9 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 .ReturnsAsync((user, role));
 
             _repositoryManagerMock
+                .Setup(m => m.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync(user);
+            _repositoryManagerMock
                 .Setup(m => m.RepositoryRepository.GetAllAsync())
                 .ReturnsAsync(repositories);
 
@@ -292,8 +301,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(resultDtos, Has.Count.EqualTo(2));
                 Assert.That(resultDtos![0].Name, Is.EqualTo("AdminRepo1"));
                 Assert.That(resultDtos![1].Name, Is.EqualTo("AdminRepo2"));
-                Assert.That(resultDtos![0].FullName, Is.EqualTo("AdminRepo1"));
-                Assert.That(resultDtos![1].FullName, Is.EqualTo("AdminRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("Admin-AdminRepo1/AdminRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("Admin-AdminRepo2/AdminRepo2"));
             });
         }
 
@@ -340,11 +349,12 @@ namespace FakeHubApi.Tests.Repositories.Tests
         {
             var user = new User { UserName = "OrgUser", Id = 2 };
             var role = "USER";
-            var organization = new Model.Entity.Organization { Name = "MyOrg", Id = 10 };
+            var organization = new Model.Entity.Organization { Name = "MyOrg1", Id = 10 };
+            var organization2 = new Model.Entity.Organization { Name = "MyOrg2", Id = 11 };
             var repositories = new List<Model.Entity.Repository>
             {
                 new() { Id = 1, OwnerId = organization.Id, Name = "OrgRepo1", OwnedBy = RepositoryOwnedBy.Organization },
-                new() { Id = 2, OwnerId = organization.Id, Name = "OrgRepo2", OwnedBy = RepositoryOwnedBy.Organization }
+                new() { Id = 2, OwnerId = organization2.Id, Name = "OrgRepo2", OwnedBy = RepositoryOwnedBy.Organization }
             };
 
             var repositoryDtos = repositories.Select(repo => new RepositoryDto
@@ -364,8 +374,12 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 .ReturnsAsync(repositories);
 
             _repositoryManagerMock
-                .Setup(m => m.OrganizationRepository.GetByIdAsync(organization.Id))
+                .Setup(m => m.OrganizationRepository.GetById(organization.Id))
                 .ReturnsAsync(organization);
+
+            _repositoryManagerMock
+                .Setup(m => m.OrganizationRepository.GetById(organization2.Id))
+                .ReturnsAsync(organization2);
 
             _repositoryMapperMock
                 .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
@@ -383,8 +397,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(resultDtos, Has.Count.EqualTo(2));
                 Assert.That(resultDtos![0].Name, Is.EqualTo("OrgRepo1"));
                 Assert.That(resultDtos![1].Name, Is.EqualTo("OrgRepo2"));
-                Assert.That(resultDtos![0].FullName, Is.EqualTo("MyOrg/OrgRepo1"));
-                Assert.That(resultDtos![1].FullName, Is.EqualTo("MyOrg/OrgRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("MyOrg1-OrgRepo1/OrgRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("MyOrg2-OrgRepo2/OrgRepo2"));
             });
         }
 
@@ -463,8 +477,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(resultDtos, Has.Count.EqualTo(2));
                 Assert.That(resultDtos![0].Name, Is.EqualTo("PublicUserRepo1"));
                 Assert.That(resultDtos![1].Name, Is.EqualTo("PublicUserRepo2"));
-                Assert.That(resultDtos![0].FullName, Is.EqualTo("User/PublicUserRepo1"));
-                Assert.That(resultDtos![1].FullName, Is.EqualTo("User/PublicUserRepo2"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("User-PublicUserRepo1/PublicUserRepo1"));
+                Assert.That(resultDtos![1].FullName, Is.EqualTo("User-PublicUserRepo2/PublicUserRepo2"));
                 Assert.That(resultDtos, Is.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
             });
         }
@@ -601,7 +615,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 OwnedBy = RepositoryOwnedBy.Admin
             };
 
-            var currentUser = new User { Id = 1 };
+            var currentUser = new User { Id = 1 , UserName = "test"};
+            var owner = new User { Id = 2, UserName = "owner" };
 
             _repositoryManagerMock
                 .Setup(m => m.RepositoryRepository.GetByIdAsync(repositoryId))
@@ -610,6 +625,14 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _userContextServiceMock
                 .Setup(m => m.GetCurrentUserWithRoleAsync())
                 .ReturnsAsync((currentUser, "ADMIN"));
+
+            _repositoryManagerMock
+                .Setup(o => o.UserRepository.GetByIdAsync(currentUser.Id))
+                .ReturnsAsync(currentUser);
+
+            _repositoryManagerMock
+                .Setup(o => o.UserRepository.GetByIdAsync(owner.Id))
+                .ReturnsAsync(owner);
 
             var response = await _repositoryService.DeleteRepository(repositoryId);
 
@@ -628,6 +651,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             {
                 Id = repositoryId,
                 OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.Admin,
                 Name = "repo1"
             };
 
@@ -649,6 +673,11 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 .Setup(m => m.deleteProject("adminUser-repo1", repository.Name))
                 .ReturnsAsync(true);
 
+            _repositoryManagerMock
+                .Setup(o => o.UserRepository.GetByIdAsync(currentUser.Id))
+                .ReturnsAsync(currentUser);
+
+
             var response = await _repositoryService.DeleteRepository(repositoryId);
 
             Assert.Multiple(() =>
@@ -660,5 +689,6 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _harborServiceMock.Verify(
                 m => m.deleteProject("adminUser-repo1", repository.Name), Times.Once);
         }
+
     }
 }

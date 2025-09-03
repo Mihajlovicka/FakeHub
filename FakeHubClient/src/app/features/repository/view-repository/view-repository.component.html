@@ -6,7 +6,7 @@
     <div class="username-container">
       <span class="username">{{ repository.name }}</span>
       <app-repository-badge [iconSize]="'medium-icon'" [ownedBy]="repository.ownedBy" [ownerBadge]="repository.badge" />
-      @if (isOwner()) {
+      @if (canUserDelete) {
       <button
         mat-icon-button
         [matMenuTriggerFor]="menu"
@@ -23,7 +23,7 @@
       </mat-menu>
       }
     </div>
-    @if (!isOwner()) {
+    @if (!canUserDelete) {
     <div class="community-info">
       <i class="fa-regular fa-user icons"></i>
       <span class="joined">Owner: {{ repository.ownerUsername }}</span>
@@ -34,12 +34,9 @@
     </div>
   </div>
   <div class="docker-commands">
-    <h3><strong>Docker commands</strong></h3>
-    <span class="docker-commands"> To push a new tag to this repository: </span
-    ><br />
-    <span class="command-view" *ngIf="repository.artifacts.length > 0">
-      docker push {{ repository.artifacts[0].repositoryName }}:tagname
-    </span>
+      <h3><strong>Docker commands</strong></h3>
+      <span class="docker-commands"> To push a new tag to this repository: </span><br>
+      <span class="command-view"> docker push {{repository.fullName}}:tagname </span>
   </div>
 </div>
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">

@@ -1,3 +1,4 @@
+using System.Collections;
 using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
@@ -5,6 +6,7 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FakeHubApi.Service.Implementation;
 
@@ -45,7 +47,7 @@ public class RepositoryService(
             await repositoryManager.RepositoryRepository.AddAsync(repository);
         }
 
-        var projectName = await GetHarborProjectName(repository, currentUser, currentUserRole);
+        var projectName = await GetHarborProjectName(repository);
 
         await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = projectName, Public = !repositoryDto.IsPrivate });
         await harborService.addMember(projectName, new HarborProjectMember { RoleId = (int)HarborRoles.Admin, MemberUser = new HarborProjectMemberUser { UserId = currentUser.HarborUserId, Username = currentUser.UserName } });
@@ -131,7 +133,7 @@ public class RepositoryService(
             return ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.");
 
         var repoDto = await MapModelToDto(repository);
-        var projectName = await GetRepoOwnerUsername(repoDto) + "-" + repository.Name;
+        var projectName = await GetHarborProjectName(repository);
         List<HarborArtifact> artifacts = await harborService.GetTags(projectName, repository.Name);
         repoDto.Artifacts = artifacts.Select(mapperManager.HarborArtifactToArtifactDtoMapper.Map).ToList();
         return ResponseBase.SuccessResponse(repoDto);
@@ -145,21 +147,48 @@ public class RepositoryService(
         if (repository == null)
             return ResponseBase.ErrorResponse("Repository not found");
 
-        if (repository.OwnerId != currentUser.Id)
+        if (!(await GetAdminUsersInRepository(repository)).Any(el => el.UserName == currentUser.UserName))
             return ResponseBase.ErrorResponse("You do not have permission to delete this repository");
 
-        await repositoryManager.RepositoryRepository.DeleteAsync(repository.Id);
+        await repositoryManager.RepositoryRepository.DeleteAsync(repositoryId);
 
-        await harborService.deleteProject(await GetHarborProjectName(repository, currentUser, currentUserRole), repository.Name);
-
+        await harborService.deleteProject(await GetHarborProjectName(repository), repository.Name);
         return ResponseBase.SuccessResponse();
+    }
+
+    public async Task<ResponseBase> CanEditRepository(int repositoryId)
+    {
+        var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
+        var repository = await GetRepositoryForCurrentUser(repositoryId);
+
+        return ResponseBase.SuccessResponse((await GetAdminUsersInRepository(repository)).Any(el => el.UserName == user.UserName));
+    }
+    public async Task<List<User>> GetAdminUsersInRepository(Model.Entity.Repository repository)
+    {
+        List<User> users = new List<User>();
+        if (repository.OwnedBy == RepositoryOwnedBy.Organization)
+        {
+            var organization = await repositoryManager.OrganizationRepository.GetById(repository.OwnerId);
+            users.Add(organization!.Owner);
+            var firstAdminTeam = organization.Teams.FirstOrDefault(el => el.TeamRole == TeamRole.Admin && el.RepositoryId == repository.Id);
+            if (firstAdminTeam != null && firstAdminTeam.Users.Count > 0)
+            {
+                users.AddRange(firstAdminTeam.Users);
+            }
+        }
+        else
+        {
+            var user = await repositoryManager.UserRepository.GetByIdAsync(repository.OwnerId);
+            if(user != null) users.Add(user);
+        }
+        return users;
     }
 
     private async Task<RepositoryDto> MapModelToDto(Model.Entity.Repository repository)
     {
         var repositoryDto = mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap(repository);
         repositoryDto.FullName = await GetFullName(repositoryDto);
-        repositoryDto.OwnerUsername = await GetRepoOwnerUsername(repositoryDto) ?? "";
+        repositoryDto.OwnerUsername = await GetRepoOwnerUsername(repositoryDto.OwnedBy, repositoryDto.OwnerId) ?? "";
 
         return repositoryDto;
     }
@@ -186,26 +215,23 @@ public class RepositoryService(
 
     private async Task<string> GetFullName(RepositoryDto repositoryDto)
     {
-        if (repositoryDto.OwnedBy is not RepositoryOwnedBy.Organization and not RepositoryOwnedBy.User)
-            return repositoryDto.Name;
-
         var defaultUsername = repositoryDto.OwnedBy == RepositoryOwnedBy.Organization ? "UnknownOrg" : "UnknownUser";
-        var username = await GetRepoOwnerUsername(repositoryDto) ?? defaultUsername;
-        return $"{username}/{repositoryDto.Name}";
+        var username = await GetRepoOwnerUsername(repositoryDto.OwnedBy, repositoryDto.OwnerId) ?? defaultUsername;
+        return $"{username}-{repositoryDto.Name}/{repositoryDto.Name}";
     }
 
-    private async Task<string?> GetRepoOwnerUsername(RepositoryDto repositoryDto)
+    private async Task<string?> GetRepoOwnerUsername(RepositoryOwnedBy ownedBy, int ownerId)
     {
         string? fullName;
-        switch (repositoryDto.OwnedBy)
+        switch (ownedBy)
         {
             case RepositoryOwnedBy.Organization:
-                fullName = (await repositoryManager.OrganizationRepository.GetByIdAsync(repositoryDto.OwnerId))?.Name;
+                fullName = (await repositoryManager.OrganizationRepository.GetById(ownerId))?.Name;
                 break;
             case RepositoryOwnedBy.User:
             case RepositoryOwnedBy.Admin:
             case RepositoryOwnedBy.SuperAdmin:
-                fullName = (await repositoryManager.UserRepository.GetByIdAsync(repositoryDto.OwnerId))?.UserName;
+                fullName = (await repositoryManager.UserRepository.GetByIdAsync(ownerId))?.UserName;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -223,11 +249,9 @@ public class RepositoryService(
         return repositories.FirstOrDefault(x => x.Id == repositoryId);
     }
 
-    private async Task<string> GetHarborProjectName(Model.Entity.Repository repository, User user, string userRole)
+    private async Task<string> GetHarborProjectName(Model.Entity.Repository repository)
     {
-        var projectName = repository.OwnerId == -1 || userRole is "ADMIN" or "SUPERADMIN" ? user.UserName : (await organizationService.GetOrganizationById(repository.OwnerId)).Name;
-        projectName += "-" + repository.Name;
-        return projectName;
+        return await GetRepoOwnerUsername(repository.OwnedBy, repository.OwnerId) + "-" + repository.Name;
     }
 
 }
