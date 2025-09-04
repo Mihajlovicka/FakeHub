@@ -22,7 +22,8 @@ export const Path = {
   AdminUsers: usersApi + "admins",
   Team: teamApi,
   OrganizationByUserIdName: organizationApi + "user/names",
-  Repositories: repositoryApi
+  Repositories: repositoryApi,
+  Log: api + 'log'
 };
 
 export function getProfilePath(username: string): string {
