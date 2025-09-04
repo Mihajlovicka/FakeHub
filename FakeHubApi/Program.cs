@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,9 @@ if (environment == "Docker")
     builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true, reloadOnChange: true);
 }
 builder.Configuration.AddEnvironmentVariables();
+
+builder.Host.UseSerilog((context, configuration) =>
+    configuration.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddDbContext<AppDbContext>(option =>
 {
@@ -133,6 +137,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors(CorsExtensions.GetCorsPolicyName());
+
+app.UseSerilogRequestLogging();
 
 app.MapControllers();
 app.ApplyPendingMigrations();

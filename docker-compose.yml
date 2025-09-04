@@ -1,6 +1,9 @@
 services: 
   db:
-    image: mysql:8.4
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile
+    image: fakehub-mysql:8.4
     restart: always
     environment:
       MYSQL_ROOT_USER: root
@@ -11,6 +14,7 @@ services:
       - "3306:3306"
     volumes:
       - db-data:/var/lib/mysql
+      - mysql-logs:/var/log/mysql
     networks:
       - mynet
     healthcheck:
@@ -69,6 +73,7 @@ services:
 volumes:
   db-data:
   nuget_cache:
+  mysql-logs:
 
 
 networks:
