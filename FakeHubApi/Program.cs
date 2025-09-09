@@ -1,3 +1,4 @@
+using System.Net;
 using FakeHubApi.Data;
 using FakeHubApi.Extensions;
 using FakeHubApi.Filters;
@@ -23,8 +24,8 @@ if (environment == "Docker")
 }
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Host.UseSerilog((context, configuration) =>
-    configuration.ReadFrom.Configuration(context.Configuration));
+// builder.Host.UseSerilog((context, configuration) =>
+//     configuration.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddDbContext<AppDbContext>(option =>
 {
@@ -138,7 +139,11 @@ app.UseHttpsRedirection();
 
 app.UseCors(CorsExtensions.GetCorsPolicyName());
 
-app.UseSerilogRequestLogging();
+// app.UseSerilogRequestLogging();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 
 app.MapControllers();
 app.ApplyPendingMigrations();

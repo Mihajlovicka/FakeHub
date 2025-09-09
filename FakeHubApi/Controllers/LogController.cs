@@ -1,4 +1,5 @@
 using FakeHubApi.Model.Dto;
+using FakeHubApi.Model.ServiceResponse;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FakeHubApi.Controllers;
@@ -12,7 +13,7 @@ public class LogController(ILogger<LogController> _logger) : ControllerBase
     {
         _logger.LogInformation("Frontend log: {Message}, Stack: {Stack}, URL: {Url}, Status: {Status}", 
             log.Message, log.Stack, log.Url, log.Status);
-        return Ok();
+        return Ok(ResponseBase.SuccessResponse());
     }
 
 }

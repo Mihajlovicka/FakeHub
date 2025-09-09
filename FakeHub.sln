@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FakeHubApi", "FakeHubApi\FakeHubApi.csproj", "{3B5A5837-9FD1-E499-6582-7978A15F705C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FakeHubApi.Tests", "FakeHubApi.Tests\FakeHubApi.Tests.csproj", "{6DBD7F71-71DA-0C17-FFDF-F0458E94BA37}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3B5A5837-9FD1-E499-6582-7978A15F705C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B5A5837-9FD1-E499-6582-7978A15F705C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B5A5837-9FD1-E499-6582-7978A15F705C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B5A5837-9FD1-E499-6582-7978A15F705C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DBD7F71-71DA-0C17-FFDF-F0458E94BA37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DBD7F71-71DA-0C17-FFDF-F0458E94BA37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DBD7F71-71DA-0C17-FFDF-F0458E94BA37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DBD7F71-71DA-0C17-FFDF-F0458E94BA37}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B23B2F64-D986-4D72-9662-702B7E2F3CC0}
+	EndGlobalSection
+EndGlobal

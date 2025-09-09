@@ -13,7 +13,8 @@ public class AuthService(
     UserManager<User> userManager,
     IMapperManager mapperManager,
     IJwtTokenGenerator jwtTokenGenerator,
-    IHarborService harborService
+    IHarborService harborService,
+    IHarborTokenService harborTokenService
 ) : IAuthService
 {
     public async Task<ResponseBase> Login(LoginRequestDto loginRequestDto)
@@ -29,6 +30,10 @@ public class AuthService(
 
         var roles = await userManager.GetRolesAsync(user);
         var token = jwtTokenGenerator.GenerateToken(user, roles);
+
+        await harborTokenService.GenerateAndStoreHarborToken(user.Id.ToString(), user.Email, loginRequestDto.Password);
+
+
         return ResponseBase.SuccessResponse(new LoginResponseDto
         {
             Token = token,

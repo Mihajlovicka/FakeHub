@@ -23,16 +23,19 @@ public static class ServiceExtensions
         IConfiguration configuration
     )
     {
+
+        services.AddHttpClient("FakeHubApi")
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                UseCookies = false,
+                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; },
+                AllowAutoRedirect = false, 
+            });
+
         services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
         services.Configure<HarborSettings>(configuration.GetSection("Harbor"));
 
-        services.AddHttpClient<HarborService>()
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-            {
-                UseCookies = false,  // This completely disables cookie handling
-                AllowAutoRedirect = false  // Recommended for API clients
-                // ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            });
+
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IDockerImageService, DockerImageService>();
@@ -41,6 +44,10 @@ public static class ServiceExtensions
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IRepositoryService, RepositoryService>();
+        services.AddMemoryCache();
+        services.AddHttpContextAccessor();
+        
+        services.AddSingleton<IHarborTokenService, HarborTokenService>();
         services.AddSingleton<IHarborService, HarborService>();
 
         // Mapper-related scoped services

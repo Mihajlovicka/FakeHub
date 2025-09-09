@@ -49,8 +49,7 @@ public class RepositoryService(
         var projectName = await GetHarborProjectName(repository);
 
         await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = projectName, Public = !repositoryDto.IsPrivate });
-        await harborService.addMember(projectName, new HarborProjectMember { RoleId = (int)HarborRoles.Admin, MemberUser = new HarborProjectMemberUser { UserId = currentUser.HarborUserId, Username = currentUser.UserName } });
-
+        
         return ResponseBase.SuccessResponse(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap(repository));
     }
 
