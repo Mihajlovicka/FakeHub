@@ -17,6 +17,7 @@ public class AuthServiceTests
     private IAuthService _authService;
     private Mock<IUserContextService> _userContextService;
     private Mock<IHarborService> _harborServiceMock;
+    private Mock<IHarborTokenService> _harborTokenServiceMock;
 
     [SetUp]
     public void Setup()
@@ -24,6 +25,7 @@ public class AuthServiceTests
         _mapperManagerMock = new Mock<IMapperManager>();
         _mockJwtTokenGenerator = new Mock<IJwtTokenGenerator>();
         _userContextService = new Mock<IUserContextService>();
+        _harborTokenServiceMock = new Mock<IHarborTokenService>();
         _harborServiceMock = new Mock<IHarborService>();
 
         _mockUserManager = new Mock<UserManager<User>>(
@@ -42,7 +44,8 @@ public class AuthServiceTests
             _mockUserManager.Object,
             _mapperManagerMock.Object,
             _mockJwtTokenGenerator.Object,
-            _harborServiceMock.Object
+            _harborServiceMock.Object,
+            _harborTokenServiceMock.Object
         );
     }
 

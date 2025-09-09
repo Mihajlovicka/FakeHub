@@ -5,7 +5,9 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.Settings;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
 public interface IHarborService
@@ -37,20 +39,63 @@ public class HarborService : IHarborService
     private const string Artifacts = "artifacts";
 
     private readonly ILogger<HarborService> _logger;
+    private readonly IHarborTokenService _harborTokenService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private string _csrfToken = string.Empty;
 
-    public HarborService(HttpClient httpClient, IOptions<HarborSettings> settings, ILogger<HarborService> logger)
+    public HarborService(IHttpClientFactory clientFactory, IOptions<HarborSettings> settings, ILogger<HarborService> logger, IHarborTokenService harborTokenService,
+         IServiceScopeFactory scopeFactory)
     {
-        _httpClient = httpClient;
+        _httpClient = clientFactory.CreateClient("FakeHubApi");
         _settings = settings.Value;
         _logger = logger;
 
+        _harborTokenService = harborTokenService;
+        _scopeFactory = scopeFactory;
+
         _httpClient.BaseAddress = new Uri(_settings.Url);
 
+        SetDefaultAuthorization();
+    }
+
+    private void SetDefaultAuthorization()
+    {
         var authToken = Encoding.ASCII.GetBytes($"{_settings.Username}:{_settings.Password}");
         _httpClient.DefaultRequestHeaders.Remove("Cookie");
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authToken));
+    }
+    private async Task SetUserAuthorization()
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+            var httpContextAccessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+
+            var user = await userManager.GetUserAsync(httpContextAccessor.HttpContext!.User);
+
+            // Get user's Harbor credentials
+            var credentials = await _harborTokenService.GetHarborToken(user.Id.ToString());
+            if (credentials == null || credentials.Expiry < DateTime.UtcNow)
+            {
+                _logger.LogWarning("No valid Harbor token found for user {UserId}, using default credentials", user.Id);
+                return;
+            }
+
+            // Set authorization with user's credentials
+            var authToken = Encoding.ASCII.GetBytes($"{credentials.Email}:{credentials.DecryptedPassword}");
+            _httpClient.DefaultRequestHeaders.Remove("Cookie");
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authToken));
+
+            _logger.LogInformation("Using user-specific credentials for Harbor API calls");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set user authorization, falling back to default credentials");
+            SetDefaultAuthorization();
+        }
     }
 
     public async Task<(bool Success, TResponse? Response, HttpStatusCode? StatusCode, string? Error)> SendRequestAsync<TResponse>(
@@ -59,6 +104,8 @@ public class HarborService : IHarborService
         object? payload = null,
         bool expectResponse = true) where TResponse : class
     {
+
+        await SetUserAuthorization();
 
         _httpClient.DefaultRequestHeaders.Remove("Cookie");
 
@@ -142,7 +189,7 @@ public class HarborService : IHarborService
 
     public async Task<int?> getUserId(string username)
     {
-        var (success, users, _, _) = await SendRequestAsync<List<HarborUser>>(HttpMethod.Get, $"{Users}search?page=1&page_size=10&username={Uri.EscapeDataString(username)}", null, false);
+        var (success, users, _, _) = await SendRequestAsync<List<HarborUser>>(HttpMethod.Get, $"{Users}search?page=1&page_size=10&username={Uri.EscapeDataString(username)}", null, true);
         if (success && users != null && users.Count > 0)
         {
             return users[0].UserId;

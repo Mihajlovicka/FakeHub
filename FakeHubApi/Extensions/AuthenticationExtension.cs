@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using FakeHubApi.Model.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -36,6 +37,36 @@ public static class AuthenticationExtension
                     ValidIssuer = jwtOptions.Issuer,
                     ValidAudience = jwtOptions.Audience,
                     ValidateAudience = true,
+                    ValidateLifetime = true
+                };
+
+                x.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = async context =>
+                    {
+                        var harborTokenService = context.HttpContext.RequestServices
+                            .GetRequiredService<IHarborTokenService>();
+
+                        // izvuci raw token
+                        var token = context.Request.Headers["Authorization"]
+                            .FirstOrDefault()?.Split(" ").Last();
+
+                        string userId = null;
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            try
+                            {
+                                var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+                                userId = jwt.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+                            }
+                            catch
+                            {
+                                // ako token ne može da se parsira, userId ostaje null
+                            }
+                        }
+
+                        await harborTokenService.HandleInvalidToken(userId);
+                    }
                 };
             });
         builder.Services.AddAuthorization();
