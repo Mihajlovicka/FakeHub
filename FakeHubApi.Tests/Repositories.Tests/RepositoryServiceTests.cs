@@ -237,6 +237,14 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 .Setup(m => m.UserRepository.GetByIdAsync(It.IsAny<int>()))
                 .ReturnsAsync(user);
 
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[0].Id))
+                .ReturnsAsync(repositories[0]);
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[1].Id))
+                .ReturnsAsync(repositories[1]);
+
             var response = await _repositoryService.GetAllRepositoriesForCurrentUser();
 
             Assert.Multiple(() =>
@@ -288,6 +296,14 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryMapperMock
                 .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
                 .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[0].Id))
+                .ReturnsAsync(repositories[0]);
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[1].Id))
+                .ReturnsAsync(repositories[1]);
 
             var response = await _repositoryService.GetAllRepositoriesForCurrentUser();
 
@@ -384,6 +400,14 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryMapperMock
                 .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
                 .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+            
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[0].Id))
+                .ReturnsAsync(repositories[0]);
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[1].Id))
+                .ReturnsAsync(repositories[1]);
 
             var response = await _repositoryService.GetAllRepositoriesForCurrentUser();
 
@@ -456,6 +480,14 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryManagerMock
                 .Setup(m => m.RepositoryRepository.GetUserRepositoriesByOwnerId(user.Id, true))
                 .ReturnsAsync(repositories);
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[0].Id))
+                .ReturnsAsync(repositories[0]);
+
+            _repositoryManagerMock
+                .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[1].Id))
+                .ReturnsAsync(repositories[1]);
 
             _repositoryMapperMock
                 .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))

@@ -15,7 +15,8 @@ public class OrganizationService(
     IRepositoryManager repositoryManager,
     IUserContextService userContext,
     IUserService userService,
-    IHarborService harborService
+    IHarborService harborService,
+    IServiceProvider serviceProvider
 ) : IOrganizationService
 {
     public async Task<ResponseBase> Add(OrganizationDto model)
@@ -70,6 +71,10 @@ public class OrganizationService(
             return ResponseBase.ErrorResponse(
                 "Organization is already deactivated."
             );
+
+        var repoService = serviceProvider.GetRequiredService<IRepositoryService>();
+        await repoService.DeleteRepositoriesOfOrganization(existingOrganization);
+
 
         existingOrganization.Active = false;
         foreach (var existingOrganizationTeam in existingOrganization.Teams)

@@ -40,10 +40,10 @@
   </div>
 </div>
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
-    <mat-tab label="Tags">
-    <ng-template matTabContent>
-        <app-tags [artifacts]="repository?.artifacts || []"></app-tags>
-    </ng-template>
-  </mat-tab>
+    <mat-tab label="Tags" *ngIf="repository">
+        <ng-template matTabContent>
+            <app-tags [repository]="repository"></app-tags>
+        </ng-template>
+    </mat-tab>
   <mat-tab label="Collaborators"></mat-tab>
 </mat-tab-group>

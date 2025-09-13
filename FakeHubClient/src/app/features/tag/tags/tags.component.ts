@@ -1,20 +1,27 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, inject, Input, OnInit } from '@angular/core';
 import { Artifact } from '../../../core/model/tag';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIcon } from "@angular/material/icon";
+import { TagService } from '../../../core/services/tag.service';
+import { Repository } from '../../../core/model/repository';
 
 @Component({
   selector: 'app-tags',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIcon],
   templateUrl: './tags.component.html',
   styleUrl: './tags.component.css'
 })
 export class TagsComponent implements OnInit{
-  @Input() artifacts: Artifact[] = [];
+  @Input() repository!: Repository;
+
+  private readonly tagsService: TagService = inject(TagService);
 
   filteredArtifacts: Artifact[] = [];
   searchQuery: string = '';
+
+  canDeleteTags: boolean = true;
 
   selectedSortOption: number = 1;
   sortBy: { id: number; name: string }[] = [
@@ -25,36 +32,52 @@ export class TagsComponent implements OnInit{
   ];
 
   ngOnInit() {
-    this.filteredArtifacts = structuredClone(this.artifacts);
+    if(this.repository) {
+      this.filteredArtifacts = structuredClone(this.repository.artifacts);
+      this.tagsService.canUserDeleteTags(this.repository.id!).subscribe((canDelete: boolean) => {
+        this.canDeleteTags = canDelete;
+      });
+    }
   }
 
   search() {
     const query = this.searchQuery.trim().toLowerCase();
 
     if (!query) {
-      this.filteredArtifacts = structuredClone(this.artifacts);
+      this.filteredArtifacts = structuredClone(this.repository?.artifacts || []);
       return;
     }
 
-    this.filteredArtifacts = this.artifacts.filter(artifact =>
-      artifact.tags[0].name.toLowerCase().includes(query)
-    );
+    this.filteredArtifacts = this.repository?.artifacts.filter(artifact =>
+      artifact.tag.name.toLowerCase().includes(query)
+    ) || [];
   }
 
   sortArtifacts() {
-    console.log(this.selectedSortOption);
-    console.log(this.artifacts);
-    this.filteredArtifacts = structuredClone(this.artifacts);
+    this.filteredArtifacts = structuredClone(this.repository?.artifacts || []);
     if(this.selectedSortOption == 1){
-      this.filteredArtifacts.sort((a,b)=> a.tags[0].name.localeCompare(b.tags[0].name))
+      this.filteredArtifacts.sort((a,b)=> a.tag.name.localeCompare(b.tag.name))
     } 
     if(this.selectedSortOption == 2){
-      this.filteredArtifacts.sort((a,b)=> b.tags[0].name.localeCompare(a.tags[0].name))
+      this.filteredArtifacts.sort((a,b)=> b.tag.name.localeCompare(a.tag.name))
     } else if(this.selectedSortOption == 3){
-      this.filteredArtifacts.sort((a, b) => new Date(b.tags[0].pushTime).getTime() - new Date(a.tags[0].pushTime).getTime());
+      this.filteredArtifacts.sort((a, b) => new Date(b.tag.pushTime).getTime() - new Date(a.tag.pushTime).getTime());
     } else if(this.selectedSortOption == 4){
-      this.filteredArtifacts.sort((a, b) => new Date(a.tags[0].pushTime).getTime() - new Date(b.tags[0].pushTime).getTime());
+      this.filteredArtifacts.sort((a, b) => new Date(a.tag.pushTime).getTime() - new Date(b.tag.pushTime).getTime());
     }
     console.log(this.filteredArtifacts);
   }
+
+  public deleteTag(artifact: Artifact): void{
+    if(this.repository) {
+      this.tagsService.deleteTag(artifact, this.repository.id!).subscribe((artifacts: Artifact[]) => {
+          this.repository.artifacts = artifacts;
+          this.filteredArtifacts = structuredClone(this.repository?.artifacts || []);
+      });
+    }
+  }
+
+  trackByIndexName(index: number, item: Artifact): string {
+    return `${item.id}-${item.tag.name}-${index}`;
+  } 
 }

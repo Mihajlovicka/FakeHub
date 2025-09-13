@@ -6,8 +6,9 @@ namespace FakeHubApi.Model.Dto;
 public class ArtifactDto
 {
     public int? Id { get; set; }
+    public string Digest { get; set; } = "";
     public string RepositoryName { get; set; } = "";
-    public List<TagDto> Tags { get; set; } = new List<TagDto>();
+    public TagDto Tag { get; set; } = new TagDto();
     public ExtraAttrsDto ExtraAttrs { get; set; } = new ExtraAttrsDto();
 
 }

@@ -27,6 +27,7 @@ export const HttpResponseInterceptor: HttpInterceptorFn = (
     }),
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
+        localStorage.clear();
         popupHandler.openSnackbar('Unauthorized');
         router.navigate(['/login']);
       } else if (error.status === 403) {

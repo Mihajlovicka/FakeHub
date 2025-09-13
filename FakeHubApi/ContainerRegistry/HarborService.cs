@@ -25,7 +25,7 @@ public interface IHarborService
     Task<bool> removeMemberFromTeam(string projectName, string username);
     Task<List<HarborArtifact>> GetTags(string projectName, string repositoryName);
     Task<bool> UpdateProjectVisibility(string projectName, bool isPublic);
-
+    Task<bool> deleteTag(string projectName, string repositoryName, string digest, string tagName, bool useAdminToken = false);
 }
 
 public class HarborService : IHarborService
@@ -77,7 +77,7 @@ public class HarborService : IHarborService
 
             // Get user's Harbor credentials
             var credentials = await _harborTokenService.GetHarborToken(user.Id.ToString());
-            if (credentials == null || credentials.Expiry < DateTime.UtcNow)
+            if (credentials == null || credentials.Expiry < DateTime.Now)
             {
                 _logger.LogWarning("No valid Harbor token found for user {UserId}, using default credentials", user.Id);
                 return;
@@ -102,10 +102,11 @@ public class HarborService : IHarborService
         HttpMethod method,
         string url,
         object? payload = null,
-        bool expectResponse = true) where TResponse : class
+        bool expectResponse = true,
+        bool useAdminToken = false) where TResponse : class
     {
 
-        await SetUserAuthorization();
+        if (!useAdminToken) await SetUserAuthorization();
 
         _httpClient.DefaultRequestHeaders.Remove("Cookie");
 
@@ -292,6 +293,25 @@ public class HarborService : IHarborService
 
         return success;
     }
+    
+    public async Task<bool> deleteTag(string projectName, string repositoryName, string digest, string tagName, bool useAdminToken = false)
+    {
+        if (useAdminToken)
+        {
+            SetDefaultAuthorization();
+        }
+        var (success, _, _, _) = await SendRequestAsync<object>(HttpMethod.Delete, $"{Projects}{projectName}/{Repositories}{repositoryName}/{Artifacts}/{digest}/tags/{Uri.EscapeDataString(tagName)}", null, false, useAdminToken);
+
+
+        var (successGetTags, tags, _, _) = await SendRequestAsync<List<HarborTag>>(HttpMethod.Get, $"{Projects}{projectName}/{Repositories}{repositoryName}/{Artifacts}/{digest}/tags", null, true, useAdminToken);
+        if (success && successGetTags && tags != null && tags.Count == 0)
+        {
+            var (successDeleteArtifact, _, _, _) = await SendRequestAsync<object>(HttpMethod.Delete, $"{Projects}{projectName}/{Repositories}{repositoryName}/{Artifacts}/{digest}", null, false, useAdminToken);
+            return successDeleteArtifact;
+        }
+
+        return success;
+    }
 }
 
 
@@ -410,6 +430,9 @@ public class HarborArtifact
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }
+
+    [JsonPropertyName("digest")]
+    public string Digest { get; set; } = string.Empty;
 
     [JsonPropertyName("tags")]
     public List<HarborTag> Tags { get; set; } = new List<HarborTag>();

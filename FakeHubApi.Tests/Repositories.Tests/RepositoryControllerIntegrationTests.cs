@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Data;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -782,6 +783,23 @@ namespace FakeHubApi.Tests.Repositories.Tests
             private Func<int, Task<ResponseBase>> DeleteRepositoryFunc { get; set; } =
                 repositoryId => Task.FromResult(new ResponseBase { Success = true });
 
+            public Task<(string, string)> GetFullProjectRepositoryName(int repositoryId)
+            {
+                // Return dummy values for testing
+                return Task.FromResult(("ProjectName", "RepositoryName"));
+            }
+
+            public List<ArtifactDto> MapHarborArtifactToArtifactDto(HarborArtifact source)
+            {
+                // Return an empty list for testing
+                return new List<ArtifactDto>();
+            }
+
+            public Task DeleteRepositoriesOfOrganization(Model.Entity.Organization existingOrganization)
+            {
+                // Simulate async deletion
+                return Task.CompletedTask;
+            }
             public Func<EditRepositoryDto, Task<ResponseBase>> EditRepositoryFunc { get; set; } =
                 dto => Task.FromResult(new ResponseBase
                 {

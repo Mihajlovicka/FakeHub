@@ -13,6 +13,7 @@ import { TagsComponent } from "../../tag/tags/tags.component";
 import { RepositoryBadgeComponent } from "../../../shared/components/repository-badge/repository-badge.component";
 import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
 import { MatDialog } from "@angular/material/dialog";
+import { MatInputModule } from "@angular/material/input";
 
 @Component({
   selector: "app-view-repository",
@@ -25,8 +26,9 @@ import { MatDialog } from "@angular/material/dialog";
     RouterModule,
     MatTabsModule,
     TagsComponent,
-    RepositoryBadgeComponent
-  ],
+    RepositoryBadgeComponent,
+    MatInputModule
+],
   templateUrl: "./view-repository.component.html",
   styleUrl: "./view-repository.component.css",
 })
@@ -51,7 +53,6 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
     if (repoId) {
       this.canEditRepositorySubscription = this.getRepositorySubscription = this.repositoryService
         .getRepository(repoId)
-        .pipe(take(1))
         .subscribe((data) => {
           if (data) {
             this.repository = data;

@@ -9,8 +9,7 @@ public class MapperManager(
     IBaseMapper<User, UserDto> userToUserDto,
     IBaseMapper<OrganizationDto, Organization> organizationDtoToOrganizationMapper,
     IBaseMapper<TeamDto, Team> teamDtoToTeamMapper,
-    IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryDtoToRepositoryMapper,
-    IBaseMapper<HarborArtifact, ArtifactDto> harborArtifactToArtifactDtoMapper
+    IBaseMapper<RepositoryDto, Model.Entity.Repository> repositoryDtoToRepositoryMapper
 ) : IMapperManager
 {
     public IBaseMapper<
@@ -33,7 +32,4 @@ public class MapperManager(
 
     public IBaseMapper<RepositoryDto, Model.Entity.Repository> RepositoryDtoToRepositoryMapper { get; set; } =
         repositoryDtoToRepositoryMapper;
-
-    public IBaseMapper<HarborArtifact, ArtifactDto> HarborArtifactToArtifactDtoMapper { get; set; } =
-        harborArtifactToArtifactDtoMapper;
 }
