@@ -27,32 +27,36 @@
 </div>
 <div class="users-content-container">
   <div class="users-container">
-    @for (artifact of filteredArtifacts; track artifact.id) {
+    @for (artifact of filteredArtifacts; track trackByIndexName($index, artifact)) {
     <div class="user-container">
       <div class="user-details-container">
         <div class="link-header">
-          <span class="ellipsis">{{ artifact.tags[0].name }}</span>
-        </div>
-        <div class="os">
-            @if(artifact.extraAttrs.os === 'linux'){
+          <span class="ellipsis">{{ artifact?.tag?.name }}</span>
+          <div class="os">
+            @if(artifact?.extraAttrs?.os === 'linux'){
                 <span>🐧</span>
             }
-            @if(artifact.extraAttrs.os === 'windows'){
+            @if(artifact?.extraAttrs?.os === 'windows'){
                 <span>🪟</span>
             }
-            {{ artifact.extraAttrs.os }}
+            {{ artifact?.extraAttrs?.os }}
+          </div>
+           @if(canDeleteTags){
+          <button class="delete-button" (click)="deleteTag(artifact)">
+              <mat-icon>delete</mat-icon></button>
+          }
         </div>
          <div class="multi-line-ellipsis">
         </div>
         <div class="link-footer">
           <span class="footer-text"
-            >Pushed at: {{ artifact.tags[0].pushTime | date : "mediumDate" }}</span
+            >Pushed at: {{ artifact?.tag?.pushTime | date : "mediumDate" }}</span
           >
           <span class="footer-text"
-            >Last pull: {{ artifact.tags[0].pullTime ? '/' : artifact.tags[0].pullTime | date : "mediumDate" }}</span
+            >Last pull: {{ artifact?.tag?.pullTime ? '/' : artifact?.tag?.pullTime | date : "mediumDate" }}</span
           >
           <span class="footer-text"
-            >docker pull {{ artifact.repositoryName }}:{{ artifact.tags[0].name }}</span
+            >docker pull {{ artifact?.repositoryName }}:{{ artifact?.tag?.name }}</span
           >
         </div>
       </div>

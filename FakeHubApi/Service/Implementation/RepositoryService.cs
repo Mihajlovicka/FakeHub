@@ -124,6 +124,16 @@ public class RepositoryService(
 
     }
 
+    public async Task<(string, string)> GetFullProjectRepositoryName(int repositoryId)
+    {
+        var repository = await repositoryManager.RepositoryRepository.GetByIdAsync(repositoryId);
+        if (repository == null)
+            throw new Exception("Repository not found");
+
+        var projectName = await GetHarborProjectName(repository);
+        return (projectName, repository.Name);
+    }
+
     public async Task<ResponseBase> GetRepository(int repositoryId)
     {
         var repository = await GetRepositoryForCurrentUser(repositoryId);
@@ -133,7 +143,7 @@ public class RepositoryService(
         var repoDto = await MapModelToDto(repository);
         var projectName = await GetHarborProjectName(repository);
         List<HarborArtifact> artifacts = await harborService.GetTags(projectName, repository.Name);
-        repoDto.Artifacts = artifacts.Select(mapperManager.HarborArtifactToArtifactDtoMapper.Map).ToList();
+        repoDto.Artifacts = artifacts.SelectMany(MapHarborArtifactToArtifactDto).ToList();
         return ResponseBase.SuccessResponse(repoDto);
     }
 
@@ -207,6 +217,42 @@ public class RepositoryService(
         return ResponseBase.SuccessResponse(updatedDto);
     }
 
+    public async Task DeleteRepositoriesOfOrganization(Organization existingOrganization)
+    {
+        var orgRepositories = await repositoryManager.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(existingOrganization.Id);
+        foreach (var repo in orgRepositories)
+        {
+            await repositoryManager.RepositoryRepository.DeleteAsync(repo.Id);
+            await harborService.deleteProject(await GetHarborProjectName(repo), repo.Name);
+        }
+    }
+
+    public List<ArtifactDto> MapHarborArtifactToArtifactDto(HarborArtifact source)
+    {
+        var artifacts = new List<ArtifactDto>();
+        source.Tags.ForEach(tag =>
+        {
+            var artifactDto = new ArtifactDto()
+            {
+                Id = source.Id,
+                Digest = source.Digest,
+                RepositoryName = source.RepositoryName,
+                Tag = new TagDto
+                {
+                    Name = tag.Name,
+                    Id = tag.Id,
+                    PullTime = tag.PullTime,
+                    PushTime = tag.PushTime
+                },
+                ExtraAttrs = new ExtraAttrsDto
+                {
+                    Os = source.ExtraAttrs.Os
+                }
+            };
+            artifacts.Add(artifactDto);
+        });
+        return artifacts;
+    }
 
     private async Task<(bool IsAllowed, Model.Entity.Repository? Repository)> IsEditAllowed(int repositoryId)
     {
@@ -250,9 +296,8 @@ public class RepositoryService(
 
     private async Task<string> GetFullName(RepositoryDto repositoryDto)
     {
-        var defaultUsername = repositoryDto.OwnedBy == RepositoryOwnedBy.Organization ? "UnknownOrg" : "UnknownUser";
-        var username = await GetRepoOwnerUsername(repositoryDto.OwnedBy, repositoryDto.OwnerId) ?? defaultUsername;
-        return $"{username}-{repositoryDto.Name}/{repositoryDto.Name}";
+        var (projectName, repoName)  = await GetFullProjectRepositoryName(repositoryDto.Id ?? -1);
+        return $"{projectName}/{repoName}";
     }
 
     private async Task<string?> GetRepoOwnerUsername(RepositoryOwnedBy ownedBy, int ownerId)

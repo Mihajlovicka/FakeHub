@@ -28,7 +28,7 @@ public class HarborTokenService : IHarborTokenService
     public async Task<string> GenerateAndStoreHarborToken(string userId, string email, string password)
     {
         var token = Guid.NewGuid().ToString();
-        var expiry = DateTime.UtcNow.AddMinutes(_settings.Duration);
+        var expiry = DateTime.Now.AddMinutes(_settings.Duration);
 
         // Encrypt the password for storage
         var encryptedPassword = _protector.Protect(password);

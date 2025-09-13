@@ -7,7 +7,8 @@ export interface Tag {
 
 export interface Artifact {
     id: number;
-    tags: Tag[];
+    digest: string;
+    tag: Tag;
     repositoryName: string;
     extraAttrs: ExtraAttrs;
 }

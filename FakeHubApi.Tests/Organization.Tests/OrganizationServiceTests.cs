@@ -20,7 +20,7 @@ public class OrganizationServiceTests
 
     private Mock<IUserService> _userServiceMock;
     private Mock<IHarborService> _harborServiceMock;
-
+    private Mock<IServiceProvider> _serviceProviderMock;
     private Mock<ICrudRepository<Model.Entity.Organization>> _organizationRepositoryMock;
 
     [SetUp]
@@ -32,6 +32,7 @@ public class OrganizationServiceTests
         _organizationRepositoryMock = new Mock<ICrudRepository<Model.Entity.Organization>>();
         _userServiceMock = new Mock<IUserService>();
         _harborServiceMock = new Mock<IHarborService>();
+        _serviceProviderMock = new Mock<IServiceProvider>();
 
         _userManagerMock = new Mock<UserManager<User>>(
             new Mock<IUserStore<User>>().Object,
@@ -51,7 +52,8 @@ public class OrganizationServiceTests
             _repositoryManagerMock.Object,
             _userContextServiceMock.Object,
             _userServiceMock.Object,
-            _harborServiceMock.Object
+            _harborServiceMock.Object,
+            _serviceProviderMock.Object
         );
     }
 
@@ -644,6 +646,12 @@ public class OrganizationServiceTests
         _userContextServiceMock.Setup(uc => uc.GetCurrentUserAsync()).ReturnsAsync(loggedInUser);
         _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.GetByName(orgName)).ReturnsAsync(organization);
         _repositoryManagerMock.Setup(rm => rm.OrganizationRepository.UpdateAsync(organization)).Returns(Task.CompletedTask);
+        _repositoryManagerMock.Setup(rm => rm.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(It.IsAny<int>())).ReturnsAsync(new List<Model.Entity.Repository>());
+        _repositoryManagerMock.Setup(rm => rm.RepositoryRepository.DeleteAsync(It.IsAny<int>())).Returns(Task.CompletedTask);
+
+        _serviceProviderMock
+            .Setup(sp => sp.GetService(typeof(IRepositoryService)))
+            .Returns(new Mock<IRepositoryService>().Object);
 
         var result = await _organizationService.DeactivateOrganization(orgName);
 

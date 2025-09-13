@@ -19,6 +19,4 @@ public interface IMapperManager
     IBaseMapper<TeamDto, Team> TeamDtoToTeamMapper { get; }
 
     IBaseMapper<RepositoryDto, Model.Entity.Repository> RepositoryDtoToRepositoryMapper { get; set; }
-
-    IBaseMapper<HarborArtifact, ArtifactDto> HarborArtifactToArtifactDtoMapper { get; set; }
 }
