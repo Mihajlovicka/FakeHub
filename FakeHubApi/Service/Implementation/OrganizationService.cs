@@ -3,6 +3,7 @@ using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using Microsoft.AspNetCore.Identity;
@@ -16,7 +17,8 @@ public class OrganizationService(
     IUserContextService userContext,
     IUserService userService,
     IHarborService harborService,
-    IServiceProvider serviceProvider
+    IServiceProvider serviceProvider,
+    IRedisCacheService _cacheService
 ) : IOrganizationService
 {
     public async Task<ResponseBase> Add(OrganizationDto model)
@@ -31,6 +33,8 @@ public class OrganizationService(
         await repositoryManager.OrganizationRepository.AddAsync(organization);
 
         await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = organization.Name });
+
+        await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{user.UserName}");
 
         return ResponseBase.SuccessResponse();
     }
@@ -51,6 +55,10 @@ public class OrganizationService(
         existingOrganization.Description = model.Description;
         existingOrganization.ImageBase64 = model.ImageBase64;
         await repositoryManager.OrganizationRepository.UpdateAsync(existingOrganization);
+
+        await _cacheService.RemoveCacheValueAsync($"Organization:{name}");
+        existingOrganization.Users.ForEach(async (el) => await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{el.UserName}"));
+        
         return ResponseBase.SuccessResponse();
     }
 
@@ -89,27 +97,44 @@ public class OrganizationService(
         }
 
         await repositoryManager.OrganizationRepository.UpdateAsync(existingOrganization);
+
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
+        existingOrganization.Users.ForEach(async (el) => await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{el.UserName}"));
+
         return ResponseBase.SuccessResponse();
     }
 
     public async Task<ResponseBase> GetByName(string name)
     {
+        var cachedOrg = await _cacheService.GetCacheValueAsync<OrganizationDto>($"Organization:{name}");
+        if (cachedOrg != null)
+        {
+            return ResponseBase.SuccessResponse(cachedOrg);
+        }
         var organization = await GetOrganization(name);
         if (organization == null)
             return ResponseBase.ErrorResponse("Organization not found.");
 
-        return ResponseBase.SuccessResponse(
-            mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap(organization)
-        );
+        var orgDto = mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap(organization);
+        await _cacheService.SetCacheValueAsync($"Organization:{name}", orgDto);
+
+        return ResponseBase.SuccessResponse(orgDto);
     }
 
     public async Task<ResponseBase> GetByUser()
     {
         var user = await userContext.GetCurrentUserAsync();
+        var cachedOrgs = await _cacheService.GetCacheValueAsync<List<OrganizationDto>>($"OrganizationsByUser:{user.UserName}");
+        if (cachedOrgs != null && cachedOrgs.Count > 0)
+        {
+            return ResponseBase.SuccessResponse(cachedOrgs);
+        }
         var organizations = await repositoryManager.OrganizationRepository.GetByUser(user.Id);
-        return ResponseBase.SuccessResponse(
-            organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap)
-        );
+        var orgDtos = organizations.Select(mapperManager.OrganizationDtoToOrganizationMapper.ReverseMap);
+
+        await _cacheService.SetCacheValueAsync($"OrganizationsByUser:{user.UserName}", orgDtos);
+
+        return ResponseBase.SuccessResponse(orgDtos);
     }
 
     public async Task<ResponseBase> Search(string? query)
@@ -168,9 +193,13 @@ public class OrganizationService(
                 );
                 var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
                 responseUsers.Add(responseUser);
+                
+                await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{user.UserName}");
             }
 
             await repositoryManager.OrganizationRepository.UpdateAsync(organization);
+
+            await _cacheService.RemoveCacheValueAsync($"Organization:{name}");
 
             return ResponseBase.SuccessResponse(responseUsers);
         }
@@ -212,6 +241,9 @@ public class OrganizationService(
             await repositoryManager.OrganizationRepository.UpdateAsync(organization);
 
             var responseUser = mapperManager.UserToUserDtoMapper.Map(user);
+
+            await _cacheService.RemoveCacheValueAsync($"Organization:{name}");
+            await _cacheService.RemoveCacheValueAsync($"OrganizationsByUser:{user.UserName}");
 
             return ResponseBase.SuccessResponse(responseUser);
         }

@@ -3,6 +3,7 @@ using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 
@@ -14,7 +15,8 @@ public class RepositoryService(
     IRepositoryManager repositoryManager,
     IUserContextService userContextService,
     IUserService userService,
-    IHarborService harborService
+    IHarborService harborService,
+    IRedisCacheService _cacheService
 ) : IRepositoryService
 {
     public async Task<ResponseBase> Save(RepositoryDto repositoryDto)
@@ -37,6 +39,11 @@ public class RepositoryService(
         if (repositoryDto.OwnerId == -1)
         {
             repository.OwnerId = currentUser.Id;
+            await _cacheService.RemoveCacheValueAsync($"RepositoriesByUser:{currentUser.UserName}");
+        }
+        else
+        {
+            await RemoveCacheRepositoriesByOrganization(repository);
         }
 
         var (success, errorMessage) = await ValidateRepository(repository);
@@ -49,7 +56,7 @@ public class RepositoryService(
         var projectName = await GetHarborProjectName(repository);
 
         await harborService.createUpdateProject(new HarborProjectCreate { ProjectName = projectName, Public = !repositoryDto.IsPrivate });
-        
+
         return ResponseBase.SuccessResponse(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap(repository));
     }
 
@@ -70,13 +77,23 @@ public class RepositoryService(
 
     public async Task<ResponseBase> GetAllRepositoriesForCurrentUser()
     {
+
         var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
+
+        var cacheKey = $"RepositoriesByUser:{user.UserName}";
+        var cachedRepository = await _cacheService.GetCacheValueAsync<List<RepositoryDto>>(cacheKey);
+        if (cachedRepository != null && cachedRepository.Count > 0)
+        {
+            return ResponseBase.SuccessResponse(cachedRepository);
+        }
 
         var repositories = await GetRepositoriesByRole(user.Id, role);
 
         var repositoryDtos = repositories.Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap).ToList();
 
         var updatedDtos = await GetFullNames(repositoryDtos);
+
+        await _cacheService.SetCacheValueAsync(cacheKey, updatedDtos);
 
         return ResponseBase.SuccessResponse(updatedDtos);
     }
@@ -109,6 +126,13 @@ public class RepositoryService(
 
     public async Task<ResponseBase> GetAllRepositoriesForOrganization(string orgName)
     {
+        var cacheKey = $"RepositoriesByOrganization:{orgName}";
+        var cachedRepository = await _cacheService.GetCacheValueAsync<List<RepositoryDto>>(cacheKey);
+        if (cachedRepository != null)
+        {
+            return ResponseBase.SuccessResponse(cachedRepository);
+        }
+
         var organization = await organizationService.GetOrganization(orgName);
 
         if (organization == null)
@@ -119,6 +143,8 @@ public class RepositoryService(
         var orgRepositories = await repositoryManager.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(organization.Id);
 
         var repositoryDtos = orgRepositories.Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap).ToList();
+
+        await _cacheService.SetCacheValueAsync(cacheKey, repositoryDtos);
 
         return ResponseBase.SuccessResponse(repositoryDtos);
 
@@ -136,14 +162,21 @@ public class RepositoryService(
 
     public async Task<ResponseBase> GetRepository(int repositoryId)
     {
+
+        var cacheKey = $"Repository:{repositoryId}";
+        var cachedRepository = await _cacheService.GetCacheValueAsync<RepositoryDto>(cacheKey);
+        if (cachedRepository != null)
+        {
+            return ResponseBase.SuccessResponse(cachedRepository);
+        }
         var repository = await GetRepositoryForCurrentUser(repositoryId);
         if (repository == null)
             return ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.");
 
         var repoDto = await MapModelToDto(repository);
-        var projectName = await GetHarborProjectName(repository);
-        List<HarborArtifact> artifacts = await harborService.GetTags(projectName, repository.Name);
-        repoDto.Artifacts = artifacts.SelectMany(MapHarborArtifactToArtifactDto).ToList();
+
+        await _cacheService.SetCacheValueAsync(cacheKey, repoDto);
+
         return ResponseBase.SuccessResponse(repoDto);
     }
 
@@ -161,6 +194,11 @@ public class RepositoryService(
         await repositoryManager.RepositoryRepository.DeleteAsync(repositoryId);
 
         await harborService.deleteProject(await GetHarborProjectName(repository), repository.Name);
+
+        await _cacheService.RemoveCacheValueAsync($"Repository:{repositoryId}");
+        await _cacheService.RemoveCacheValueAsync($"RepositoriesByUser:{currentUser.UserName}");
+        await RemoveCacheRepositoriesByOrganization(repository);
+
         return ResponseBase.SuccessResponse();
     }
 
@@ -187,11 +225,11 @@ public class RepositoryService(
         else
         {
             var user = await repositoryManager.UserRepository.GetByIdAsync(repository.OwnerId);
-            if(user != null) users.Add(user);
+            if (user != null) users.Add(user);
         }
         return users;
     }
-    
+
     public async Task<ResponseBase> EditRepository(EditRepositoryDto data)
     {
         var (isEditAllowed, repository) = await IsEditAllowed(data.Id);
@@ -214,44 +252,24 @@ public class RepositoryService(
 
         var updatedDto = await MapModelToDto(repository);
 
+        var (currentUser, _) = await userContextService.GetCurrentUserWithRoleAsync();
+        await _cacheService.RemoveCacheValueAsync($"Repository:{data.Id}");
+        await _cacheService.RemoveCacheValueAsync($"RepositoriesByUser:{currentUser.UserName}");
+        await RemoveCacheRepositoriesByOrganization(repository);
+
         return ResponseBase.SuccessResponse(updatedDto);
     }
 
-    public async Task DeleteRepositoriesOfOrganization(Organization existingOrganization)
+    public async Task<ResponseBase> DeleteRepositoriesOfOrganization(Organization existingOrganization)
     {
         var orgRepositories = await repositoryManager.RepositoryRepository.GetOrganizationRepositoriesByOrganizationId(existingOrganization.Id);
         foreach (var repo in orgRepositories)
         {
             await repositoryManager.RepositoryRepository.DeleteAsync(repo.Id);
             await harborService.deleteProject(await GetHarborProjectName(repo), repo.Name);
+            await RemoveCacheRepositoriesByOrganization(repo);
         }
-    }
-
-    public List<ArtifactDto> MapHarborArtifactToArtifactDto(HarborArtifact source)
-    {
-        var artifacts = new List<ArtifactDto>();
-        source.Tags.ForEach(tag =>
-        {
-            var artifactDto = new ArtifactDto()
-            {
-                Id = source.Id,
-                Digest = source.Digest,
-                RepositoryName = source.RepositoryName,
-                Tag = new TagDto
-                {
-                    Name = tag.Name,
-                    Id = tag.Id,
-                    PullTime = tag.PullTime,
-                    PushTime = tag.PushTime
-                },
-                ExtraAttrs = new ExtraAttrsDto
-                {
-                    Os = source.ExtraAttrs.Os
-                }
-            };
-            artifacts.Add(artifactDto);
-        });
-        return artifacts;
+        return ResponseBase.SuccessResponse();
     }
 
     private async Task<(bool IsAllowed, Model.Entity.Repository? Repository)> IsEditAllowed(int repositoryId)
@@ -296,7 +314,7 @@ public class RepositoryService(
 
     private async Task<string> GetFullName(RepositoryDto repositoryDto)
     {
-        var (projectName, repoName)  = await GetFullProjectRepositoryName(repositoryDto.Id ?? -1);
+        var (projectName, repoName) = await GetFullProjectRepositoryName(repositoryDto.Id ?? -1);
         return $"{projectName}/{repoName}";
     }
 
@@ -332,6 +350,18 @@ public class RepositoryService(
     private async Task<string> GetHarborProjectName(Model.Entity.Repository repository)
     {
         return await GetRepoOwnerUsername(repository.OwnedBy, repository.OwnerId) + "-" + repository.Name;
+    }
+    
+    private async Task RemoveCacheRepositoriesByOrganization(Model.Entity.Repository repository)
+    {
+        if (repository.OwnedBy == RepositoryOwnedBy.Organization)
+        {
+            var organization = await repositoryManager.OrganizationRepository.GetById(repository.OwnerId);
+            if (organization != null)
+            {
+                await _cacheService.RemoveCacheValueAsync($"RepositoriesByOrganization:{organization.Name}");
+            }
+        }
     }
 
 }

@@ -2,6 +2,7 @@ using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
@@ -22,6 +23,7 @@ public class OrganizationServiceTests
     private Mock<IHarborService> _harborServiceMock;
     private Mock<IServiceProvider> _serviceProviderMock;
     private Mock<ICrudRepository<Model.Entity.Organization>> _organizationRepositoryMock;
+    private Mock<IRedisCacheService> _redisCacheServiceMock;
 
     [SetUp]
     public void Setup()
@@ -33,6 +35,7 @@ public class OrganizationServiceTests
         _userServiceMock = new Mock<IUserService>();
         _harborServiceMock = new Mock<IHarborService>();
         _serviceProviderMock = new Mock<IServiceProvider>();
+        _redisCacheServiceMock = new Mock<IRedisCacheService>();
 
         _userManagerMock = new Mock<UserManager<User>>(
             new Mock<IUserStore<User>>().Object,
@@ -53,7 +56,8 @@ public class OrganizationServiceTests
             _userContextServiceMock.Object,
             _userServiceMock.Object,
             _harborServiceMock.Object,
-            _serviceProviderMock.Object
+            _serviceProviderMock.Object,
+            _redisCacheServiceMock.Object
         );
     }
 

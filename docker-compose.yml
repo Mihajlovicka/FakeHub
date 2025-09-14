@@ -39,6 +39,8 @@ services:
       - ./secret/cert/harbor.fakehub.com.crt:/usr/local/share/ca-certificates/harbor.fakehub.com.crt:ro
     command: sh -c "update-ca-certificates && dotnet FakeHubApi.dll"
     depends_on:
+      redis_cache:
+        condition: service_healthy
       db:
         condition: service_healthy
   fakehubclient:
@@ -340,6 +342,16 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+  redis_cache:
+    image: redis:7
+    container_name: redis_cache
+    networks:
+      - mynet
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_cache:/data
+    command: ["redis-server", "--appendonly", "yes"]
 
 volumes:
   db-data:
@@ -348,7 +360,7 @@ volumes:
   registry_data:
   database_data:
   redis_data:
-
+  redis_data_cache:
 
 networks:
   mynet:

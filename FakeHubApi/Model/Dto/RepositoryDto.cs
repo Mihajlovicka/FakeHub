@@ -15,5 +15,4 @@ public class RepositoryDto
     public Badge Badge { get; set; }
     public string? FullName { get; set; }
     public DateTime? UpdatedAt { get; set; } = null;
-    public List<ArtifactDto>? Artifacts { get; set; } = null;
 }

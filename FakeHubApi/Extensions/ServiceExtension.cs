@@ -8,6 +8,7 @@ using FakeHubApi.Mapper.UserMapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.Settings;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Repository.Implementation;
 using FakeHubApi.Service.Contract;
@@ -49,6 +50,14 @@ public static class ServiceExtensions
         
         services.AddSingleton<IHarborTokenService, HarborTokenService>();
         services.AddSingleton<IHarborService, HarborService>();
+
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("Redis");
+            options.InstanceName = "FakeHub_";
+        });
+
+        services.AddScoped<IRedisCacheService, RedisCacheService>();
 
         // Mapper-related scoped services
         services.AddScoped<
