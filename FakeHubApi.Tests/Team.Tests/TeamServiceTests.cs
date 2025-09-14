@@ -3,6 +3,7 @@ using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
@@ -19,6 +20,7 @@ public class TeamServiceTests
     private Mock<IUserContextService> _userContextServiceMock;
     private Mock<IHarborService> _harborServiceMock;
     private Mock<IOrganizationService> _organizationServiceMock;
+    private Mock<IRedisCacheService> _redisCacheServiceMock;
 
     [SetUp]
     public void Setup()
@@ -28,13 +30,15 @@ public class TeamServiceTests
         _userServiceMock = new Mock<IUserService>();
         _organizationServiceMock = new Mock<IOrganizationService>();
         _harborServiceMock = new Mock<IHarborService>();
+        _redisCacheServiceMock = new Mock<IRedisCacheService>();
 
         _teamService = new TeamService(
             _organizationServiceMock.Object,
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
             _userServiceMock.Object,
-            _harborServiceMock.Object
+            _harborServiceMock.Object,
+            _redisCacheServiceMock.Object
         );
     }
 

@@ -17,6 +17,5 @@ public interface IRepositoryService
     Task<ResponseBase> CanEditRepository(int repositoryId);
     Task<ResponseBase> EditRepository(EditRepositoryDto data);
     Task<(string, string)> GetFullProjectRepositoryName(int repositoryId);
-    List<ArtifactDto> MapHarborArtifactToArtifactDto(HarborArtifact source);
-    Task DeleteRepositoriesOfOrganization(Organization existingOrganization);
+    Task<ResponseBase> DeleteRepositoriesOfOrganization(Organization existingOrganization);
 }

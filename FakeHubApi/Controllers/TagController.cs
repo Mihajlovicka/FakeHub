@@ -21,6 +21,17 @@ public class TagController(ITagService tagService) : ControllerBase
         return BadRequest(response);
     }
 
+    [HttpGet("all/{repositoryId}")]
+    public async Task<IActionResult> getTags([FromRoute] int repositoryId)
+    {
+        var response = await tagService.GetTags(repositoryId);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
     [HttpDelete("{repositoryId}")]
     public async Task<IActionResult> deleteTag([FromRoute] int repositoryId, [FromBody] ArtifactDto artifact)
     {

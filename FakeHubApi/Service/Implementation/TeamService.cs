@@ -3,6 +3,7 @@ using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using Org.BouncyCastle.Bcpg;
@@ -14,7 +15,8 @@ public class TeamService(
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
     IUserService userService,
-    IHarborService harborService
+    IHarborService harborService,
+    IRedisCacheService _cacheService
 ) : ITeamService
 {
     public async Task<ResponseBase> Add(TeamDto model)
@@ -33,17 +35,28 @@ public class TeamService(
             team.Repository = repository!;
             await repositoryManager.TeamRepository.AddAsync(team);
         }
+
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organization.Name}");
+
         return response;
     }
 
     public async Task<ResponseBase> Get(string organizationName, string teamName)
     {
+        var cachedTask = await _cacheService.GetCacheValueAsync<TeamDto>($"Team:{organizationName}:{teamName}");
+        if (cachedTask != null)
+        {
+            return ResponseBase.SuccessResponse(cachedTask);
+        }
         var team = await repositoryManager.TeamRepository.GetTeam(organizationName, teamName);
         if (team == null)
             return ResponseBase.ErrorResponse("Team not found.");
         var teamDto = mapperManager.TeamDtoToTeamMapper.ReverseMap(team);
         teamDto.Owner = team.Organization.Owner.UserName!;
         teamDto.Users = team.Users.Select(mapperManager.UserToUserDtoMapper.Map);
+
+        await _cacheService.SetCacheValueAsync($"Team:{organizationName}:{teamName}", teamDto);
+
         return ResponseBase.SuccessResponse(teamDto);
     }
 
@@ -65,6 +78,10 @@ public class TeamService(
             team!.Description = model.Description;
             await repositoryManager.TeamRepository.UpdateAsync(team);
         }
+
+        await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organization.Name}");
+
         return response;
     }
 
@@ -86,6 +103,10 @@ public class TeamService(
             organization!.Teams.Remove(team!);
             await repositoryManager.TeamRepository.UpdateAsync(team!);
         }
+
+        await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+        await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
+
         return response;
     }
 
@@ -132,7 +153,8 @@ public class TeamService(
                 }
                 await repositoryManager.TeamRepository.UpdateAsync(team!);
                 response.Result = addedUsers.Select(mapperManager.UserToUserDtoMapper.Map);
-
+                await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+                await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
 
             }
         }
@@ -177,6 +199,9 @@ public class TeamService(
             team.Users.Remove(deleteRelation);
 
             await repositoryManager.TeamRepository.UpdateAsync(team);
+
+            await _cacheService.RemoveCacheValueAsync($"Team:{organizationName}:{teamName}");
+            await _cacheService.RemoveCacheValueAsync($"Organization:{organizationName}");
 
             return ResponseBase.SuccessResponse(user);
         }

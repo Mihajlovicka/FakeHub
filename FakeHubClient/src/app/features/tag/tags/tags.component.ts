@@ -18,6 +18,7 @@ export class TagsComponent implements OnInit{
 
   private readonly tagsService: TagService = inject(TagService);
 
+  artifacts: Artifact[] = [];
   filteredArtifacts: Artifact[] = [];
   searchQuery: string = '';
 
@@ -33,10 +34,13 @@ export class TagsComponent implements OnInit{
 
   ngOnInit() {
     if(this.repository) {
-      this.filteredArtifacts = structuredClone(this.repository.artifacts);
-      this.tagsService.canUserDeleteTags(this.repository.id!).subscribe((canDelete: boolean) => {
-        this.canDeleteTags = canDelete;
-      });
+      this.tagsService.getTags(this.repository.id!).subscribe((artifacts: Artifact[]) => {
+        this.artifacts = artifacts;
+        this.filteredArtifacts = structuredClone(this.artifacts);
+        this.tagsService.canUserDeleteTags(this.repository.id!).subscribe((canDelete: boolean) => {
+          this.canDeleteTags = canDelete;
+        });
+      }) 
     }
   }
 
@@ -44,17 +48,17 @@ export class TagsComponent implements OnInit{
     const query = this.searchQuery.trim().toLowerCase();
 
     if (!query) {
-      this.filteredArtifacts = structuredClone(this.repository?.artifacts || []);
+      this.filteredArtifacts = structuredClone(this.artifacts || []);
       return;
     }
 
-    this.filteredArtifacts = this.repository?.artifacts.filter(artifact =>
+    this.filteredArtifacts = this.artifacts.filter(artifact =>
       artifact.tag.name.toLowerCase().includes(query)
     ) || [];
   }
 
   sortArtifacts() {
-    this.filteredArtifacts = structuredClone(this.repository?.artifacts || []);
+    this.filteredArtifacts = structuredClone(this.artifacts || []);
     if(this.selectedSortOption == 1){
       this.filteredArtifacts.sort((a,b)=> a.tag.name.localeCompare(b.tag.name))
     } 
@@ -71,8 +75,8 @@ export class TagsComponent implements OnInit{
   public deleteTag(artifact: Artifact): void{
     if(this.repository) {
       this.tagsService.deleteTag(artifact, this.repository.id!).subscribe((artifacts: Artifact[]) => {
-          this.repository.artifacts = artifacts;
-          this.filteredArtifacts = structuredClone(this.repository?.artifacts || []);
+          this.artifacts = artifacts;
+          this.filteredArtifacts = structuredClone(this.artifacts || []);
       });
     }
   }

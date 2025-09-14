@@ -3,6 +3,7 @@ using FakeHubApi.Mapper;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
+using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
@@ -20,6 +21,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         private Mock<IUserService> _userServiceMock;
         private IRepositoryService _repositoryService;
         private Mock<IHarborService> _harborServiceMock;
+        private Mock<IRedisCacheService> _redisCacheServiceMock;
 
         [SetUp]
         public void Setup()
@@ -30,6 +32,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _userContextServiceMock = new Mock<IUserContextService>();
             _userServiceMock = new Mock<IUserService>();
             _harborServiceMock = new Mock<IHarborService>();
+            _redisCacheServiceMock = new Mock<IRedisCacheService>();
 
             _repositoryService = new RepositoryService(
                 _repositoryMapperMock.Object,
@@ -37,7 +40,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 _repositoryManagerMock.Object,
                 _userContextServiceMock.Object,
                 _userServiceMock.Object,
-                _harborServiceMock.Object
+                _harborServiceMock.Object,
+                _redisCacheServiceMock.Object
             );
         }
 
@@ -85,10 +89,12 @@ namespace FakeHubApi.Tests.Repositories.Tests
         {
             var repositoryDto = new RepositoryDto { OwnerId = 1, Name = "TestRepo", OwnedBy = RepositoryOwnedBy.Organization };
             var repository = new Model.Entity.Repository { OwnerId = 1, Name = "TestRepo", OwnedBy = RepositoryOwnedBy.Organization };
+            var org = new Model.Entity.Organization { Id = 1 };
 
             _repositoryMapperMock.Setup(m => m.RepositoryDtoToRepositoryMapper.Map(repositoryDto)).Returns(repository);
             _repositoryManagerMock.Setup(m => m.RepositoryRepository.GetByOwnerAndName(It.IsAny<RepositoryOwnedBy>(), It.IsAny<int>(), It.IsAny<string>())).ReturnsAsync((Model.Entity.Repository)null);
             _organizationServiceMock.Setup(m => m.GetOrganizationById(It.IsAny<int>())).ReturnsAsync((Model.Entity.Organization)null);
+            _repositoryManagerMock.Setup(m => m.OrganizationRepository.GetById(It.IsAny<int>())).ReturnsAsync((Model.Entity.Organization)null);
 
             var response = await _repositoryService.Save(repositoryDto);
 

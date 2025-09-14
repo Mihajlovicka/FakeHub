@@ -12,7 +12,6 @@ export interface Repository {
     updatedAt: Date;
     fullName: string;
     ownerUsername: string;
-    artifacts: Artifact[];
 }
 
 export enum RepositoryOwnedBy {

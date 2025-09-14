@@ -14,6 +14,10 @@ export class TagService {
     return this.http.get<boolean>(`${Path.Tag}${repositoryId}/canUserDelete`);
   }
 
+  public getTags(repositoryId: number): Observable<Artifact[]> {
+    return this.http.get<Artifact[]>(`${Path.Tag}all/${repositoryId}`);
+  }
+
   public deleteTag(artifact: Artifact, repositoryId: number): Observable<Artifact[]> {
     return this.http.delete<Artifact[]>(`${Path.Tag}${repositoryId}`, { body: artifact });
   }

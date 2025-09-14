@@ -795,10 +795,10 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 return new List<ArtifactDto>();
             }
 
-            public Task DeleteRepositoriesOfOrganization(Model.Entity.Organization existingOrganization)
+            public Task<ResponseBase> DeleteRepositoriesOfOrganization(Model.Entity.Organization existingOrganization)
             {
                 // Simulate async deletion
-                return Task.CompletedTask;
+                return Task.FromResult(ResponseBase.SuccessResponse());
             }
             public Func<EditRepositoryDto, Task<ResponseBase>> EditRepositoryFunc { get; set; } =
                 dto => Task.FromResult(new ResponseBase

@@ -25,6 +25,13 @@ public class TagService(
         return ResponseBase.SuccessResponse(isAllowed);
     }
 
+    public async Task<ResponseBase> GetTags(int repositoryId)
+    {
+        var (projectName, repositoryName) = await repositoryService.GetFullProjectRepositoryName(repositoryId);
+        List<HarborArtifact> artifacts = await harborService.GetTags(projectName, repositoryName);
+        return  ResponseBase.SuccessResponse(artifacts.SelectMany(MapHarborArtifactToArtifactDto).ToList());
+    }
+
     public async Task<ResponseBase> DeleteTag(ArtifactDto artifact, int repositoryId)
     {
         var justReadWriteAccess = await JustReadWriteAccess(await repositoryManager.RepositoryRepository.GetByIdAsync(repositoryId));
@@ -33,8 +40,35 @@ public class TagService(
         var harborResponse = await harborService.deleteTag(projectName, repositoryName, artifact.Digest, artifact.Tag.Name, justReadWriteAccess);
 
         List<HarborArtifact> artifacts = await harborService.GetTags(projectName, repositoryName);
-        var artifactsDtos = artifacts.SelectMany(repositoryService.MapHarborArtifactToArtifactDto).ToList();
+        var artifactsDtos = artifacts.SelectMany(MapHarborArtifactToArtifactDto).ToList();
         return ResponseBase.SuccessResponse(artifactsDtos);
+    }
+
+    public List<ArtifactDto> MapHarborArtifactToArtifactDto(HarborArtifact source)
+    {
+        var artifacts = new List<ArtifactDto>();
+        source.Tags.ForEach(tag =>
+        {
+            var artifactDto = new ArtifactDto()
+            {
+                Id = source.Id,
+                Digest = source.Digest,
+                RepositoryName = source.RepositoryName,
+                Tag = new TagDto
+                {
+                    Name = tag.Name,
+                    Id = tag.Id,
+                    PullTime = tag.PullTime,
+                    PushTime = tag.PushTime
+                },
+                ExtraAttrs = new ExtraAttrsDto
+                {
+                    Os = source.ExtraAttrs.Os
+                }
+            };
+            artifacts.Add(artifactDto);
+        });
+        return artifacts;
     }
 
     private async Task<List<User>> GetUsersInRepositoryWhoCanDeleteTags(Model.Entity.Repository repository)
