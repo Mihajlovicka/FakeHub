@@ -17,6 +17,7 @@
 
 .navbar-brand {
   font-family: monospace;
+  cursor: pointer;
 }
 
 .logo-img {

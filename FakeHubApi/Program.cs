@@ -138,12 +138,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors(CorsExtensions.GetCorsPolicyName());
-
-// app.UseSerilogRequestLogging();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
+// app.UseSerilogRequestLogging();
 
 app.MapControllers();
 app.ApplyPendingMigrations();

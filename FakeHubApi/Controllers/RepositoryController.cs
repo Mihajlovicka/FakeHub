@@ -57,7 +57,6 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
         return BadRequest(response);
     }
 
-    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
     [HttpGet("{repositoryId:int}")]
     public async Task<IActionResult> GetRepository([FromRoute] int repositoryId)
     {
@@ -110,6 +109,17 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
     public async Task<IActionResult> Search([FromQuery] string? query)
     {
         var response = await repositoryService.Search(query);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [HttpGet("public-repositories")]
+    public async Task<IActionResult> GetAllPublicRepositories()
+    {
+        var response = await repositoryService.GetAllPublicRepositories();
         if (response.Success)
         {
             return Ok(response);

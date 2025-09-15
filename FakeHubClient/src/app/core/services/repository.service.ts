@@ -50,4 +50,8 @@ export class RepositoryService {
   public editRepository(data: EditRepositoryDto): Observable<void> {
     return this.http.put<void>(`${Path.Repositories}`, data);
   }
+
+  public getAllPublicRepositories(): Observable<any> {
+    return this.http.get<any>(`${Path.Repositories}/public-repositories`);
+}
 }

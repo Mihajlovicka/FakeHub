@@ -38,7 +38,6 @@ public static class ServiceExtensions
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
-        services.AddScoped<IDockerImageService, DockerImageService>();
         services.AddScoped<ValidationFilter>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IOrganizationService, OrganizationService>();

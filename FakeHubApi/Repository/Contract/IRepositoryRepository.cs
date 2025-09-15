@@ -9,4 +9,5 @@ public interface IRepositoryRepository : ICrudRepository<Model.Entity.Repository
     Task<IEnumerable<Model.Entity.Repository>> GetOrganizationRepositoriesByOrganizationId(int orgId);
     Task<IEnumerable<Model.Entity.Repository>> SearchByOwnerId(string? query, int userId);
     Task<IEnumerable<Model.Entity.Repository>> SearchAllAsync(string? query);
+    Task<IEnumerable<Model.Entity.Repository>> GetAllPublicRepositories();
 }

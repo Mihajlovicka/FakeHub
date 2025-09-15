@@ -76,16 +76,18 @@ export const routes: Routes = [
   },
   {
     path: 'repository',
-    canActivate: [AuthGuard],
-    data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] },
     children: [
       {
         path: 'add',
-        component: CreateRepositoryComponent
+        component: CreateRepositoryComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] }
       },
       {
         path: 'edit/:repositoryId',
-        component: EditRepositoryComponent
+        component: EditRepositoryComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRole: [UserRole.USER, UserRole.ADMIN, UserRole.SUPERADMIN] }
       },
       {
         path: ':repositoryId',
