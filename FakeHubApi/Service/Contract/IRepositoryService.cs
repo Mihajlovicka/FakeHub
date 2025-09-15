@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
@@ -18,4 +17,6 @@ public interface IRepositoryService
     Task<ResponseBase> EditRepository(EditRepositoryDto data);
     Task<(string, string)> GetFullProjectRepositoryName(int repositoryId);
     Task<ResponseBase> DeleteRepositoriesOfOrganization(Organization existingOrganization);
+    List<ArtifactDto> MapHarborArtifactToArtifactDto(HarborArtifact source);
+    Task<ResponseBase> Search(string? query);
 }
