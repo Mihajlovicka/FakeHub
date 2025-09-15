@@ -800,6 +800,12 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 // Simulate async deletion
                 return Task.FromResult(ResponseBase.SuccessResponse());
             }
+
+            public Task<ResponseBase> Search(string? query)
+            {
+                throw null;
+            }
+
             public Func<EditRepositoryDto, Task<ResponseBase>> EditRepositoryFunc { get; set; } =
                 dto => Task.FromResult(new ResponseBase
                 {
