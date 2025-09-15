@@ -217,7 +217,7 @@ public class RepositoryService(
             var organization = await repositoryManager.OrganizationRepository.GetById(repository.OwnerId);
             users.Add(organization!.Owner);
             var firstAdminTeam = organization.Teams.FirstOrDefault(el => el.TeamRole == TeamRole.Admin && el.RepositoryId == repository.Id);
-            if (firstAdminTeam != null && firstAdminTeam.Users.Count > 0)
+            if (firstAdminTeam is { Users.Count: > 0 })
             {
                 users.AddRange(firstAdminTeam.Users);
             }
@@ -271,10 +271,25 @@ public class RepositoryService(
         }
         return ResponseBase.SuccessResponse();
     }
-
-    private async Task<(bool IsAllowed, Model.Entity.Repository? Repository)> IsEditAllowed(int repositoryId)
+    
+    public async Task<ResponseBase> Search(string? query)
     {
         var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
+        var repositories = role == "USER" ?
+            await repositoryManager.RepositoryRepository.SearchByOwnerId(query, user.Id) :
+            await repositoryManager.RepositoryRepository.SearchAllAsync(query);
+       
+        var repositoryDtos = repositories
+            .Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap)
+            .ToList();
+        var updatedDtos = await GetFullNames(repositoryDtos);
+        
+        return ResponseBase.SuccessResponse(updatedDtos);
+    }
+    
+    private async Task<(bool IsAllowed, Model.Entity.Repository? Repository)> IsEditAllowed(int repositoryId)
+    {
+        var (user, _) = await userContextService.GetCurrentUserWithRoleAsync();
         var repository = await GetRepositoryForCurrentUser(repositoryId);
 
         var isAllowed = repository != null && (await GetAdminUsersInRepository(repository))
@@ -363,5 +378,4 @@ public class RepositoryService(
             }
         }
     }
-
 }

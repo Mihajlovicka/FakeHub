@@ -6,6 +6,7 @@ import { HelperService } from '../../../core/services/helper.service';
 import { OrganizationService } from '../../../core/services/organization.service';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { RepositoryService } from '../../../core/services/repository.service';
 
 @Component({
   selector: 'app-header',
@@ -18,6 +19,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private helperService: HelperService = inject(HelperService);
   private userService: UserService = inject(UserService);
   private organizationService: OrganizationService = inject(OrganizationService);
+  private repositoryService: RepositoryService = inject<any>(RepositoryService);
   private router: Router = inject(Router);
 
   public isLoggedIn: boolean = false;
@@ -131,6 +133,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
     if(currentRoute.includes('/users')){
       return this.userService;
+    }
+    if(currentRoute.includes('/repositories')){
+      return this.repositoryService;
     }
     return null;
   }

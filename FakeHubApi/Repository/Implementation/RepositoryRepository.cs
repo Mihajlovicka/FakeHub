@@ -16,7 +16,7 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
     public async Task<IEnumerable<Model.Entity.Repository>> GetUserRepositoriesByOwnerId(int ownerId, bool onlyPublic = false)
     {
         var ownedRepositories = await _context.Repositories
-            .Where(r => r.OwnedBy > 0 && r.OwnerId == ownerId && (onlyPublic ? !r.IsPrivate : true))
+            .Where(r => r.OwnedBy > 0 && r.OwnerId == ownerId && (!onlyPublic || !r.IsPrivate))
             .ToListAsync();
 
         var userOrganizations = await _context.UserOrganizations
@@ -32,7 +32,7 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
         var allOrganizations = userOrganizations.Concat(ownedOrganizations).Distinct().ToList();
 
         var organizationRepositories = await _context.Repositories
-            .Where(r => allOrganizations.Contains(r.OwnerId) && r.OwnedBy == RepositoryOwnedBy.Organization && (onlyPublic ? !r.IsPrivate : true))
+            .Where(r => allOrganizations.Contains(r.OwnerId) && r.OwnedBy == RepositoryOwnedBy.Organization && (!onlyPublic || !r.IsPrivate))
             .ToListAsync();
 
         return ownedRepositories.Concat(organizationRepositories);
@@ -47,4 +47,54 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
         return ownedRepositories;
     }
 
+    public async Task<IEnumerable<Model.Entity.Repository>> SearchByOwnerId(string? query, int ownerId)
+    {
+        var ownedRepositoriesQuery = _context.Repositories
+            .Where(r => r.OwnedBy > 0 && r.OwnerId == ownerId);
+
+        var userOrganizations = await _context.UserOrganizations
+            .Where(ou => ou.UserId == ownerId)
+            .Select(ou => ou.OrganizationId)
+            .ToListAsync();
+
+        var ownedOrganizations = await _context.Organizations
+            .Where(o => o.OwnerId == ownerId)
+            .Select(o => o.Id)
+            .ToListAsync();
+
+        var allOrganizations = userOrganizations.Concat(ownedOrganizations).Distinct().ToList();
+
+        var organizationRepositoriesQuery = _context.Repositories
+            .Where(r => allOrganizations.Contains(r.OwnerId) && r.OwnedBy == RepositoryOwnedBy.Organization);
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            ownedRepositoriesQuery = ownedRepositoriesQuery
+                .Where(r => EF.Functions.Like(r.Name, $"%{query}%") 
+                            || EF.Functions.Like(r.Description, $"%{query}%"));
+
+            organizationRepositoriesQuery = organizationRepositoriesQuery
+                .Where(r => EF.Functions.Like(r.Name, $"%{query}%") 
+                            || EF.Functions.Like(r.Description, $"%{query}%"));
+        }
+
+        var ownedRepositories = await ownedRepositoriesQuery.ToListAsync();
+        var organizationRepositories = await organizationRepositoriesQuery.ToListAsync();
+
+        return ownedRepositories.Concat(organizationRepositories);
+    }
+
+    public async Task<IEnumerable<Model.Entity.Repository>> SearchAllAsync(string? query)
+    {
+        var repositoriesQuery = _context.Repositories.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            repositoriesQuery = repositoriesQuery
+                .Where(r => EF.Functions.Like(r.Name, $"%{query}%") 
+                            || EF.Functions.Like(r.Description, $"%{query}%"));
+        }
+
+        return await repositoriesQuery.ToListAsync();
+    }
 }

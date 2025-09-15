@@ -2,13 +2,12 @@ import {Component, inject, OnDestroy, OnInit} from "@angular/core";
 import { Organization } from "../../../core/model/organization";
 import { Router, RouterLink } from "@angular/router";
 import { OrganizationService } from "../../../core/services/organization.service";
-import { MatButton } from "@angular/material/button";
 import {Subscription} from "rxjs";
 
 @Component({
   selector: "app-organizations",
   standalone: true,
-  imports: [RouterLink, MatButton],
+  imports: [RouterLink],
   templateUrl: "./organizations.component.html",
   styleUrl: "./organizations.component.css",
 })
