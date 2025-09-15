@@ -169,8 +169,11 @@ public class RepositoryService(
         {
             return ResponseBase.SuccessResponse(cachedRepository);
         }
-        var repository = await GetRepositoryForCurrentUser(repositoryId);
-        if (repository == null)
+        
+        var repository = await repositoryManager.RepositoryRepository.GetByIdAsync(repositoryId);
+
+        if (repository == null 
+            || !(await CanCurrentUserAccessRepository(repository)))
             return ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.");
 
         var repoDto = await MapModelToDto(repository);
@@ -207,6 +210,19 @@ public class RepositoryService(
         var (isAllowed, _) = await IsEditAllowed(repositoryId);
 
         return ResponseBase.SuccessResponse(isAllowed);
+    }
+
+    public async Task<ResponseBase> GetAllPublicRepositories()
+    {
+        var publicRepos = await repositoryManager.RepositoryRepository.GetAllPublicRepositories();
+
+        var repositoryDtos = publicRepos?
+            .Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap)
+            .ToList() ?? new List<RepositoryDto>();
+
+        var updatedDtos = await GetFullNames(repositoryDtos);
+
+        return ResponseBase.SuccessResponse(updatedDtos);
     }
 
     private async Task<List<User>> GetAdminUsersInRepository(Model.Entity.Repository repository)
@@ -345,6 +361,39 @@ public class RepositoryService(
         var repositories = await GetRepositoriesByRole(user.Id, role);
 
         return repositories.FirstOrDefault(x => x.Id == repositoryId);
+    }
+
+    private async Task<bool> CanCurrentUserAccessRepository(Model.Entity.Repository repository)
+    {
+        if (!repository.IsPrivate)
+            return true;
+
+        var (currentUser, role) = await userContextService.GetCurrentUserWithRoleAsync();
+        if (currentUser == null)
+            return false;
+
+        if (role is "SUPERADMIN" or "ADMIN")
+            return true;
+
+        if (repository.OwnedBy == RepositoryOwnedBy.User && repository.OwnerId == currentUser.Id)
+            return true;
+
+        if (repository.OwnedBy == RepositoryOwnedBy.Organization &&
+            await GetOrganizationUserAsync(repository.OwnerId, currentUser.Id) != null)
+            return true;
+
+        return false;
+    }
+
+    private async Task<User?> GetOrganizationUserAsync(int organizationId, int userId)
+    {
+        var organization = await repositoryManager.OrganizationRepository.GetById(organizationId);
+        if (organization == null)
+            return null;
+
+        return organization.OwnerId == userId 
+            ? organization.Owner 
+            : organization.Users.FirstOrDefault(u => u.Id == userId);
     }
 
     private async Task<string> GetHarborProjectName(Model.Entity.Repository repository)

@@ -14,6 +14,7 @@ import { RepositoryBadgeComponent } from "../../../shared/components/repository-
 import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
 import { MatDialog } from "@angular/material/dialog";
 import { MatInputModule } from "@angular/material/input";
+import { UserService } from "../../../core/services/user.service";
 
 @Component({
   selector: "app-view-repository",
@@ -39,6 +40,7 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
 
   private readonly repositoryService: RepositoryService =
     inject(RepositoryService);
+  private readonly userService: UserService = inject(UserService);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly helperService: HelperService = inject(HelperService);
   private getRepositorySubscription: Subscription | null = null;
@@ -57,7 +59,8 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
           if (data) {
             this.repository = data;
             this.avatarProfile();
-            this.isOwner();
+            if(this.userService.isLoggedIn())
+              this.isOwner();
           }
         });
     }

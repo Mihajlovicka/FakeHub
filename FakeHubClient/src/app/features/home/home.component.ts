@@ -1,9 +1,9 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DockerImageComponent } from "../../shared/components/docker-image/docker-image.component";
-import { DockerImage } from '../../core/model/docker-image';
-import { DockerImageService } from '../../core/services/docker-image.service';
-import { UserService } from '../../core/services/user.service';
+import { Repository } from '../../core/model/repository';
+import { RepositoryService } from '../../core/services/repository.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-home',
@@ -13,33 +13,30 @@ import { UserService } from '../../core/services/user.service';
   styleUrl: './home.component.css'
 })
 export class HomeComponent implements OnInit {
-  private userService: UserService = inject(UserService);
-  private dockerImageService: DockerImageService = inject(DockerImageService);
+  private repositoryService: RepositoryService = inject(RepositoryService);
+  private readonly router: Router = inject(Router);
 
   public isTrustedContentVisible: boolean = true;
-  public isCategoriesVisible: boolean = true;
-  public isLoggedIn: boolean = false;
-  public dockerImages: DockerImage[] = [];
+  public publicRepositories: Repository[] = [];
 
   ngOnInit(): void {
-    this.isLoggedIn = this.userService.isLoggedIn();
-    this.loadDockerImages();
+    this.loadPublicRepositories();
   }
   
   public toggleTrustedContentVisibility() {
     this.isTrustedContentVisible = !this.isTrustedContentVisible;
   }
 
-  public toggleCategoriesVisibility() {
-    this.isCategoriesVisible = !this.isCategoriesVisible;
+  public navigateToRepository(id: number | undefined){
+    if(id) this.router.navigate(["/repository/", id]);
   }
 
-  private loadDockerImages(): void {
-    this.dockerImageService.getDockerImages()
-      .subscribe({
-        next: (images) => {
-          this.dockerImages = images;
-        }
+  private loadPublicRepositories(): void {
+    this.repositoryService.getAllPublicRepositories()
+    .subscribe({
+      next: (repos) => {
+        this.publicRepositories = repos;
+      },
       });
   }
 }

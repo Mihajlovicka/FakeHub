@@ -1,17 +1,16 @@
 <h1 class="title">Docker Images</h1>
 <div class="content-container">
-  <div *ngIf="!isLoggedIn" class="filters-container">
+  <div class="filters-container">
     <div class="trusted-content">
       <button (click)="toggleTrustedContentVisibility()" class="dropdown-btn">
         Trusted content
         <i
           class="fa chevron-icon"
           [ngClass]="
-            isLoggedIn ? 'fa-chevron-up' : 'fa-chevron-down'
+            isTrustedContentVisible ? 'fa-chevron-up' : 'fa-chevron-down'
           "
         ></i>
       </button>
-
       <div *ngIf="isTrustedContentVisible">
         <div class="dropdown-content">
           <a href="#">Docker Official Image</a>
@@ -20,42 +19,18 @@
         </div>
       </div>
     </div>
-
-    <div class="categories">
-      <button (click)="toggleCategoriesVisibility()" class="dropdown-btn">
-        Categories
-        <i
-          class="fa chevron-icon"
-          [ngClass]="
-            isLoggedIn ? 'fa-chevron-up' : 'fa-chevron-down'
-          "
-        ></i>
-      </button>
-      <div *ngIf="isCategoriesVisible">
-        <div class="dropdown-content">
-          <a href="#">API Management</a>
-          <a href="#">Content Management System</a>
-          <a href="#">Data Science</a>
-          <a href="#">Database & Storage</a>
-          <a href="#">Languages & Frameworks</a>
-          <a href="#">Integration & Delivery</a>
-          <a href="#">Internet of Things</a>
-          <a href="#">Machine Learning & AI</a>
-          <a href="#">Message Queues</a>
-          <a href="#">Monitoring Observability</a>
-          <a href="#">Networing</a>
-          <a href="#">Operating Systems</a>
-          <a href="#">Security</a>
-          <a href="#">Web Servers</a>
-          <a href="#">Developer Tools</a>
-          <a href="#">Web Analytics</a>
-        </div>
-      </div>
-    </div>
   </div>
   <div class="docker-images-container">
-    <div *ngFor="let dockerImage of dockerImages">
-      <app-docker-image [title]="dockerImage?.title" [updatedAt]="dockerImage?.title == 'Ubuntu' ? '12.01.2025': undefined" [description]="dockerImage?.description" [footerText]="'Public'"></app-docker-image>
+    <div *ngFor="let repo of publicRepositories">
+      <app-docker-image
+        [title]="repo?.fullName"
+        [updatedAt]="repo?.updatedAt"
+        [description]="repo?.description"
+        [footerText]="'Public'"
+        [ownedBy]="repo?.ownedBy"
+        [badge]="repo?.badge"
+        (click)="navigateToRepository(repo.id)"
+      ></app-docker-image>
     </div>
   </div>
 </div>

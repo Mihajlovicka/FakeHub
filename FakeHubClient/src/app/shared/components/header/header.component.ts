@@ -89,6 +89,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   public signOut(): void {
     this.isDropdownVisible = false;
     this.userService.logout();
+    this.router.navigate(['/'], { queryParams: { reload: new Date().getTime() } });
   }
 
   public goToOrganizations(): void {

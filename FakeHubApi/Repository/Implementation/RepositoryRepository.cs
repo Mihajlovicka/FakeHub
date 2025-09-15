@@ -97,4 +97,12 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
 
         return await repositoriesQuery.ToListAsync();
     }
+    
+    public async Task<IEnumerable<Model.Entity.Repository>> GetAllPublicRepositories()
+    {
+        return await _context.Repositories
+        .Where(r => r.IsPrivate == false)
+        .ToListAsync();
+    }
+
 }

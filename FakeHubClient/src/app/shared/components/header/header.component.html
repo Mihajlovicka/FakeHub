@@ -8,7 +8,7 @@
                 </a>
             </div>
             <div *ngIf="isLoggedIn" class="navbar-links">
-                <a *ngIf="isUser" class="nav-link text-white mx-2" href="#">Explore</a>
+                <a *ngIf="isUser" class="nav-link text-white mx-2" (click)="goToHomePage()">Explore</a>
                 <a class="nav-link text-white mx-2" (click)="goToRepositories()">Repositories</a>
                 <a *ngIf="isUser" class="nav-link text-white mx-2" (click)="goToOrganizations()">Organizations</a>
 
