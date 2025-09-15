@@ -364,4 +364,18 @@ public class RepositoryService(
         }
     }
 
+    public async Task<ResponseBase> Search(string? query)
+    {
+        var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
+        var repositories = role == "USER" ?
+            await repositoryManager.RepositoryRepository.SearchByOwnerId(query, user.Id) :
+            await repositoryManager.RepositoryRepository.SearchAllAsync(query);
+
+        var repositoryDtos = repositories
+            .Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap)
+            .ToList();
+        var updatedDtos = await GetFullNames(repositoryDtos);
+
+        return ResponseBase.SuccessResponse(updatedDtos);
+    }
 }
