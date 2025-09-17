@@ -25,6 +25,7 @@ import { Team } from "../../../core/model/team";
 import { Repository } from "../../../core/model/repository";
 import { RepositoryService } from "../../../core/services/repository.service";
 import { DockerImageComponent } from "../../../shared/components/docker-image/docker-image.component";
+import { FormsModule } from "@angular/forms";
 
 @Component({
   selector: "app-view-organization",
@@ -38,7 +39,8 @@ import { DockerImageComponent } from "../../../shared/components/docker-image/do
     MatTabsModule,
     TeamsComponent,
     ViewOrganizationsMembersComponent,
-    DockerImageComponent
+    DockerImageComponent,
+    FormsModule
   ],
   templateUrl: "./view-organization.component.html",
   styleUrl: "./view-organization.component.css",
@@ -60,6 +62,8 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     imageBase64: "",
   };
   public repositories: Repository[] = [];
+  public searchQuery: string = "";
+  public filteredRepositories: Repository[]= [];
 
   public isOwner(): boolean {
     return (
@@ -111,6 +115,60 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
       this.users$.next(usersSnapshot);
     });
   }
+
+  public search(): void {
+    const query = this.searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      // Resetujemo na sve repozitorijume ako query prazan
+      this.filteredRepositories = [...this.repositories];
+      return;
+    }
+
+    const queriesName = [query];
+    const queriesDescription = [query];
+
+    let result: Repository[] = [];
+
+    // Tačno i delimično podudaranje po name
+    for (const q of queriesName) {
+      const nameExact = this.repositories.filter(r => r.name.toLowerCase() === q);
+      const nameContains = this.repositories.filter(r => r.name.toLowerCase().includes(q));
+      result = Array.from(new Set([...result, ...nameExact, ...nameContains]));
+    }
+
+    // Tačno i delimično podudaranje po description
+    for (const q of queriesDescription) {
+      const descExact = this.repositories.filter(r => (r.description ?? "").toLowerCase() === q);
+      const descContains = this.repositories.filter(r => (r.description ?? "").toLowerCase().includes(q));
+      result = Array.from(new Set([...result, ...descExact, ...descContains]));
+    }
+
+    // Sortiranje po prioritetu: tačno name → tačno description → delimično name → delimično description
+    result = result.sort((a, b) => {
+      const isExactNameA = queriesName.includes(a.name.toLowerCase());
+      const isExactNameB = queriesName.includes(b.name.toLowerCase());
+
+      const isExactDescA = queriesDescription.includes((a.description ?? "").toLowerCase());
+      const isExactDescB = queriesDescription.includes((b.description ?? "").toLowerCase());
+
+      const isPartialNameA = queriesName.some(q => a.name.toLowerCase().includes(q));
+      const isPartialNameB = queriesName.some(q => b.name.toLowerCase().includes(q));
+
+      const isPartialDescA = queriesDescription.some(q => (a.description ?? "").toLowerCase().includes(q));
+      const isPartialDescB = queriesDescription.some(q => (b.description ?? "").toLowerCase().includes(q));
+
+      if (isExactNameA !== isExactNameB) return isExactNameA ? -1 : 1;
+      if (isExactDescA !== isExactDescB) return isExactDescA ? -1 : 1;
+      if (isPartialNameA !== isPartialNameB) return isPartialNameA ? -1 : 1;
+      if (isPartialDescA !== isPartialDescB) return isPartialDescA ? -1 : 1;
+
+      return 0;
+    });
+
+    this.filteredRepositories = result;
+  }
+
 
   private filterUsers(newUsers: UserProfileResponseDto[]): void {
     const filteredUsers =
@@ -165,6 +223,10 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     }
   }
 
+  public navigateToRepository(id: number | undefined) {
+    if (id) this.router.navigate(["/repository/", id]);
+  }
+
   private addMember(usernames: string[]): void {
     this.service
       .addMember(this.organization.name, { usernames: usernames })
@@ -183,6 +245,8 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
         this.repositoryService.getAllRepositoriesForOrganization(this.organization.name).subscribe({
           next: repos => {
             this.repositories = repos;
+            this.filteredRepositories = [...repos];
+
           }
         });
       });
