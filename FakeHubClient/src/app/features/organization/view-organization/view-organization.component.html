@@ -1,11 +1,7 @@
 <div class="profile-container">
   <div class="avatar-container">
     <div class="avatar">
-      <img
-        class="image"
-        [src]="organization.imageBase64 || 'icons/no-photo-avatar.png'"
-        alt="avatar"
-      />
+      <img class="image" [src]="organization.imageBase64 || 'icons/no-photo-avatar.png'" alt="avatar" />
     </div>
   </div>
   <div class="info-container">
@@ -13,11 +9,7 @@
       <span class="username">{{ organization.name }}</span>
       @if(isOwner()){
 
-      <button
-        mat-icon-button
-        [matMenuTriggerFor]="menu"
-        aria-label="Example icon-button with a menu"
-      >
+      <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Example icon-button with a menu">
         <mat-icon>edit</mat-icon>
       </button>
       <mat-menu #menu="matMenu">
@@ -54,28 +46,36 @@
 <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
   <mat-tab label="Members">
     <ng-template matTabContent>
-        <app-view-organizations-members (deleteUserEvent)="OnUserDeleted($event)" [users]="organization.users || []" [organizationName]="organization.name" [isOwner]="isOwner()"></app-view-organizations-members>
+      <app-view-organizations-members (deleteUserEvent)="OnUserDeleted($event)" [users]="organization.users || []"
+        [organizationName]="organization.name" [isOwner]="isOwner()"></app-view-organizations-members>
     </ng-template>
   </mat-tab>
   <mat-tab label="Teams">
     <ng-template matTabContent>
-      <app-teams (deleteTeamEvent)="OnTeamDeleted($event)" [teams]="organization.teams || []" [organizationName]="organization.name" [isOwner]="isOwner()"></app-teams>
+      <app-teams (deleteTeamEvent)="OnTeamDeleted($event)" [teams]="organization.teams || []"
+        [organizationName]="organization.name" [isOwner]="isOwner()"></app-teams>
     </ng-template>
   </mat-tab>
   <mat-tab label="Repositories">
     <ng-template matTabContent>
+      <div class="search">
+        <form (submit)="search(); $event.preventDefault()">
+          <input type="text" placeholder="Search repositories..." name="search" class="search-input" autocomplete="off"
+            [(ngModel)]="searchQuery" />
+          <button type="submit" class="search-button">
+            <img src="icons/search.png" width="25rem" height="25rem" />
+          </button>
+        </form>
+      </div>
       <div class="repositories-container">
-        @for (repository of repositories; track repository.id) {
-        <app-docker-image
-          [title]="repository?.name"
-          [updatedAt]="repository?.updatedAt"
-          [description]="repository?.description"
-          [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
-          [ownedBy]="repository?.ownedBy"
-          [badge]="repository?.badge"
-        ></app-docker-image>
+        @for (repository of filteredRepositories; track repository.id) {
+        <app-docker-image [title]="repository?.name" [updatedAt]="repository?.updatedAt"
+          [description]="repository?.description" [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
+          [ownedBy]="repository?.ownedBy" [badge]="repository?.badge" (click)="navigateToRepository(repository.id)">
+        </app-docker-image>
         }
       </div>
+
     </ng-template>
   </mat-tab>
 </mat-tab-group>

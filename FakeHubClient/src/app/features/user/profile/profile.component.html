@@ -59,14 +59,6 @@
     </a>
 
     <a
-      [ngClass]="{ active: activeLink === 2 }"
-      (click)="setActiveLink(2)"
-      class="link"
-    >
-      Starred
-    </a>
-
-    <a
       *ngIf="isLoggedInUserProfile"
       [ngClass]="{ active: activeLink === 3 }"
       (click)="setActiveLink(3)"
@@ -101,10 +93,6 @@
           ></app-docker-image>
         }
       </div>
-    </div>
-
-    <div *ngIf="activeLink === 2">
-      <h2>Starred Content</h2>
     </div>
 
     <div *ngIf="activeLink === 3">

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { UserBadge } from '../../../core/model/user';
 import { RepositoryBadgeComponent } from '../repository-badge/repository-badge.component';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-docker-image',
@@ -35,7 +36,7 @@ export class DockerImageComponent {
     const minValidDate = new Date(1, 0, 1);
     return date > minValidDate;
   }
-
+  
   private formatLargeNumber (value: number, divisor: number, suffix: string): string {
     let decNumber = (value / divisor).toFixed(1);
     decNumber = decNumber.endsWith('.0') ? decNumber.slice(0, decNumber.length - 2) : decNumber;
