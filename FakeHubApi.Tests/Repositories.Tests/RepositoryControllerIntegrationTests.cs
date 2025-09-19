@@ -656,6 +656,121 @@ namespace FakeHubApi.Tests.Repositories.Tests
             });
         }
 
+        [Test, Order(26)]
+        public async Task GetAllPublicRepositories_WithoutQuery_ReturnsAllPublicRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.GreaterThanOrEqualTo(0));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+        }
+
+        [Test, Order(27)]
+        public async Task GetAllPublicRepositories_WithDescriptionQuery_ReturnsFilteredRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=description:description");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Description.Contains("description", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        [Test, Order(28)]
+        public async Task GetAllPublicRepositories_WithComplexQuery_ReturnsFilteredRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=name:Repository description:description badge:DockerOfficialImage");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Name.Contains("Repository", StringComparison.OrdinalIgnoreCase)));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Description.Contains("description", StringComparison.OrdinalIgnoreCase)));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Badge == Badge.DockerOfficialImage));
+        }
+
+        [Test, Order(29)]
+        public async Task GetAllPublicRepositories_WithGeneralTermQuery_ReturnsFilteredRepositories()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=Repository");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => (r.Name != null && r.Name.Contains("Repository", StringComparison.OrdinalIgnoreCase)) ||
+                    (r.Description != null && r.Description.Contains("Repository", StringComparison.OrdinalIgnoreCase))));
+        }
+
+        [Test, Order(30)]
+        public async Task GetAllPublicRepositories_WithNonExistentQuery_ReturnsEmptyList()
+        {
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories?query=name:NonExistentRepository");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories!.Count, Is.EqualTo(0));
+        }
+
+        [Test, Order(31)]
+        public async Task GetAllPublicRepositories_WithoutToken_ReturnsOk()
+        {
+            _client.DefaultRequestHeaders.Authorization = null;
+
+            var response = await _client.GetAsync("/api/repositories/public-repositories");
+            response.EnsureSuccessStatusCode();
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+            Assert.That(responseObj.Result, Is.Not.Null);
+
+            var repositories = JsonConvert.DeserializeObject<List<RepositoryDto>>(responseObj.Result.ToString()!);
+            Assert.That(repositories, Is.Not.Null);
+            Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+        }
+
         private async Task SetupDbData()
         {
             using var scope = _factory.Services.CreateScope();
@@ -806,6 +921,39 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 OwnedBy = RepositoryOwnedBy.User,
             };
 
+            var repository6 = new Model.Entity.Repository
+            {
+                Id = 6,
+                Name = "AdminPublicRepo",
+                Description = "Admin public repository for testing",
+                IsPrivate = false,
+                OwnerId = adminUser.Id,
+                OwnedBy = RepositoryOwnedBy.Admin,
+                Badge = Badge.DockerOfficialImage
+            };
+
+            var repository7 = new Model.Entity.Repository
+            {
+                Id = 7,
+                Name = "SuperAdminPublicRepo",
+                Description = "SuperAdmin public repository for testing",
+                IsPrivate = false,
+                OwnerId = superAdminUser.Id,
+                OwnedBy = RepositoryOwnedBy.SuperAdmin,
+                Badge = Badge.DockerOfficialImage
+            };
+
+            var repository8 = new Model.Entity.Repository
+            {
+                Id = 8,
+                Name = "UserPublicRepo",
+                Description = "User public repository for testing",
+                IsPrivate = false,
+                OwnerId = 1,
+                OwnedBy = RepositoryOwnedBy.User,
+                Badge = Badge.SponsoredOSS
+            };
+
             await db.Organizations.AddAsync(organization1);
             await db.Organizations.AddAsync(organization2);
             await db.Repositories.AddAsync(repository1);
@@ -813,6 +961,9 @@ namespace FakeHubApi.Tests.Repositories.Tests
             await db.Repositories.AddAsync(repository3);
             await db.Repositories.AddAsync(repository4);
             await db.Repositories.AddAsync(repository5);
+            await db.Repositories.AddAsync(repository6);
+            await db.Repositories.AddAsync(repository7);
+            await db.Repositories.AddAsync(repository8);
             await db.SaveChangesAsync();
         }
         
@@ -898,26 +1049,48 @@ namespace FakeHubApi.Tests.Repositories.Tests
             {
                 throw null;
             }
-            
-            private Func<Task<ResponseBase>> GetAllPublicRepositoriesFunc { get; set; } =
-                () => Task.FromResult(new ResponseBase
+
+            private Func<string?, Task<ResponseBase>> GetAllPublicRepositoriesFunc { get; set; } =
+        query =>
+        {
+            var allPublicRepos = new List<RepositoryDto>
+            {
+                new()
                 {
-                    Success = true,
-                    Result = new List<RepositoryDto>
-                    {
-                        new RepositoryDto
-                        {
-                            Id = 1,
-                            Name = "PublicRepo1",
-                            Description = "A public repository",
-                            IsPrivate = false,
-                            OwnedBy = RepositoryOwnedBy.User,
-                            OwnerId = 2,
-                            FullName = "User-PublicRepo1/PublicRepo1",
-                            OwnerUsername = "User"
-                        }
-                    }
-                });
+                    Id = 1,
+                    Name = "PublicRepo1",
+                    Description = "A public repository",
+                    IsPrivate = false,
+                    OwnedBy = RepositoryOwnedBy.User,
+                    OwnerId = 2,
+                    FullName = "User-PublicRepo1/PublicRepo1",
+                    OwnerUsername = "User"
+                },
+                new()
+                {
+                    Id = 2,
+                    Name = "SearchResultRepo",
+                    Description = "Found by search",
+                    IsPrivate = false,
+                    OwnedBy = RepositoryOwnedBy.User,
+                    OwnerId = 3,
+                    FullName = "User-SearchResultRepo/SearchResultRepo",
+                    OwnerUsername = "User"
+                }
+            };
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                allPublicRepos = allPublicRepos
+                    .Where(r =>
+                        r.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        r.Description.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            return Task.FromResult(ResponseBase.SuccessResponse(allPublicRepos));
+        };
+
 
             public Func<EditRepositoryDto, Task<ResponseBase>> EditRepositoryFunc { get; set; } =
                 dto => Task.FromResult(new ResponseBase
@@ -990,9 +1163,9 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 return EditRepositoryFunc(data);
             }
 
-            public Task<ResponseBase> GetAllPublicRepositories()
+            public Task<ResponseBase> GetAllPublicRepositories(string? query = null)
             {
-                return GetAllPublicRepositoriesFunc();
+                return GetAllPublicRepositoriesFunc(query);
             }
         }
     }

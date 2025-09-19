@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIcon } from "@angular/material/icon";
 import { TagService } from '../../../core/services/tag.service';
 import { Repository } from '../../../core/model/repository';
+import { UserService } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-tags',
@@ -16,6 +17,7 @@ import { Repository } from '../../../core/model/repository';
 export class TagsComponent implements OnInit{
   @Input() repository!: Repository;
 
+  private readonly userService = inject(UserService);
   private readonly tagsService: TagService = inject(TagService);
 
   artifacts: Artifact[] = [];
@@ -37,9 +39,11 @@ export class TagsComponent implements OnInit{
       this.tagsService.getTags(this.repository.id!).subscribe((artifacts: Artifact[]) => {
         this.artifacts = artifacts;
         this.filteredArtifacts = structuredClone(this.artifacts);
-        this.tagsService.canUserDeleteTags(this.repository.id!).subscribe((canDelete: boolean) => {
-          this.canDeleteTags = canDelete;
-        });
+        
+        if(this.userService.isLoggedIn())
+          this.tagsService.canUserDeleteTags(this.repository.id!).subscribe((canDelete: boolean) => {
+            this.canDeleteTags = canDelete;
+          });
       }) 
     }
   }

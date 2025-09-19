@@ -1,4 +1,5 @@
 using FakeHubApi.Data;
+using FakeHubApi.Model.Dto;
 using FakeHubApi.Model.Entity;
 using FakeHubApi.Repository.Contract;
 using Microsoft.EntityFrameworkCore;
@@ -97,12 +98,39 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
 
         return await repositoriesQuery.ToListAsync();
     }
-    
-    public async Task<IEnumerable<Model.Entity.Repository>> GetAllPublicRepositories()
-    {
-        return await _context.Repositories
-        .Where(r => r.IsPrivate == false)
-        .ToListAsync();
-    }
 
+    public async Task<IEnumerable<Model.Entity.Repository>> GetAllPublicRepositories(RepositorySearchDto filters)
+    {
+        var query = _context.Repositories
+            .Where(r => !r.IsPrivate)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(filters.Name))
+            query = query.Where(r => EF.Functions.Like(r.Name, $"%{filters.Name}%"));
+
+        if (!string.IsNullOrWhiteSpace(filters.Description))
+            query = query.Where(r => EF.Functions.Like(r.Description, $"%{filters.Description}%"));
+
+        if (filters.Badge.HasValue && filters.Badge.Value != Badge.None)
+            query = query.Where(r => r.Badge == filters.Badge.Value);
+
+        if (!string.IsNullOrEmpty(filters.AuthorName))
+        {
+            query = query.Where(r => (filters.AuthorUserIds.Count > 0 ? r.OwnedBy == RepositoryOwnedBy.User && filters.AuthorUserIds.Contains(r.OwnerId) : false) 
+            || (filters.AuthorOrganizationIds.Count > 0 ? r.OwnedBy == RepositoryOwnedBy.Organization && filters.AuthorOrganizationIds.Contains(r.OwnerId) : false));
+        }
+
+        if (filters.GeneralTerms.Count > 0)
+        {
+            foreach (var term in filters.GeneralTerms)
+            {
+                var like = $"%{term}%";
+                query = query.Where(r =>
+                    EF.Functions.Like(r.Name, like) ||
+                    EF.Functions.Like(r.Description, like));
+            }
+        }
+
+        return await query.ToListAsync();
+    }
 }

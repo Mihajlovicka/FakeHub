@@ -117,9 +117,9 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
     }
 
     [HttpGet("public-repositories")]
-    public async Task<IActionResult> GetAllPublicRepositories()
+    public async Task<IActionResult> GetAllPublicRepositories([FromQuery] string? query)
     {
-        var response = await repositoryService.GetAllPublicRepositories();
+        var response = await repositoryService.GetAllPublicRepositories(query);
         if (response.Success)
         {
             return Ok(response);

@@ -33,4 +33,9 @@ public class UserRepository(AppDbContext context) : CrudRepository<User>(context
             .SelectMany(u => u.Organizations
                 .Concat(u.OwnedOrganizations))
             .ToListAsync();
+
+    public async Task<List<User>> GetUsersByUsernameContaining(string username) =>
+        await _context.Users
+            .Where(u => EF.Functions.Like(u.UserName, $"%{username}%"))
+            .ToListAsync();
 }

@@ -19,5 +19,5 @@ public interface IRepositoryService
     Task<(string, string)> GetFullProjectRepositoryName(int repositoryId);
     Task<ResponseBase> DeleteRepositoriesOfOrganization(Organization existingOrganization);
     Task<ResponseBase> Search(string? query);
-    Task<ResponseBase> GetAllPublicRepositories();
+    Task<ResponseBase> GetAllPublicRepositories(string? query);
 }

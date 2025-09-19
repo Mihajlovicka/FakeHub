@@ -51,7 +51,9 @@ export class RepositoryService {
     return this.http.put<void>(`${Path.Repositories}`, data);
   }
 
-  public getAllPublicRepositories(): Observable<any> {
-    return this.http.get<any>(`${Path.Repositories}/public-repositories`);
+  public getAllPublicRepositories(query: string = ''): Observable<any> {
+    return this.http.get<any>(`${Path.Repositories}/public-repositories`, {
+      params: { query }
+    });
 }
 }
