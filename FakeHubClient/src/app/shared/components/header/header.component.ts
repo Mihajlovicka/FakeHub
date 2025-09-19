@@ -114,6 +114,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   public goToHomePage(): void {
     this.searchQuery = '';
+    this.repositoryService.updateQuery('');
     this.router.navigate(['/']);
   }
 
@@ -135,7 +136,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if(currentRoute.includes('/users')){
       return this.userService;
     }
-    if(currentRoute.includes('/repositories')){
+    if(currentRoute.includes('/repositories') || currentRoute === '/'){
       return this.repositoryService;
     }
     return null;

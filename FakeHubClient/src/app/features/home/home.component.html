@@ -2,6 +2,18 @@
 <div class="content-container">
   <div class="filters-container">
     <div class="trusted-content">
+      <div class="sort-content">
+        <label for="sortSelect">Sort by:</label>
+        <select
+          id="sortSelect"
+          [(ngModel)]="selectedSortOption"
+          (change)="sortRepositories()"
+        >
+          <option *ngFor="let option of sortBy" [value]="option.id">
+            {{ option.name }}
+          </option>
+        </select>
+      </div>
       <button (click)="toggleTrustedContentVisibility()" class="dropdown-btn">
         Trusted content
         <i
@@ -13,15 +25,31 @@
       </button>
       <div *ngIf="isTrustedContentVisible">
         <div class="dropdown-content">
-          <a href="#">Docker Official Image</a>
-          <a href="#">Verified Publisher</a>
-          <a href="#">Sponsored OSS</a>
+          <button
+            (click)="filterByBadge(UserBadge.DockerOfficialImage)"
+            [class.active]="isActive(UserBadge.DockerOfficialImage)"
+          >
+            Docker Official Image
+          </button>
+          <button
+            (click)="filterByBadge(UserBadge.VerifiedPublisher)"
+            [class.active]="isActive(UserBadge.VerifiedPublisher)"
+          >
+            Verified Publisher
+          </button>
+          <button
+            (click)="filterByBadge(UserBadge.SponsoredOSS)"
+            [class.active]="isActive(UserBadge.SponsoredOSS)"
+          >
+            Sponsored OSS
+          </button>
         </div>
       </div>
     </div>
   </div>
+
   <div class="docker-images-container">
-    <div *ngFor="let repo of publicRepositories">
+    <div *ngFor="let repo of repositories">
       <app-docker-image
         [title]="repo?.fullName"
         [updatedAt]="repo?.updatedAt"

@@ -46,4 +46,9 @@ public class OrganizationRepository(AppDbContext context)
             .Include(x => x.Owner)
             .Include(x => x.Users)
             .ToListAsync();
+
+    public async Task<List<Organization>> GetOrganizationsByNameContaining(string name) =>
+        await _context.Organizations
+            .Where(o => o.Active && EF.Functions.Like(o.Name, $"%{name}%"))
+            .ToListAsync();
 }

@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace FakeHubApi.Controllers;
 
 [Route("api/repositories/[controller]")]
-[Authorize(Roles = "ADMIN, SUPERADMIN, USER")]
 [ApiController]
 public class TagController(ITagService tagService) : ControllerBase
 {
+    [Authorize(Roles = "ADMIN, SUPERADMIN, USER")]
     [HttpGet("{repositoryId}/canUserDelete")]
     public async Task<IActionResult> canDelete([FromRoute] int repositoryId)
     {
@@ -32,6 +32,7 @@ public class TagController(ITagService tagService) : ControllerBase
         return BadRequest(response);
     }
 
+    [Authorize(Roles = "ADMIN, SUPERADMIN, USER")]
     [HttpDelete("{repositoryId}")]
     public async Task<IActionResult> deleteTag([FromRoute] int repositoryId, [FromBody] ArtifactDto artifact)
     {

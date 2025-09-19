@@ -406,7 +406,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _repositoryMapperMock
                 .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
                 .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
-            
+
             _repositoryManagerMock
                 .Setup(m => m.RepositoryRepository.GetByIdAsync(repositories[0].Id))
                 .ReturnsAsync(repositories[0]);
@@ -653,7 +653,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 OwnedBy = RepositoryOwnedBy.Admin
             };
 
-            var currentUser = new User { Id = 1 , UserName = "test"};
+            var currentUser = new User { Id = 1, UserName = "test" };
             var owner = new User { Id = 2, UserName = "owner" };
 
             _repositoryManagerMock
@@ -727,13 +727,13 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _harborServiceMock.Verify(
                 m => m.deleteProject("adminUser-repo1", repository.Name), Times.Once);
         }
-        
+
         [Test]
         public async Task EditRepository_UserAllowedToEdit_ReturnsUpdatedRepository()
         {
             const int repositoryId = 1;
             var editDto = new EditRepositoryDto(repositoryId, "Updated description", true);
-            
+
             var repository = new Model.Entity.Repository
             {
                 Id = repositoryId,
@@ -804,7 +804,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
 
             _harborServiceMock.Verify(h => h.UpdateProjectVisibility(It.IsAny<string>(), false), Times.Once);
         }
-        
+
         [Test]
         public async Task EditRepository_UserNotAllowedToEdit_ReturnsErrorResponse()
         {
@@ -864,7 +864,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             }).ToList();
 
             _repositoryManagerMock
-                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories())
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.IsAny<RepositorySearchDto>()))
                 .ReturnsAsync(repositories);
 
             _repositoryMapperMock
@@ -879,7 +879,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
                 .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
 
-            var response = await _repositoryService.GetAllPublicRepositories();
+            var response = await _repositoryService.GetAllPublicRepositories(null);
 
             Assert.Multiple(() =>
             {
@@ -900,14 +900,14 @@ namespace FakeHubApi.Tests.Repositories.Tests
         public async Task GetAllPublicRepositories_NoPublicRepos_ReturnsEmptyList()
         {
             _repositoryManagerMock
-                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories())
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.IsAny<RepositorySearchDto>()))
                 .ReturnsAsync(new List<Model.Entity.Repository>());
 
             _repositoryMapperMock
                 .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
                 .Returns((Model.Entity.Repository r) => new RepositoryDto());
 
-            var response = await _repositoryService.GetAllPublicRepositories();
+            var response = await _repositoryService.GetAllPublicRepositories(null);
 
             Assert.Multiple(() =>
             {
@@ -1027,7 +1027,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
 
             _userContextServiceMock
                 .Setup(u => u.GetCurrentUserWithRoleAsync())
-                .ReturnsAsync((null, null));
+                .ReturnsAsync((new User(), string.Empty));
 
             var response = await _repositoryService.GetRepository(repositoryId);
 
@@ -1045,6 +1045,312 @@ namespace FakeHubApi.Tests.Repositories.Tests
 
             _repositoryMapperMock.Verify(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()), Times.Never);
             _harborServiceMock.Verify(h => h.GetTags(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Test]
+        public async Task GetAllPublicRepositories_WithEmptyQuery_ReturnsSuccessResponse()
+        {
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = 1, Name = "PublicRepo1", OwnedBy = RepositoryOwnedBy.User, IsPrivate = false }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy,
+                IsPrivate = repo.IsPrivate
+            }).ToList();
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.IsAny<RepositorySearchDto>()))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => new User { Id = id, UserName = $"User{id}" });
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
+
+            var response = await _repositoryService.GetAllPublicRepositories("");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(1));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("PublicRepo1"));
+                Assert.That(resultDtos![0].IsPrivate, Is.False);
+            });
+        }
+
+        [Test]
+        public async Task GetAllPublicRepositories_WithSpecificQuery_ReturnsFilteredRepositories()
+        {
+            var repoNameQuery = "FilteredRepo";
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = 1, Name = "FilteredRepo", OwnedBy = RepositoryOwnedBy.User, IsPrivate = false, Description = "Test description" }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy,
+                IsPrivate = repo.IsPrivate,
+                Description = repo.Description
+            }).ToList();
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.Is<RepositorySearchDto>(f => f.Name == repoNameQuery)))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => new User { Id = id, UserName = $"User{id}" });
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
+
+            var response = await _repositoryService.GetAllPublicRepositories($"name:{repoNameQuery}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(1));
+                Assert.That(resultDtos![0].Name, Is.EqualTo(repoNameQuery));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("User1-FilteredRepo/FilteredRepo"));
+                Assert.That(resultDtos![0].IsPrivate, Is.False);
+            });
+        }
+
+        [Test]
+        public async Task GetAllPublicRepositories_NoRepositoriesFound_ReturnsEmptyList()
+        {
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.IsAny<RepositorySearchDto>()))
+                .ReturnsAsync(new List<Model.Entity.Repository>());
+
+            var response = await _repositoryService.GetAllPublicRepositories("name:NonExistentRepo");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Is.Empty);
+            });
+        }
+
+        [Test]
+        public async Task GetAllPublicRepositories_WithComplexQuery_ReturnsSuccessResponse()
+        {
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = 1, Name = "Repo", OwnedBy = RepositoryOwnedBy.User, IsPrivate = false, Badge = Badge.SponsoredOSS }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy,
+                IsPrivate = repo.IsPrivate,
+                Badge = repo.Badge
+            }).ToList();
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.Is<RepositorySearchDto>(f =>
+                    f.Name == "Repo" && f.Badge == Badge.SponsoredOSS)))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => new User { Id = id, UserName = $"User{id}" });
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
+
+            var response = await _repositoryService.GetAllPublicRepositories("name:Repo badge:SponsoredOSS");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(1));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("Repo"));
+                Assert.That(resultDtos![0].Badge, Is.EqualTo(Badge.SponsoredOSS));
+                Assert.That(resultDtos![0].IsPrivate, Is.False);
+            });
+        }
+
+        [Test]
+        public async Task GetAllPublicRepositories_WithAuthorQueryMatchingUser_ReturnsSuccessResponse()
+        {
+            var authorNameQuery = "TestAuthor";
+            var author = new User { Id = 5, UserName = "TestAuthorUser" };
+            var organization = new Model.Entity.Organization { Id = 10, Name = "TestOrganization" };
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = 5, Name = "AuthorRepo", OwnedBy = RepositoryOwnedBy.User, IsPrivate = false },
+                new() { Id = 2, OwnerId = 10, Name = "OrganizationRepo", OwnedBy = RepositoryOwnedBy.Organization, IsPrivate = false }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy,
+                IsPrivate = repo.IsPrivate
+            }).ToList();
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetUsersByUsernameContaining(authorNameQuery))
+                .ReturnsAsync(new List<User> { author });
+
+            _repositoryManagerMock
+                .Setup(r => r.OrganizationRepository.GetOrganizationsByNameContaining(authorNameQuery))
+                .ReturnsAsync(new List<Model.Entity.Organization>());
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.Is<RepositorySearchDto>(f =>
+                    f.AuthorUserIds.Contains(author.Id))))
+                .ReturnsAsync(repositories.Where(r => r.OwnerId == author.Id).ToList());
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+               .Setup(r => r.UserRepository.GetByIdAsync(author.Id))
+               .ReturnsAsync(author);
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
+
+            var response = await _repositoryService.GetAllPublicRepositories("author:TestAuthor");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(1));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("AuthorRepo"));
+                Assert.That(resultDtos![0].FullName, Is.EqualTo("TestAuthorUser-AuthorRepo/AuthorRepo"));
+            });
+        }
+
+        [Test]
+        public async Task GetAllPublicRepositories_WithAuthorQueryMatchingUserAndOrganization_ReturnsSuccessResponse()
+        {
+            var authorNameQuery = "TestAuthor";
+            var user = new User { Id = 5, UserName = "TestAuthorUser" };
+            var organization = new Model.Entity.Organization { Id = 10, Name = "TestAuthorOrganization" };
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, OwnerId = 5, Name = "UserRepo", OwnedBy = RepositoryOwnedBy.User, IsPrivate = false },
+                new() { Id = 2, OwnerId = 10, Name = "OrganizationRepo", OwnedBy = RepositoryOwnedBy.Organization, IsPrivate = false }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                OwnerId = repo.OwnerId,
+                Name = repo.Name,
+                OwnedBy = repo.OwnedBy,
+                IsPrivate = repo.IsPrivate
+            }).ToList();
+
+            var filter = new RepositorySearchDto
+            {
+                AuthorName = authorNameQuery,
+                AuthorUserIds = [user.Id],
+                AuthorOrganizationIds = [organization.Id]
+            };
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetUsersByUsernameContaining(authorNameQuery))
+                .ReturnsAsync(new List<User> { user });
+
+            _repositoryManagerMock
+                .Setup(r => r.OrganizationRepository.GetOrganizationsByNameContaining(authorNameQuery))
+                .ReturnsAsync(new List<Model.Entity.Organization> { organization });
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.Is<RepositorySearchDto>(f =>
+                    f.AuthorUserIds.Contains(5))))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(user.Id))
+                .ReturnsAsync(user);
+
+            _repositoryManagerMock
+                .Setup(r => r.OrganizationRepository.GetById(organization.Id))
+                .ReturnsAsync(organization);
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
+
+            var response = await _repositoryService.GetAllPublicRepositories($"author:{authorNameQuery}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(repositories.Count));
+                Assert.That(resultDtos, Is.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
+                Assert.That(resultDtos, Is.All.Matches<RepositoryDto>(r => 
+                (r.OwnedBy == RepositoryOwnedBy.User && filter.AuthorUserIds.Contains(r.OwnerId)) 
+                || ( r.OwnedBy == RepositoryOwnedBy.Organization && filter.AuthorOrganizationIds.Contains(r.OwnerId))
+                ));
+            });
         }
 
     }

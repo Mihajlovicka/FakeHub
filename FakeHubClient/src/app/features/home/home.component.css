@@ -7,16 +7,21 @@
 
 .content-container {
   display: flex;
-  padding-left: 3rem;
-  padding-right: 3rem;
-  gap: 4rem;
-  justify-content: flex-start;
+  gap: 2rem;
   align-items: flex-start;
 }
 
 .filters-container {
   display: flex;
   flex-direction: column;
+  width: 200px;
+}
+
+.docker-images-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
 }
 
 .trusted-content {
@@ -40,21 +45,18 @@
   margin-bottom: 1rem;
 }
 
-.dropdown-content a {
+.dropdown-content button {
+  border: none;
+  background: none;
   color: black;
   text-decoration: none;
   margin-bottom: 8px;
   display: block;
+  cursor: pointer;
 
-  &:hover {
+  &:hover, &.active {
     color: var(--primary-color);
   }
-}
-
-.docker-images-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
 }
 
 .button-container button {
@@ -62,4 +64,35 @@
   padding: 10px;
   font-size: 14px;
   cursor: pointer;
+}
+
+.sort-content {
+  margin-bottom: 5rem;
+  margin-left: 0.4rem;
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  label {
+    margin-right: 0;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  select {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+
+    flex-grow: 1;
+    min-width: 5rem;
+    max-width: 100%;
+  }
+
+  select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
 }

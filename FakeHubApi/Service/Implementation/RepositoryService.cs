@@ -5,6 +5,7 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
+using FakeHubApi.Repository.Implementation;
 using FakeHubApi.Service.Contract;
 
 namespace FakeHubApi.Service.Implementation;
@@ -212,13 +213,15 @@ public class RepositoryService(
         return ResponseBase.SuccessResponse(isAllowed);
     }
 
-    public async Task<ResponseBase> GetAllPublicRepositories()
+    public async Task<ResponseBase> GetAllPublicRepositories(string? query)
     {
-        var publicRepos = await repositoryManager.RepositoryRepository.GetAllPublicRepositories();
+        var filters = await ParseQuery(query);
 
-        var repositoryDtos = publicRepos?
-            .Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap)
-            .ToList() ?? new List<RepositoryDto>();
+        var publicRepos = await repositoryManager.RepositoryRepository.GetAllPublicRepositories(filters);
+
+        var repositoryDtos = publicRepos?.Any() == true ?
+            publicRepos.Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap).ToList() :
+            new List<RepositoryDto>();
 
         var updatedDtos = await GetFullNames(repositoryDtos);
 
@@ -298,6 +301,67 @@ public class RepositoryService(
 
         return (isAllowed, repository);
     }
+
+    private async Task<RepositorySearchDto> ParseQuery(string? query)
+    {
+        var filters = new RepositorySearchDto();
+
+        if (string.IsNullOrWhiteSpace(query))
+            return filters;
+
+        var terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var term in terms)
+        {
+            if (term.StartsWith("name:", StringComparison.OrdinalIgnoreCase))
+            {
+                filters.Name = term[5..];
+            }
+            else if (term.StartsWith("description:", StringComparison.OrdinalIgnoreCase))
+            {
+                filters.Description = term[12..];
+            }
+            else if (term.StartsWith("badge:", StringComparison.OrdinalIgnoreCase))
+            {
+                var value = term[6..];
+                if (Enum.TryParse<Badge>(value, true, out var parsedBadge))
+                {
+                    filters.Badge = parsedBadge;
+                }
+                else
+                {
+                    var match = Enum.GetValues<Badge>()
+                        .FirstOrDefault(b => b.ToString()
+                            .Contains(value, StringComparison.OrdinalIgnoreCase));
+                    if (match != Badge.None)
+                        filters.Badge = match;
+                }
+            }
+            else if (term.StartsWith("author:", StringComparison.OrdinalIgnoreCase))
+            {
+                filters.AuthorName = term[7..];
+                
+                var users = await repositoryManager.UserRepository.GetUsersByUsernameContaining(filters.AuthorName);
+                foreach (var user in users)
+                {
+                    filters.AuthorUserIds.Add(user.Id);
+                }
+                
+                var organizations = await repositoryManager.OrganizationRepository.GetOrganizationsByNameContaining(filters.AuthorName);
+                foreach (var org in organizations)
+                {
+                    filters.AuthorOrganizationIds.Add(org.Id);
+                }
+            }
+            else
+            {
+                filters.GeneralTerms.Add(term);
+            }
+        }
+
+        return filters;
+    }
+
 
     private async Task<RepositoryDto> MapModelToDto(Model.Entity.Repository repository)
     {
