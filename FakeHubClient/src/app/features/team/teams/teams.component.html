@@ -1,31 +1,42 @@
 <div class="teams-content-container">
+  <!-- Search on its own line -->
+  <div class="search">
+    <form (submit)="search(); $event.preventDefault()">
+      <input
+        type="text"
+        placeholder="Search repositories..."
+        name="search"
+        class="search-input"
+        autocomplete="off"
+        [(ngModel)]="searchQuery" />
+      <button type="submit" class="search-button">
+        <img src="icons/search.png" width="25rem" height="25rem" />
+      </button>
+    </form>
+  </div>
   <div class="teams-container">
-    @for (team of teams; track team.name) {
-    <div class="team-container">
-      <div class="team-details-container" (click)="goToTeam(team.name)">
-        <div class="link-header">
-          <span class="ellipsis">{{ team.repository?.name}}/{{ team.name }}</span>
-        </div>
-        @if(isOwner){
-      <button class="delete-button" (click)="openDeleteTeamModal(team)">
-          <mat-icon>delete</mat-icon></button>
-      }
-        <div class="multi-line-ellipsis">
-          {{ team.description.substring(0, 50)
-          }}{{ team.description.length > 50 ? "..." : "" }}
-        </div>
-        <div class="link-footer">
-           <span class="footer-text"
-            > {{ team.teamRole }} ({{ team.users?.length || 0 }})</span
-          >
-          <span class="footer-text"
-            >Created at: {{ team.createdAt | date : "mediumDate" }}</span
-          >
+    @for (team of filteredTeams; track team.name) {
+      <div class="team-container">
+        <div class="team-details-container" (click)="goToTeam(team.name)">
+          <div class="link-header">
+            <span class="ellipsis">{{ team.repository?.name }}/{{ team.name }}</span>
+          </div>
+          @if(isOwner){
+            <button class="delete-button" (click)="openDeleteTeamModal(team)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
+          <div class="multi-line-ellipsis">
+            {{ team.description.substring(0, 50) }}{{ team.description.length > 50 ? "..." : "" }}
+          </div>
+          <div class="link-footer">
+            <span class="footer-text">{{ team.teamRole }} ({{ team.users?.length || 0 }})</span>
+            <span class="footer-text">Created at: {{ team.createdAt | date : "mediumDate" }}</span>
+          </div>
         </div>
       </div>
-    </div>
     } @empty {
-    <div class="no-teams">There are no teams</div>
+      <div class="no-teams">There are no teams</div>
     }
   </div>
 </div>
