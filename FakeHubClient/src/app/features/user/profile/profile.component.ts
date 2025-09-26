@@ -7,6 +7,7 @@ import { HelperService } from '../../../core/services/helper.service';
 import { UserBadgeComponent } from '../../../shared/components/user-badge/user-badge.component';
 import { UserBadgeModalComponent } from '../../../shared/components/user-badge/user-badge-modal/user-badge-modal.component';
 import { MatDialog } from '@angular/material/dialog';
+import { MatTabsModule } from '@angular/material/tabs';
 import { ChangeUserBadgeRequest } from '../../../core/model/change-badge-to-user-request';
 import { RepositoryService } from '../../../core/services/repository.service';
 import { Repository, RepositoryOwnedBy } from '../../../core/model/repository';
@@ -15,7 +16,7 @@ import { DockerImageComponent } from '../../../shared/components/docker-image/do
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, UserBadgeComponent, DockerImageComponent],
+  imports: [CommonModule, UserBadgeComponent, DockerImageComponent, MatTabsModule],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css'
 })
@@ -29,13 +30,13 @@ export class ProfileComponent implements OnInit{
   private usernameParam = this.route.snapshot.paramMap.get('username') ?? '';
 
   public user: UserProfileResponseDto = new UserProfileResponseDto();
-  public activeLink: number = 1;  
   public isLoggedInUserProfile: boolean = false;
   public isAdminLoggedIn: boolean = false;
   public isSuperAdminLoggedIn: boolean = false;
   public isUserLoggedIn: boolean = false;
   public capitalizedLetterAvatar = "";
   public repositories: Repository[] = [];
+  public contributedRepositories: Repository[] = [];
 
   get editable(): boolean {
     return (this.isAdminLoggedIn || this.isSuperAdminLoggedIn) && this.user.role === 'USER';
@@ -51,6 +52,14 @@ export class ProfileComponent implements OnInit{
         this.repositories = repos;
       }
     });
+
+    if(this.isLoggedInUserProfile || this.isAdminLoggedIn || this.isSuperAdminLoggedIn) {
+      this.repositoryService.getRepositoriesUserContributed(usernameParam).subscribe({
+      next: repos => {
+        this.contributedRepositories = repos;
+      }
+    });
+    }
   }
 
   private checkUserPermissions(): void {
@@ -76,9 +85,6 @@ export class ProfileComponent implements OnInit{
     });
   }
 
-  public setActiveLink(linkNumber: number) {
-    this.activeLink = linkNumber;  
-  }
 
   public goToSettings() {
     this.router.navigate(['/settings']);

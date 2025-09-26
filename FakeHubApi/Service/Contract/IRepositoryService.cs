@@ -20,4 +20,7 @@ public interface IRepositoryService
     Task<ResponseBase> DeleteRepositoriesOfOrganization(Organization existingOrganization);
     Task<ResponseBase> Search(string? query);
     Task<ResponseBase> GetAllPublicRepositories(string? query);
+    Task<ResponseBase> AddCollaborator(int repositoryId, string username);
+    Task<ResponseBase> GetCollaborators(int repositoryId);
+    Task<ResponseBase> GetRepositoriesUserContributed(string username);
 }

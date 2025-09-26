@@ -444,6 +444,15 @@ public class HarborArtifact
     public ExtraAttrs ExtraAttrs { get; set; } = new ExtraAttrs();
 }
 
+public class HarborPromoteToAdminDto
+{
+    [JsonPropertyName("user_id")]
+    public int UserId { get; set; }
+
+    [JsonPropertyName("sysadmin_flag")]
+    public bool SysadminFlag { get; set; }
+}
+
 public class ExtraAttrs
 {
     [JsonPropertyName("os")]

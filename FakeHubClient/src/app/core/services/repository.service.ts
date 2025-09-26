@@ -3,6 +3,8 @@ import { inject, Injectable } from "@angular/core";
 import { BehaviorSubject, Observable } from "rxjs";
 import { Repository, EditRepositoryDto } from "../model/repository";
 import { Path, getRepository } from "../constant/path";
+import { UserProfileResponseDto } from "../model/user";
+import { Team } from "../model/team";
 
 @Injectable({
   providedIn: "root",
@@ -55,5 +57,19 @@ export class RepositoryService {
     return this.http.get<any>(`${Path.Repositories}/public-repositories`, {
       params: { query }
     });
-}
+  }
+
+  public addCollaborator(repoId: number, username: string): Observable<any> {
+    return this.http.post(`${Path.Repositories}/${repoId}/add-collaborator`, {
+      username,
+    });
+  }
+
+  public getCollaborators(repoId: number): Observable<(UserProfileResponseDto | Team)[]> {
+    return this.http.get<(UserProfileResponseDto | Team)[]>(`${Path.Repositories}/${repoId}/collaborators`);
+  }
+
+  public getRepositoriesUserContributed(username: string): Observable<Repository[]> {
+    return this.http.get<Repository[]>(`${Path.Repositories}/contributed/${username}`);
+  }
 }

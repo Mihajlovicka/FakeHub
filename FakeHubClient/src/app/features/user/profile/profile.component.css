@@ -80,30 +80,6 @@
   margin: auto;
 }
 
-.links-container {
-  display: flex;
-  gap: 1.3rem;
-  margin-top: 3rem;
-  padding-left: 2rem;
-}
-
-.link {
-  font-size: 0.9rem;
-  color: black;
-  text-decoration: none;
-  font-weight: 400;
-  cursor: pointer;
-}
-
-.link:hover {
-  border-bottom: 2px solid #b4c3e3;
-}
-
-.link.active {
-  font-weight: bold;
-  border-bottom: 2px solid var(--primary-color);
-}
-
 .content {
   display: flex;
   flex-direction: column;
@@ -134,41 +110,54 @@ input:focus {
   outline: none;
 }
 
-.search-container {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-bottom: 1rem;
-  margin-top: 1rem;
-}
-
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 17rem;
-}
-
-.search-container input {
-  padding: 10px 35px 10px 10px;
-  width: 17rem;
-  font-size: 0.9rem;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-
-.search-container .search-icon {
+.search {
   position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 20px;
-  color: #7e88d3;
-  cursor: pointer;
+  top: 0;
+  left: 0.5rem;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+
+  > form {
+    display: flex;
+    width: 20%;
+    margin: 1%;
+    align-items: center;
+  }
 }
 
-.search-container .search-icon:hover {
-  color: var(--primary-color);
+.search-input {
+  flex: 1;
+  padding: 10px;
+  height: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-right: 1%;
+  outline: none;
+}
+
+.search-select {
+  height: 2rem;
+  width: 20rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-right: 1%;
+  outline: none;
+}
+
+.search-button {
+  padding-bottom: 5px;
+  height: 2rem;
+  width: 2rem;
+  background-color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .no-user-container {
@@ -198,9 +187,36 @@ input:focus {
   opacity: 0.8;
 }
 
+.repositories-wrapper {
+  width: 100%;
+  padding-top: 4rem;
+  position: relative;
+}
+
 .repositories-container {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   padding-top: 2rem;
+}
+
+::ng-deep .mat-mdc-tab {
+  min-width: 120px;
+}
+
+::ng-deep .mat-mdc-tab-body-wrapper {
+  padding-top: 1rem;
+}
+
+.no-users {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  text-align: center;
+  color: #555;
 }

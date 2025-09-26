@@ -5,8 +5,8 @@ using FakeHubApi.Model.Entity;
 using FakeHubApi.Model.ServiceResponse;
 using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
-using FakeHubApi.Repository.Implementation;
 using FakeHubApi.Service.Contract;
+using Microsoft.AspNetCore.Identity;
 
 namespace FakeHubApi.Service.Implementation;
 
@@ -17,7 +17,8 @@ public class RepositoryService(
     IUserContextService userContextService,
     IUserService userService,
     IHarborService harborService,
-    IRedisCacheService _cacheService
+    IRedisCacheService _cacheService,
+    UserManager<User> userManager
 ) : IRepositoryService
 {
     public async Task<ResponseBase> Save(RepositoryDto repositoryDto)
@@ -163,22 +164,25 @@ public class RepositoryService(
 
     public async Task<ResponseBase> GetRepository(int repositoryId)
     {
-
         var cacheKey = $"Repository:{repositoryId}";
         var cachedRepository = await _cacheService.GetCacheValueAsync<RepositoryDto>(cacheKey);
+        if (cachedRepository is { IsPrivate: false })
+        {
+            return ResponseBase.SuccessResponse(cachedRepository);
+        }
+
+        var repository = await repositoryManager.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId);
+
+        if (repository == null
+            || !(await CanCurrentUserAccessRepository(repository)))
+            return ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.");
+
         if (cachedRepository != null)
         {
             return ResponseBase.SuccessResponse(cachedRepository);
         }
-        
-        var repository = await repositoryManager.RepositoryRepository.GetByIdAsync(repositoryId);
-
-        if (repository == null 
-            || !(await CanCurrentUserAccessRepository(repository)))
-            return ResponseBase.ErrorResponse($"Repository with id {repositoryId} does not exist.");
 
         var repoDto = await MapModelToDto(repository);
-
         await _cacheService.SetCacheValueAsync(cacheKey, repoDto);
 
         return ResponseBase.SuccessResponse(repoDto);
@@ -187,12 +191,12 @@ public class RepositoryService(
     public async Task<ResponseBase> DeleteRepository(int repositoryId)
     {
         var repository = await repositoryManager.RepositoryRepository.GetByIdAsync(repositoryId);
-        var (currentUser, _) = await userContextService.GetCurrentUserWithRoleAsync();
+        var (currentUser, role) = await userContextService.GetCurrentUserWithRoleAsync();
 
         if (repository == null)
             return ResponseBase.ErrorResponse("Repository not found");
 
-        if ((await GetAdminUsersInRepository(repository)).All(el => el.UserName != currentUser.UserName))
+        if (!(role is "ADMIN" or "SUPERADMIN") && (await GetAdminUsersInRepository(repository)).All(el => el.UserName != currentUser.UserName))
             return ResponseBase.ErrorResponse("You do not have permission to delete this repository");
 
         await repositoryManager.RepositoryRepository.DeleteAsync(repositoryId);
@@ -289,6 +293,115 @@ public class RepositoryService(
             await RemoveCacheRepositoriesByOrganization(repo);
         }
         return ResponseBase.SuccessResponse();
+    }
+
+    public async Task<ResponseBase> AddCollaborator(int repositoryId, string username)
+    {
+        var repo = await repositoryManager.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId);
+        if (repo == null)
+        {
+            return ResponseBase.ErrorResponse("Repository not found.");
+        }
+
+        if (repo.OwnedBy == RepositoryOwnedBy.Organization)
+            return ResponseBase.ErrorResponse("Cannot add collaborators to organization repositories.");
+
+        var userResponse = await userService.GetUserByUsernameAsync(username);
+        var user = userResponse.Result as User;
+        if (user == null)
+        {
+            return ResponseBase.ErrorResponse("User does not exist.");
+        }
+
+        if(user.Id == repo.OwnerId)
+        {
+            return ResponseBase.ErrorResponse("Cannot add owner as collaborator.");
+        }
+
+        var (currentUser, role) = await userContextService.GetCurrentUserWithRoleAsync();
+        if (repo.OwnerId != currentUser.Id)
+        {
+            return ResponseBase.ErrorResponse("You are not the owner.");
+        }
+
+        var alreadyExists = repo.Collaborators.Any(c => c.Id == user.Id);
+        if (alreadyExists)
+        {
+            return ResponseBase.ErrorResponse("User already added.");
+        }
+
+        repo.Collaborators.Add(user);
+        await repositoryManager.RepositoryRepository.UpdateAsync(repo);
+        var harborProjectMember = new HarborProjectMember
+        {
+            MemberUser = new HarborProjectMemberUser
+            {
+                UserId = user.HarborUserId,
+                Username = user.UserName
+            },
+            RoleId = (int)HarborRoles.Developer
+        };
+        await harborService.addMember($"{currentUser.UserName}-{repo.Name}", harborProjectMember);
+
+        return ResponseBase.SuccessResponse();
+    }
+
+    public async Task<ResponseBase> GetCollaborators(int repositoryId)
+    {
+        var repo = await repositoryManager.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId);
+        if (repo == null)
+        {
+            return ResponseBase.ErrorResponse("Repository not found.");
+        }
+
+        var (currentUser, currentUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
+        if (currentUser == null)
+        {
+            return ResponseBase.ErrorResponse("User does not exist.");
+        }
+
+        if (repo.OwnedBy == RepositoryOwnedBy.Organization)
+        {
+            var teams = await repositoryManager.TeamRepository
+            .GetAllByRepositoryIdAsync(repositoryId);
+
+            if (!await isCurrentUserCollaborator<Team>(currentUser.Id, currentUserRole, RepositoryOwnedBy.Organization, repo.OwnerId, teams))
+            {
+                return ResponseBase.SuccessResponse(null);
+            }
+
+            var teamDtos = teams
+            .Select(mapperManager.TeamDtoToTeamMapper.ReverseMap)
+            .ToList();
+
+            return ResponseBase.SuccessResponse(teamDtos);
+        }
+
+        if (!await isCurrentUserCollaborator<User>(currentUser.Id, currentUserRole, RepositoryOwnedBy.User, repo.OwnerId , repo.Collaborators))
+        {
+            return ResponseBase.SuccessResponse(null);
+        }
+
+        var collaborators = repo.Collaborators.Select(mapperManager.UserToUserDtoMapper.Map).ToList();
+        return ResponseBase.SuccessResponse(collaborators);
+    }
+
+    public async Task<ResponseBase> GetRepositoriesUserContributed(string username)
+    {
+        var user = await userManager.FindByNameAsync(username);
+        if (user == null)
+        {
+            return ResponseBase.ErrorResponse("User does not exist!");
+        }
+
+        var (loggedInUser, loggedInUserRole) = await userContextService.GetCurrentUserWithRoleAsync();
+        var showOnlyPublic = loggedInUserRole == "USER" && user?.Id != loggedInUser.Id;
+        var contributedRepositories = await repositoryManager.RepositoryRepository.GetContributedByUserIdAsync(user.Id, showOnlyPublic);
+        var repositoryDtos = contributedRepositories.Select(mapperManager.RepositoryDtoToRepositoryMapper.ReverseMap).ToList();
+
+        var updatedDtos = await GetFullNames(repositoryDtos);
+
+        return ResponseBase.SuccessResponse(updatedDtos);
     }
 
     private async Task<(bool IsAllowed, Model.Entity.Repository? Repository)> IsEditAllowed(int repositoryId)
@@ -429,24 +542,32 @@ public class RepositoryService(
 
     private async Task<bool> CanCurrentUserAccessRepository(Model.Entity.Repository repository)
     {
-        if (!repository.IsPrivate)
-            return true;
+        try
+        {
+            if (!repository.IsPrivate)
+                return true;
 
-        var (currentUser, role) = await userContextService.GetCurrentUserWithRoleAsync();
-        if (currentUser == null)
+            var (currentUser, role) = await userContextService.GetCurrentUserWithRoleAsync();
+            if (currentUser == null)
+                return false;
+
+            if (role is "SUPERADMIN" or "ADMIN")
+                return true;
+
+            if (repository.OwnedBy == RepositoryOwnedBy.User
+            && (repository.OwnerId == currentUser.Id || repository.Collaborators.Any(c => c.Id == currentUser.Id)))
+                return true;
+
+            if (repository.OwnedBy == RepositoryOwnedBy.Organization &&
+                await GetOrganizationUserAsync(repository.OwnerId, currentUser.Id) != null)
+                return true;
+
             return false;
-
-        if (role is "SUPERADMIN" or "ADMIN")
-            return true;
-
-        if (repository.OwnedBy == RepositoryOwnedBy.User && repository.OwnerId == currentUser.Id)
-            return true;
-
-        if (repository.OwnedBy == RepositoryOwnedBy.Organization &&
-            await GetOrganizationUserAsync(repository.OwnerId, currentUser.Id) != null)
-            return true;
-
-        return false;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private async Task<User?> GetOrganizationUserAsync(int organizationId, int userId)
@@ -475,6 +596,25 @@ public class RepositoryService(
                 await _cacheService.RemoveCacheValueAsync($"RepositoriesByOrganization:{organization.Name}");
             }
         }
+    }
+
+    private async Task<bool> isCurrentUserCollaborator<T>(int userId, string userRole, RepositoryOwnedBy ownedBy, int ownerId, List<T> items)
+    {
+        if (userRole is "SUPERADMIN" or "ADMIN") return true;
+
+        if (ownedBy == RepositoryOwnedBy.Organization)
+        {
+            var teams = items as List<Team>;
+            var ownerOrganization = await repositoryManager.OrganizationRepository.GetByIdAsync(ownerId);
+
+            if (ownerOrganization == null)
+                return false;
+
+            return userId == ownerOrganization.OwnerId || teams.Any(t => t.Users.Any(u => u.Id == userId));
+        }
+
+        var collaborators = items as List<User>;
+        return ownerId == userId || collaborators.Any(c => c.Id == userId);
     }
 
     public async Task<ResponseBase> Search(string? query)

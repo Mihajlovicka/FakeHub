@@ -22,4 +22,6 @@ public class Repository
     public Badge Badge { get; set; }
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    
+    public List<User> Collaborators { get; set; } = new();
 }

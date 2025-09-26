@@ -1,0 +1,15 @@
+.full-width {
+  width: 100%;
+}
+
+mat-dialog-content {
+  margin-top: 10px;
+}
+
+mat-dialog-actions {
+  margin-top: 20px;
+}
+
+::ng-deep .mat-mdc-dialog-container .mat-mdc-dialog-title + .mat-mdc-dialog-content {
+  padding-top: 5px;
+}

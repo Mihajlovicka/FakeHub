@@ -5,7 +5,7 @@ import { MatIconModule } from "@angular/material/icon";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatTabsModule } from "@angular/material/tabs";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
-import { Repository } from "../../../core/model/repository";
+import { Repository, RepositoryOwnedBy } from "../../../core/model/repository";
 import { RepositoryService } from "../../../core/services/repository.service";
 import { filter, Subscription, switchMap, take } from "rxjs";
 import { HelperService } from "../../../core/services/helper.service";
@@ -15,6 +15,10 @@ import { ConfirmationDialogComponent } from "../../../shared/components/confirma
 import { MatDialog } from "@angular/material/dialog";
 import { MatInputModule } from "@angular/material/input";
 import { UserService } from "../../../core/services/user.service";
+import { AddCollaboratorComponent } from "../add-collaborator/add-collaborator.component";
+import { UserProfileResponseDto } from "../../../core/model/user";
+import { UserBadgeComponent } from "../../../shared/components/user-badge/user-badge.component";
+import { Team } from "../../../core/model/team";
 
 @Component({
   selector: "app-view-repository",
@@ -28,8 +32,9 @@ import { UserService } from "../../../core/services/user.service";
     MatTabsModule,
     TagsComponent,
     RepositoryBadgeComponent,
-    MatInputModule
-],
+    MatInputModule,
+    UserBadgeComponent,
+  ],
   templateUrl: "./view-repository.component.html",
   styleUrl: "./view-repository.component.css",
 })
@@ -37,6 +42,8 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
   public repository!: Repository;
   public capitalizedLetterAvatar: string = "";
   public canUserDelete: boolean = false;
+  public isCurrentUserCollaborator: boolean = false;
+  public collaborators?: (UserProfileResponseDto | Team)[] = [];
 
   private readonly repositoryService: RepositoryService =
     inject(RepositoryService);
@@ -53,14 +60,15 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
   public ngOnInit() {
     const repoId = this.getRepoId();
     if (repoId) {
-      this.canEditRepositorySubscription = this.getRepositorySubscription = this.repositoryService
-        .getRepository(repoId)
-        .subscribe((data) => {
+      this.canEditRepositorySubscription = this.getRepositorySubscription =
+        this.repositoryService.getRepository(repoId).subscribe((data) => {
           if (data) {
             this.repository = data;
             this.avatarProfile();
-            if(this.userService.isLoggedIn())
+            if (this.userService.isLoggedIn()) {
               this.isOwner();
+              this.loadCollaborators();
+            } 
           }
         });
     }
@@ -83,7 +91,8 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
 
   public isOwner(): void {
     if (this.repository.id) {
-      this.canEditRepositorySubscription = this.repositoryService.canEditRepository(this.repository.id)
+      this.canEditRepositorySubscription = this.repositoryService
+        .canEditRepository(this.repository.id)
         .pipe(take(1))
         .subscribe((data: boolean) => {
           this.canUserDelete = data;
@@ -97,6 +106,10 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
     );
   }
 
+  public isOrganizationRepository(): boolean {
+    return this.repository?.ownedBy === RepositoryOwnedBy.ORGANIZATION;
+  }
+
   public openDeleteRepositoryModal(): void {
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
       data: {
@@ -105,9 +118,10 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
       },
     });
 
-    this.dialogSubscription = dialogRef.afterClosed()
+    this.dialogSubscription = dialogRef
+      .afterClosed()
       .pipe(
-        filter(isConfirmed => isConfirmed && this.repository?.id != null),
+        filter((isConfirmed) => isConfirmed && this.repository?.id != null),
         switchMap(() => this.repositoryService.delete(this.repository.id!)),
         take(1)
       )
@@ -117,8 +131,67 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           throw err;
-        }
+        },
       });
+  }
+
+  public openAddCollaboratorModal(): void {
+    const dialogRef = this.dialog.open(AddCollaboratorComponent, {
+      width: "30rem",
+    });
+
+    dialogRef.afterClosed().subscribe((username) => {
+      const repoId = this.repository?.id;
+      if (username && repoId !== undefined) {
+        this.repositoryService.addCollaborator(repoId, username).subscribe({
+          next: () => {
+            this.loadCollaborators();
+          },
+        });
+      }
+    });
+  }
+
+  public loadCollaborators(): void {
+    const repoId = this.repository?.id;
+    if (!repoId) return;
+
+    this.repositoryService.getCollaborators(repoId).subscribe({
+      next: (data) => {
+        if (data != null) {
+          this.isCurrentUserCollaborator = true;
+          this.collaborators = data;
+        }
+      },
+    });
+  }
+
+  public onUserClick(user: UserProfileResponseDto): void {
+    this.router.navigate([`/profile/${user.username}`]);
+  }
+
+  public onTeamClick(team: Team): void {
+    const organizationName = this.repository.ownerUsername;
+    const teamName = team.name;
+    if (organizationName) {
+      this.router.navigate([
+        "/organization/team/view",
+        organizationName,
+        teamName,
+      ]);
+    }
+  }
+
+  public isUser(item: UserProfileResponseDto | Team): item is UserProfileResponseDto {
+    return (item as UserProfileResponseDto).username !== undefined;
+  }
+
+  public isTeam(item: UserProfileResponseDto | Team): item is Team {
+    return ((item as Team).name !== undefined && (item as Team).users !== undefined);
+  }
+
+  public trackById(index: number, item: any) {
+    return item.id;
   }
 
   private getRepoId(): number | undefined {
