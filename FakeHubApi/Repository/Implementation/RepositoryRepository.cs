@@ -20,20 +20,13 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
             .Where(r => r.OwnedBy > 0 && r.OwnerId == ownerId && (onlyPublic ? !r.IsPrivate : true))
             .ToListAsync();
 
-        var userOrganizations = await _context.UserOrganizations
-            .Where(ou => ou.UserId == ownerId)
-            .Select(ou => ou.OrganizationId)
-            .ToListAsync();
-
         var ownedOrganizations = await _context.Organizations
             .Where(o => o.OwnerId == ownerId)
             .Select(o => o.Id)
             .ToListAsync();
 
-        var allOrganizations = userOrganizations.Concat(ownedOrganizations).Distinct().ToList();
-
         var organizationRepositories = await _context.Repositories
-            .Where(r => allOrganizations.Contains(r.OwnerId) && r.OwnedBy == RepositoryOwnedBy.Organization && (onlyPublic ? !r.IsPrivate : true))
+            .Where(r => ownedOrganizations.Contains(r.OwnerId) && r.OwnedBy == RepositoryOwnedBy.Organization && (onlyPublic ? !r.IsPrivate : true))
             .ToListAsync();
 
         return ownedRepositories.Concat(organizationRepositories);
@@ -132,5 +125,33 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
         }
 
         return await query.ToListAsync();
+    }
+
+    public async Task<Model.Entity.Repository?> GetByIdWithCollaboratorsAsync(int repositoryId)
+    {
+        var repo = await _dbSet.FindAsync(repositoryId);
+        if (repo == null)
+            return null;
+
+        await _context.Entry(repo)
+            .Collection(r => r.Collaborators)
+            .LoadAsync();
+
+        return repo;
+    }
+
+    public async Task<IEnumerable<Model.Entity.Repository>> GetContributedByUserIdAsync(int userId, bool onlyPublic = false)
+    {
+        var userTeams = await _context.Teams
+            .Where(t => t.Users.Any(u => u.Id == userId) && (onlyPublic ? !t.Repository.IsPrivate : true))
+            .ToListAsync();
+        var organizationRepoIds = userTeams.Select(t => t.RepositoryId);
+
+        var contributedRepositories = await _context.Repositories
+            .Where(r => (r.Collaborators.Any(u => u.Id == userId) || organizationRepoIds.Any(repoId => repoId == r.Id)) 
+                        && (onlyPublic ? !r.IsPrivate : true))
+            .ToListAsync();
+
+        return contributedRepositories;
     }
 }

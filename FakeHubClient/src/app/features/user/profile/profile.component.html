@@ -49,56 +49,71 @@
       </div>
     </div>
   </div>
-  <div class="links-container">
-    <a
-      [ngClass]="{ active: activeLink === 1 }"
-      (click)="setActiveLink(1)"
-      class="link"
-    >
-      Repositories
-    </a>
+  <mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
+    <mat-tab label="Repositories">
+      <ng-template matTabContent>
+        <div class="repositories-wrapper">
+          <div class="search">
+            <form (submit)="$event.preventDefault()">
+              <input
+                type="text"
+                placeholder="Search repositories..."
+                name="search"
+                class="search-input"
+                autocomplete="off"
+              />
+              <button type="submit" class="search-button">
+                <img src="icons/search.png" width="25rem" height="25rem" />
+              </button>
+            </form>
+          </div>
 
-    <a
-      *ngIf="isLoggedInUserProfile"
-      [ngClass]="{ active: activeLink === 3 }"
-      (click)="setActiveLink(3)"
-      class="link"
-    >
-      Contributed
-    </a>
-  </div>
-
-  <div
-    class="content"
-    [ngClass]="{ 'content-center': activeLink === 2 || activeLink === 3 }"
-  >
-    <div *ngIf="activeLink === 1">
-      <div class="search-container">
-        <div class="search-input-wrapper">
-          <input type="text" placeholder="Search Repositories" />
-          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <div class="repositories-container">
+            @if (repositories && repositories.length > 0) { @for (repository of
+            repositories; track repository.id) {
+            <app-docker-image
+              (click)="navigateToRepository(repository.id)"
+              [title]="repository?.fullName"
+              [updatedAt]="repository?.updatedAt"
+              [description]="repository?.description"
+              [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
+              [ownedBy]="repository?.ownedBy"
+              [badge]="repository?.badge"
+            ></app-docker-image>
+            } } @else {
+            <div class="no-users">No repositories found</div>
+            }
+          </div>
         </div>
-      </div>
+      </ng-template>
+    </mat-tab>
 
-      <div class="repositories-container">
-        @for (repository of repositories; track repository.id) {
-        <app-docker-image
-          (click)="navigateToRepository(repository.id)"
-          [title]="repository?.fullName"
-          [updatedAt]="repository?.updatedAt"
-          [description]="repository?.description"
-          [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
-          [ownedBy]="repository?.ownedBy"
-          [badge]="repository?.badge"
-          ></app-docker-image>
-        }
-      </div>
-    </div>
-
-    <div *ngIf="activeLink === 3">
-      <h2>Contributed Repositories</h2>
-    </div>
-  </div>
+    <mat-tab
+      label="Contributed"
+    >
+      <ng-template matTabContent>
+        <div class="repositories-wrapper">
+          <div class="repositories-container">
+            @if (contributedRepositories && contributedRepositories.length > 0)
+            { @for (repository of contributedRepositories; track repository.id)
+            {
+            <app-docker-image
+              (click)="navigateToRepository(repository.id)"
+              [title]="repository?.fullName"
+              [updatedAt]="repository?.updatedAt"
+              [description]="repository?.description"
+              [footerText]="repository?.isPrivate ? 'Private' : 'Public'"
+              [ownedBy]="repository?.ownedBy"
+              [badge]="repository?.badge"
+            ></app-docker-image>
+            } } @else {
+            <div class="no-users">No contributed repositories</div>
+            }
+          </div>
+        </div>
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
 </div>
 
 <div *ngIf="!user?.username">

@@ -11,4 +11,6 @@ public interface IRepositoryRepository : ICrudRepository<Model.Entity.Repository
     Task<IEnumerable<Model.Entity.Repository>> SearchByOwnerId(string? query, int userId);
     Task<IEnumerable<Model.Entity.Repository>> SearchAllAsync(string? query);
     Task<IEnumerable<Model.Entity.Repository>> GetAllPublicRepositories(RepositorySearchDto filters);
+    Task<Model.Entity.Repository?> GetByIdWithCollaboratorsAsync(int repositoryId);
+    Task<IEnumerable<Model.Entity.Repository>> GetContributedByUserIdAsync(int userId, bool onlyPublic = false);
 }

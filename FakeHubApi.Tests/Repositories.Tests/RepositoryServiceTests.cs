@@ -7,7 +7,7 @@ using FakeHubApi.Redis;
 using FakeHubApi.Repository.Contract;
 using FakeHubApi.Service.Contract;
 using FakeHubApi.Service.Implementation;
-using Google.Protobuf.WellKnownTypes;
+using Microsoft.AspNetCore.Identity;
 using Moq;
 
 namespace FakeHubApi.Tests.Repositories.Tests
@@ -22,6 +22,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         private IRepositoryService _repositoryService;
         private Mock<IHarborService> _harborServiceMock;
         private Mock<IRedisCacheService> _redisCacheServiceMock;
+        private Mock<UserManager<User>> _userManagerMock;
 
         [SetUp]
         public void Setup()
@@ -34,6 +35,18 @@ namespace FakeHubApi.Tests.Repositories.Tests
             _harborServiceMock = new Mock<IHarborService>();
             _redisCacheServiceMock = new Mock<IRedisCacheService>();
 
+            _userManagerMock = new Mock<UserManager<User>>(
+                new Mock<IUserStore<User>>().Object,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            );
+
             _repositoryService = new RepositoryService(
                 _repositoryMapperMock.Object,
                 _organizationServiceMock.Object,
@@ -41,7 +54,8 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 _userContextServiceMock.Object,
                 _userServiceMock.Object,
                 _harborServiceMock.Object,
-                _redisCacheServiceMock.Object
+                _redisCacheServiceMock.Object,
+                _userManagerMock.Object
             );
         }
 
@@ -662,7 +676,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
 
             _userContextServiceMock
                 .Setup(m => m.GetCurrentUserWithRoleAsync())
-                .ReturnsAsync((currentUser, "ADMIN"));
+                .ReturnsAsync((currentUser, "USER"));
 
             _repositoryManagerMock
                 .Setup(o => o.UserRepository.GetByIdAsync(currentUser.Id))
@@ -923,6 +937,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
         public async Task GetRepository_PublicRepository_ReturnsSuccessResponse()
         {
             var repositoryId = 1;
+            var collaborator = new User { Id = 1, UserName = "RepoCollaborator", Email = "collaborator@example.com" };
             var repository = new Model.Entity.Repository
             {
                 Id = repositoryId,
@@ -930,6 +945,15 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 IsPrivate = false,
                 OwnerId = 10,
                 OwnedBy = RepositoryOwnedBy.User
+            };
+            var repositoryWithCollaborators = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "PublicRepo",
+                IsPrivate = false,
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaborator },
             };
 
             var repoDto = new RepositoryDto
@@ -951,13 +975,16 @@ namespace FakeHubApi.Tests.Repositories.Tests
                     ExtraAttrs = new ExtraAttrs { Os = "linux" }
                 }
             };
-
             _repositoryManagerMock
                 .Setup(r => r.RepositoryRepository.GetByIdAsync(repositoryId))
                 .ReturnsAsync(repository);
 
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repositoryWithCollaborators);
+
             _repositoryMapperMock
-                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(repository))
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(repositoryWithCollaborators))
                 .Returns(repoDto);
 
             _repositoryManagerMock
@@ -991,7 +1018,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             var repositoryId = 999;
 
             _repositoryManagerMock
-                .Setup(r => r.RepositoryRepository.GetByIdAsync(repositoryId))
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
                 .ReturnsAsync((Model.Entity.Repository?)null);
 
             var response = await _repositoryService.GetRepository(repositoryId);
@@ -1004,7 +1031,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(response.ErrorMessage, Is.EqualTo($"Repository with id {repositoryId} does not exist."));
             });
 
-            _repositoryManagerMock.Verify(r => r.RepositoryRepository.GetByIdAsync(repositoryId), Times.Once);
+            _repositoryManagerMock.Verify(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId), Times.Once);
             _harborServiceMock.Verify(h => h.GetTags(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         }
 
@@ -1012,17 +1039,19 @@ namespace FakeHubApi.Tests.Repositories.Tests
         public async Task GetRepository_PrivateRepositoryWithoutPermission_ReturnsErrorResponse()
         {
             var repositoryId = 2;
+            var collaborator = new User { Id = 1, UserName = "RepoCollaborator", Email = "collaborator@example.com" };
             var privateRepo = new Model.Entity.Repository
             {
                 Id = repositoryId,
                 Name = "PrivateRepo",
                 IsPrivate = true,
                 OwnerId = 1,
-                OwnedBy = RepositoryOwnedBy.User
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaborator },
             };
 
             _repositoryManagerMock
-                .Setup(r => r.RepositoryRepository.GetByIdAsync(repositoryId))
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
                 .ReturnsAsync(privateRepo);
 
             _userContextServiceMock
@@ -1039,7 +1068,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 Assert.That(response.ErrorMessage, Is.EqualTo($"Repository with id {repositoryId} does not exist."));
             });
 
-            _repositoryManagerMock.Verify(r => r.RepositoryRepository.GetByIdAsync(repositoryId), Times.Once);
+            _repositoryManagerMock.Verify(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId), Times.Once);
 
             _userContextServiceMock.Verify(u => u.GetCurrentUserWithRoleAsync(), Times.Once);
 
@@ -1350,6 +1379,495 @@ namespace FakeHubApi.Tests.Repositories.Tests
                 (r.OwnedBy == RepositoryOwnedBy.User && filter.AuthorUserIds.Contains(r.OwnerId)) 
                 || ( r.OwnedBy == RepositoryOwnedBy.Organization && filter.AuthorOrganizationIds.Contains(r.OwnerId))
                 ));
+            });
+        }
+
+        [Test]
+        public async Task AddCollaborator_ValidRepositoryAndUser_ReturnsSuccessResponse()
+        {
+            var repositoryId = 1;
+            var username = "collaborator";
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User>()
+            };
+            var collaboratorUser = new User { Id = 5, UserName = username, HarborUserId = 1005 };
+            var currentUser = new User { Id = 10, UserName = "owner" };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userServiceMock
+                .Setup(u => u.GetUserByUsernameAsync(username))
+                .ReturnsAsync(ResponseBase.SuccessResponse(collaboratorUser));
+
+            _userManagerMock
+                .Setup(u => u.GetRolesAsync(collaboratorUser))
+                .ReturnsAsync(new List<string> { "USER" });
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.UpdateAsync(It.IsAny<Model.Entity.Repository>()))
+                .Returns(Task.CompletedTask);
+
+            _harborServiceMock
+                .Setup(h => h.addMember(It.IsAny<string>(), It.IsAny<HarborProjectMember>()))
+                .ReturnsAsync(true);
+
+            var response = await _repositoryService.AddCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+                Assert.That(repository.Collaborators, Contains.Item(collaboratorUser));
+            });
+
+            _repositoryManagerMock.Verify(r => r.RepositoryRepository.UpdateAsync(repository), Times.Once);
+            _harborServiceMock.Verify(h => h.addMember(It.IsAny<string>(), It.IsAny<HarborProjectMember>()), Times.Once);
+        }
+
+        [Test]
+        public async Task AddCollaborator_RepositoryNotFound_ReturnsErrorResponse()
+        {
+            var repositoryId = 999;
+            var username = "collaborator";
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync((Model.Entity.Repository)null);
+
+            var response = await _repositoryService.AddCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Repository not found."));
+            });
+        }
+
+        [Test]
+        public async Task AddCollaborator_OrganizationRepository_ReturnsErrorResponse()
+        {
+            var repositoryId = 1;
+            var username = "collaborator";
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "OrgRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.Organization,
+                Collaborators = new List<User>()
+            };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            var response = await _repositoryService.AddCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Cannot add collaborators to organization repositories."));
+            });
+        }
+
+        [Test]
+        public async Task AddCollaborator_UserAlreadyExists_ReturnsErrorResponse()
+        {
+            var repositoryId = 1;
+            var username = "collaborator";
+            var collaboratorUser = new User { Id = 5, UserName = username };
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaboratorUser }
+            };
+            var currentUser = new User { Id = 10, UserName = "owner" };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userServiceMock
+                .Setup(u => u.GetUserByUsernameAsync(username))
+                .ReturnsAsync(ResponseBase.SuccessResponse(collaboratorUser));
+
+            _userManagerMock
+                .Setup(u => u.GetRolesAsync(collaboratorUser))
+                .ReturnsAsync(new List<string> { "USER" });
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            var response = await _repositoryService.AddCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("User already added."));
+            });
+        }
+
+        [Test]
+        public async Task AddCollaborator_AddingOwnerAsCollaborator_ReturnsErrorResponse()
+        {
+            var repositoryId = 1;
+            var username = "owner";
+            var ownerUser = new User { Id = 10, UserName = username };
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User>()
+            };
+            var currentUser = new User { Id = 10, UserName = "owner" };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userServiceMock
+                .Setup(u => u.GetUserByUsernameAsync(username))
+                .ReturnsAsync(ResponseBase.SuccessResponse(ownerUser));
+
+            _userManagerMock
+                .Setup(u => u.GetRolesAsync(ownerUser))
+                .ReturnsAsync(new List<string> { "USER" });
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+                
+            var response = await _repositoryService.AddCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Cannot add owner as collaborator."));
+            });
+        }
+
+        [Test]
+        public async Task GetCollaborators_UserRepository_ReturnsCollaborators()
+        {
+            var currentUser = new User { Id = 5, UserName = "admin" };
+            var repositoryId = 1;
+            var collaborator1 = new User { Id = 5, UserName = "collab1" };
+            var collaborator2 = new User { Id = 6, UserName = "collab2" };
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaborator1, collaborator2 }
+            };
+
+            var userDtos = new List<UserDto>
+            {
+                new() { Username = "collab1", Email = "collab1@test.com" },
+                new() { Username = "collab2", Email = "collab2@test.com" }
+            };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "ADMIN"));
+
+            _repositoryMapperMock
+                .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
+                .Returns((User u) => userDtos.First(dto => dto.Username == u.UserName));
+
+            var response = await _repositoryService.GetCollaborators(repositoryId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<UserDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Username, Is.EqualTo("collab1"));
+                Assert.That(resultDtos![1].Username, Is.EqualTo("collab2"));
+            });
+        }
+
+        [Test]
+        public async Task GetCollaborators_OrganizationRepository_ReturnsTeams()
+        {
+            var currentUser = new User { Id = 5, UserName = "collaborator" };
+            var organizationOwnerUser = new User { Id = 6, UserName = "orgOwner" };
+            var repositoryId = 1;
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "orgRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.Organization
+            };
+            var organization = new Model.Entity.Organization { Id = 10, Name = "org" };
+
+            var teams = new List<Model.Entity.Team>
+            {
+                new() { Id = 1, Name = "Team1", TeamRole = TeamRole.Admin },
+                new() { Id = 2, Name = "Team2", TeamRole = TeamRole.ReadWrite, Users = new List<User> {currentUser } }
+            };
+
+            var teamDtos = new List<TeamDto>
+            {
+                new() { Name = "Team1", TeamRole = "Admin" },
+                new() { Name = "Team2", TeamRole = "ReadWrite" }
+            };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            _repositoryManagerMock
+                .Setup(r => r.OrganizationRepository.GetByIdAsync(repository.OwnerId))
+                .ReturnsAsync(organization);
+
+            _repositoryManagerMock
+                .Setup(r => r.TeamRepository.GetAllByRepositoryIdAsync(repositoryId))
+                .ReturnsAsync(teams);
+
+            _repositoryMapperMock
+                .Setup(m => m.TeamDtoToTeamMapper.ReverseMap(It.IsAny<Model.Entity.Team>()))
+                .Returns((Model.Entity.Team t) => teamDtos.First(dto => dto.Name == t.Name));
+
+            var response = await _repositoryService.GetCollaborators(repositoryId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<TeamDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("Team1"));
+                Assert.That(resultDtos![1].Name, Is.EqualTo("Team2"));
+            });
+        }
+
+        [Test]
+        public async Task GetCollaborators_RepositoryNotFound_ReturnsErrorResponse()
+        {
+            var repositoryId = 999;
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync((Model.Entity.Repository)null);
+
+            var response = await _repositoryService.GetCollaborators(repositoryId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Repository not found."));
+            });
+        }
+
+        [Test]
+        public async Task GetCollaborators_UserRepositoryWithNoCollaborators_ReturnsEmptyList()
+        {
+            var currentUser = new User { Id = 5, UserName = "owner" };
+            var repositoryId = 1;
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 5,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User>()
+            };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            _repositoryMapperMock
+                .Setup(m => m.UserToUserDtoMapper.Map(It.IsAny<User>()))
+                .Returns(new UserDto());
+
+            var response = await _repositoryService.GetCollaborators(repositoryId);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<UserDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Is.Empty);
+            });
+        }
+
+        [Test]
+        public async Task GetRepositoriesUserContributed_ValidUser_ReturnsContributedRepositories()
+        {
+            var username = "contributor";
+            var user = new User { Id = 5, UserName = username };
+            var loggedInUser = new User { Id = 5, UserName = username };
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, Name = "ContribRepo1", OwnerId = 10, OwnedBy = RepositoryOwnedBy.User },
+                new() { Id = 2, Name = "ContribRepo2", OwnerId = 11, OwnedBy = RepositoryOwnedBy.User }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                Name = repo.Name,
+                OwnerId = repo.OwnerId,
+                OwnedBy = repo.OwnedBy
+            }).ToList();
+
+            _userManagerMock
+                .Setup(u => u.FindByNameAsync(username))
+                .ReturnsAsync(user);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((loggedInUser, "USER"));
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetContributedByUserIdAsync(user.Id, false))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => new User { Id = id, UserName = $"User{id}" });
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
+
+            var response = await _repositoryService.GetRepositoriesUserContributed(username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(2));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("ContribRepo1"));
+                Assert.That(resultDtos![1].Name, Is.EqualTo("ContribRepo2"));
+            });
+        }
+
+        [Test]
+        public async Task GetRepositoriesUserContributed_UserNotFound_ReturnsErrorResponse()
+        {
+            var username = "nonexistent";
+
+            _userManagerMock
+                .Setup(u => u.FindByNameAsync(username))
+                .ReturnsAsync((User)null);
+
+            var response = await _repositoryService.GetRepositoriesUserContributed(username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("User does not exist!"));
+            });
+        }
+
+        [Test]
+        public async Task GetRepositoriesUserContributed_AdminAccess_ReturnsContributedRepositories()
+        {
+            var username = "contributor";
+            var user = new User { Id = 5, UserName = username };
+            var loggedInUser = new User { Id = 10, UserName = "admin" };
+            var repositories = new List<Model.Entity.Repository>
+            {
+                new() { Id = 1, Name = "ContribRepo1", OwnerId = 15, OwnedBy = RepositoryOwnedBy.User }
+            };
+
+            var repositoryDtos = repositories.Select(repo => new RepositoryDto
+            {
+                Id = repo.Id,
+                Name = repo.Name,
+                OwnerId = repo.OwnerId,
+                OwnedBy = repo.OwnedBy
+            }).ToList();
+
+            _userManagerMock
+                .Setup(u => u.FindByNameAsync(username))
+                .ReturnsAsync(user);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((loggedInUser, "ADMIN"));
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetContributedByUserIdAsync(user.Id, false))
+                .ReturnsAsync(repositories);
+
+            _repositoryMapperMock
+                .Setup(m => m.RepositoryDtoToRepositoryMapper.ReverseMap(It.IsAny<Model.Entity.Repository>()))
+                .Returns((Model.Entity.Repository r) => repositoryDtos.First(d => d.Id == r.Id));
+
+            _repositoryManagerMock
+                .Setup(r => r.UserRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => new User { Id = id, UserName = $"User{id}" });
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdAsync(It.IsAny<int>()))
+                .ReturnsAsync((int id) => repositories.FirstOrDefault(r => r.Id == id));
+
+            var response = await _repositoryService.GetRepositoriesUserContributed(username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+
+                var resultDtos = response.Result as List<RepositoryDto>;
+                Assert.That(resultDtos, Is.Not.Null);
+                Assert.That(resultDtos, Has.Count.EqualTo(1));
+                Assert.That(resultDtos![0].Name, Is.EqualTo("ContribRepo1"));
             });
         }
 

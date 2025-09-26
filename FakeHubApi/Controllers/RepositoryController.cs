@@ -126,4 +126,40 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
         }
         return BadRequest(response);
     }
+
+    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
+    [HttpPost("{repositoryId}/add-collaborator")]
+    public async Task<IActionResult> AddCollaborator([FromRoute] int repositoryId, [FromBody] AddCollaboratorDto model)
+    {
+        var response = await repositoryService.AddCollaborator(repositoryId, model.Username);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
+    [HttpGet("{id}/collaborators")]
+    public async Task<ActionResult<List<UserDto>>> GetCollaborators([FromRoute] int id)
+    {
+        var response = await repositoryService.GetCollaborators(id);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
+
+    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
+    [HttpGet("contributed/{username}")]
+    public async Task<IActionResult> GetRepositoriesUserContributed([FromRoute] string username)
+{
+        var response = await repositoryService.GetRepositoriesUserContributed(username);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }
