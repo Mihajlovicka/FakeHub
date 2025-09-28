@@ -1,0 +1,156 @@
+:host {
+  display: block;
+  font-family: Inter, Roboto, Arial, sans-serif;
+}
+
+.log-viewer {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.logs-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.lv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #fafafa;
+  gap: 12px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-width: 280px;
+}
+
+.btn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+  background: transparent;
+  cursor: pointer;
+}
+
+.summary {
+  color: #666;
+  font-size: 13px;
+}
+
+.lv-body {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.lv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lv-table th,
+.lv-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.6;
+  display: inline-block;
+}
+
+.badge.information {
+  background: #e8f4ff;
+  color: #0366d6;
+}
+
+.badge.warning {
+  background: #fff4e5;
+  color: #b36b00;
+}
+
+.badge.error {
+  background: #ffecec;
+  color: #c53030;
+}
+
+.details-row td {
+  background: #fbfbfb;
+}
+
+.details pre {
+  margin: 0;
+  padding: 8px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  overflow: auto;
+}
+
+.message {
+  max-width: 60ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions button {
+  padding: 4px 8px;
+}
+
+/* Striping samo za glavne redove */
+.logs-table tbody tr:not(.expanded-row):nth-child(odd) {
+  background-color: #ffffff; /* bela */
+}
+
+.logs-table tbody tr:not(.expanded-row):nth-child(even) {
+  background-color: #f0f8ff; /* baby blue */
+}
+
+/* Hover efekat za glavne redove */
+.logs-table tbody tr:not(.expanded-row):hover {
+  background-color: #d0e7ff; /* svetlija plava */
+  cursor: pointer;
+}
+
+/* Expanded redovi */
+.expanded-row td {
+  background: #fafafa;
+  padding: 10px;
+}
+
+.no-results {
+  padding: 12px;
+  color: #999;
+  text-align: center;
+  background: #fafafa;
+  padding: 10px;
+}
+
+.no-results {
+  padding: 12px;
+  color: #999;
+  text-align: center;
+}
