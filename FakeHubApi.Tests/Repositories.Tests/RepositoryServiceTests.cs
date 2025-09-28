@@ -1215,7 +1215,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
 
             _repositoryManagerMock
                 .Setup(r => r.RepositoryRepository.GetAllPublicRepositories(It.Is<RepositorySearchDto>(f =>
-                    f.Name == "Repo" && f.Badge == Badge.SponsoredOSS)))
+                    f.Name == "Repo" && f.Badges.Contains(Badge.SponsoredOSS))))
                 .ReturnsAsync(repositories);
 
             _repositoryMapperMock

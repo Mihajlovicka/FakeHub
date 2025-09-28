@@ -439,7 +439,7 @@ public class RepositoryService(
                 var value = term[6..];
                 if (Enum.TryParse<Badge>(value, true, out var parsedBadge))
                 {
-                    filters.Badge = parsedBadge;
+                    filters.Badges.Add(parsedBadge);
                 }
                 else
                 {
@@ -447,7 +447,7 @@ public class RepositoryService(
                         .FirstOrDefault(b => b.ToString()
                             .Contains(value, StringComparison.OrdinalIgnoreCase));
                     if (match != Badge.None)
-                        filters.Badge = match;
+                        filters.Badges.Add(match);
                 }
             }
             else if (term.StartsWith("author:", StringComparison.OrdinalIgnoreCase))

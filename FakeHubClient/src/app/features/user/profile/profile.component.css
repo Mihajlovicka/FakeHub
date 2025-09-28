@@ -110,56 +110,6 @@ input:focus {
   outline: none;
 }
 
-.search {
-  position: absolute;
-  top: 0;
-  left: 0.5rem;
-  display: flex;
-  align-items: center;
-  flex-direction: row;
-
-  > form {
-    display: flex;
-    width: 20%;
-    margin: 1%;
-    align-items: center;
-  }
-}
-
-.search-input {
-  flex: 1;
-  padding: 10px;
-  height: 2rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  margin-right: 1%;
-  outline: none;
-}
-
-.search-select {
-  height: 2rem;
-  width: 20rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  margin-right: 1%;
-  outline: none;
-}
-
-.search-button {
-  padding-bottom: 5px;
-  height: 2rem;
-  width: 2rem;
-  background-color: var(--primary-color);
-  border: 2px solid var(--primary-color);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
 .no-user-container {
   display: flex;
   justify-content: center;
@@ -189,7 +139,6 @@ input:focus {
 
 .repositories-wrapper {
   width: 100%;
-  padding-top: 4rem;
   position: relative;
 }
 

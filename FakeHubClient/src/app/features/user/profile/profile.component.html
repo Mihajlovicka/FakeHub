@@ -53,21 +53,6 @@
     <mat-tab label="Repositories">
       <ng-template matTabContent>
         <div class="repositories-wrapper">
-          <div class="search">
-            <form (submit)="$event.preventDefault()">
-              <input
-                type="text"
-                placeholder="Search repositories..."
-                name="search"
-                class="search-input"
-                autocomplete="off"
-              />
-              <button type="submit" class="search-button">
-                <img src="icons/search.png" width="25rem" height="25rem" />
-              </button>
-            </form>
-          </div>
-
           <div class="repositories-container">
             @if (repositories && repositories.length > 0) { @for (repository of
             repositories; track repository.id) {

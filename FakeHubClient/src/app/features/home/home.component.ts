@@ -7,11 +7,12 @@ import { Router } from "@angular/router";
 import { Subscription } from "rxjs";
 import { UserBadge } from "../../core/model/user";
 import { FormsModule } from "@angular/forms";
+import { MatCheckboxModule } from "@angular/material/checkbox";
 
 @Component({
   selector: "app-home",
   standalone: true,
-  imports: [CommonModule, DockerImageComponent, FormsModule],
+  imports: [CommonModule, DockerImageComponent, FormsModule, MatCheckboxModule],
   templateUrl: "./home.component.html",
   styleUrl: "./home.component.css",
 })
@@ -24,7 +25,7 @@ export class HomeComponent implements OnInit {
   public publicRepositories: Repository[] = [];
   public repositories: Repository[] = [];
   public filteredRepositories: Repository[] = [];
-  public selectedBadge: UserBadge | null = null;
+  public selectedBadges: UserBadge[] = [];
   public UserBadge = UserBadge;
 
   public previousQuery: string = "";
@@ -37,6 +38,12 @@ export class HomeComponent implements OnInit {
     { id: 3, name: "Newest" },
     { id: 4, name: "Oldest" },
   ];
+
+  public trustedOptions = [
+  { label: "Docker Official Image", value: UserBadge.DockerOfficialImage },
+  { label: "Verified Publisher", value: UserBadge.VerifiedPublisher },
+  { label: "Sponsored OSS", value: UserBadge.SponsoredOSS },
+];
 
   ngOnInit(): void {
     this.searchSubscription = this.repositoryService.searchQuery$.subscribe(
@@ -61,35 +68,33 @@ export class HomeComponent implements OnInit {
   }
 
   public filterByBadge(badge: UserBadge) {
-    if (this.selectedBadge === badge) {
-      this.selectedBadge = null;
-      this.badgeQuery = this.removeBadgeFromQuery(this.badgeQuery);
+    const index = this.selectedBadges.indexOf(badge);
+    if (index > -1) {
+      this.selectedBadges.splice(index, 1);
     } else {
-      this.selectedBadge = badge;
-      this.badgeQuery = this.setBadgeInQuery(this.badgeQuery, badge);
+      this.selectedBadges.push(badge);
     }
-    this.getFilteredRepositories(this.searchQuery);
+    this.applyFilters();
   }
 
   public isActive(badge: UserBadge): boolean {
-    return this.selectedBadge === badge;
+    return this.selectedBadges.includes(badge);
   }
 
   public applyFilters(): void {
     let temp = [...this.publicRepositories];
 
-    if (this.selectedBadge !== null) {
-      temp = temp.filter((r) => {
-        if (r.ownedBy === RepositoryOwnedBy.ORGANIZATION) {
-          return false;
-        }
+  if (this.selectedBadges.length > 0) {
+    temp = temp.filter((r) => {
+      if (r.ownedBy === RepositoryOwnedBy.ORGANIZATION) {
+        return false;
+      }
+      return this.selectedBadges.includes(r.badge);
+    });
+  }
 
-        return r.badge === this.selectedBadge;
-      });
-    }
-
-    this.filteredRepositories = temp;
-    this.sortRepositories();
+  this.filteredRepositories = temp;
+  this.sortRepositories();
   }
 
   public sortRepositories(): void {
@@ -126,23 +131,22 @@ export class HomeComponent implements OnInit {
       });
   }
 
-  private parseBadgeFromQuery(query: string | null): UserBadge | null {
-    if (!query) return null;
+  private parseBadgeFromQuery(query: string | null): UserBadge[] {
+    if (!query) return [];
 
-    const badgeTerm = query
-      .split(" ")
-      .find((t) => t.toLowerCase().startsWith("badge:"));
+    const badgeTerms = query
+    .split(" ")
+    .filter((t) => t.toLowerCase().startsWith("badge:"))
+    .map((t) => t.substring(6).toLowerCase());
 
-    if (!badgeTerm) return null;
+  const badges = (Object.values(UserBadge) as Array<string | number>)
+    .filter((v) => typeof v === "number")
+    .map((v) => v as UserBadge)
+    .filter((b) =>
+      badgeTerms.some((term) => UserBadge[b].toLowerCase().includes(term))
+    );
 
-    const value = badgeTerm.substring(6).toLowerCase();
-
-    const badge = (Object.values(UserBadge) as Array<string | number>)
-      .filter((v) => typeof v === "number")
-      .map((v) => v as UserBadge)
-      .find((b) => UserBadge[b].toLowerCase().includes(value));
-
-    return badge ?? null;
+    return badges;
   }
 
   private removeBadgeFromQuery(query: string): string {
@@ -152,22 +156,14 @@ export class HomeComponent implements OnInit {
       .join(" ");
   }
 
-  private setBadgeInQuery(query: string, badge: UserBadge): string {
-    let q = this.removeBadgeFromQuery(query);
-    return `${q} badge:${UserBadge[badge]}`.trim();
-  }
-
   private getFilteredRepositories = (query: string | null) => {
-    var badge = this.parseBadgeFromQuery(query);
+    var badges = this.parseBadgeFromQuery(query);
     if (this.previousQuery?.includes("badge:") && !query?.includes("badge:")) {
-      this.badgeQuery = this.removeBadgeFromQuery(this.badgeQuery);
-      this.selectedBadge = null;
-    } else {
-      if (badge != null) {
-        this.badgeQuery = this.setBadgeInQuery(this.badgeQuery, badge);
-        this.selectedBadge = badge;
-        query = this.removeBadgeFromQuery(query ?? "");
-      }
+    this.badgeQuery = "";
+      this.selectedBadges = [];
+    } else if (badges.length > 0) {
+      this.selectedBadges = badges;
+      query = this.removeBadgeFromQuery(query ?? "");
     }
 
     this.previousQuery = query || "";
