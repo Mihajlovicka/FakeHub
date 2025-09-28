@@ -104,8 +104,8 @@ public class RepositoryRepository(AppDbContext context): CrudRepository<Model.En
         if (!string.IsNullOrWhiteSpace(filters.Description))
             query = query.Where(r => EF.Functions.Like(r.Description, $"%{filters.Description}%"));
 
-        if (filters.Badge.HasValue && filters.Badge.Value != Badge.None)
-            query = query.Where(r => r.Badge == filters.Badge.Value);
+        if (filters.Badges != null && filters.Badges.Any())
+            query = query.Where(r => filters.Badges.Contains(r.Badge));
 
         if (!string.IsNullOrEmpty(filters.AuthorName))
         {

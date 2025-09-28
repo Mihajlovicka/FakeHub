@@ -25,7 +25,6 @@
 }
 
 .trusted-content {
-  width: 150px;
   margin-bottom: 1rem;
 }
 
@@ -59,6 +58,16 @@
   }
 }
 
+.no-repos {
+    font-size: 1.2rem;
+    font-weight: bold;
+    width: 100%;
+    text-align: center;
+    transform: translateX(-100px);
+    color: #555;
+    margin-top: 7rem;
+}
+
 .button-container button {
   width: calc(25% - 10px);
   padding: 10px;
@@ -67,7 +76,7 @@
 }
 
 .sort-content {
-  margin-bottom: 5rem;
+  margin-bottom: 2rem;
   margin-left: 0.4rem;
 
   display: flex;
@@ -95,4 +104,33 @@
     outline: none;
     border-color: var(--primary-color);
   }
+}
+:host ::ng-deep .mat-mdc-checkbox.mat-accent {
+  --mdc-checkbox-selected-icon-color: #3f51b5;
+  --mdc-checkbox-selected-checkmark-color: #ffffff;
+
+  --mdc-checkbox-selected-focus-icon-color: #3f51b5;
+
+  --mdc-checkbox-selected-hover-icon-color: #3f51b5;
+  --mdc-checkbox-selected-hover-state-layer-color: rgba(0, 0, 0, 0.08);
+
+  --mdc-checkbox-unselected-hover-icon-color: #3f51b5;
+  --mdc-checkbox-hover-state-layer-color: rgba(63, 81, 181, 0.1);
+
+  --mdc-checkbox-activated-state-layer-color: rgba(63, 81, 181, 0.2);
+
+  --mdc-checkbox-focus-ring-color: #3f51b5;
+
+  --mdc-checkbox-indeterminate-icon-color: #3f51b5;
+  --mdc-checkbox-indeterminate-checkmark-color: #ffffff;
+}
+
+:host ::ng-deep .mat-mdc-checkbox.mat-accent .mdc-checkbox__ripple::before,
+:host ::ng-deep .mat-mdc-checkbox.mat-accent .mdc-checkbox__ripple::after {
+  background-color: rgba(63, 81, 181, 0.2) !important;
+}
+
+:host ::ng-deep .mat-mdc-checkbox.mat-accent.mdc-checkbox--selected .mdc-checkbox__native-control {
+  border-color: var(--mdc-checkbox-selected-icon-color, #3f51b5);
+  background-color: var(--mdc-checkbox-selected-icon-color, #3f51b5);
 }
