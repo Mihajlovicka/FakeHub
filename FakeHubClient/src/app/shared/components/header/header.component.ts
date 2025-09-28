@@ -118,6 +118,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.router.navigate(['/']);
   }
 
+  public goToAnalytics(): void {
+    this.router.navigate(["/analytics"]);
+  }
+
   public search(): void {
     const service: any = this.getService();
     service.updateQuery(this.searchQuery);
@@ -125,7 +129,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   public toggleUsersDropdown(event: MouseEvent): void {
     this.isUsersDropdownVisible = !this.isUsersDropdownVisible;
-    event.stopPropagation(); // Prevent triggering the document click handler
+    event.stopPropagation();
   }
 
   private getService(): any {

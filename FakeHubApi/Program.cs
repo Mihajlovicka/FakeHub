@@ -1,5 +1,5 @@
-using System.Net;
 using FakeHubApi.Data;
+using FakeHubApi.ElasticSearch;
 using FakeHubApi.Extensions;
 using FakeHubApi.Filters;
 using FakeHubApi.Helpers;
@@ -10,11 +10,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using Nest;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load configuration files
 builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
 var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
@@ -24,9 +27,21 @@ if (environment == "Docker")
 }
 builder.Configuration.AddEnvironmentVariables();
 
-// builder.Host.UseSerilog((context, configuration) =>
-//     configuration.ReadFrom.Configuration(context.Configuration));
+//
+// Configure Serilog
+//
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .CreateLogger();
 
+builder.Host.UseSerilog(); // Hook Serilog into the generic host
+
+//
+// ✅ Configure services
+//
+
+// Database context
 builder.Services.AddDbContext<AppDbContext>(option =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -53,8 +68,8 @@ builder
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
+// Authentication & Authorization
 builder.AddAuthenticationAndAuthorization();
-
 builder.Services.AddScoped<IUserContextService, UserContextService>();
 
 builder.Services.AddControllers(options =>
@@ -62,7 +77,25 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<ValidationFilter>();
 });
 
-// Swagger configuration
+//
+// ✅ Elasticsearch configuration
+//
+builder.Services.Configure<ElasticsearchSettings>(
+    builder.Configuration.GetSection("ElasticsearchSettings")
+);
+
+builder.Services.AddSingleton<IElasticClient>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<ElasticsearchSettings>>().Value;
+    var connectionSettings = new ConnectionSettings(new Uri(settings.Uri))
+                                .BasicAuthentication(settings.Username, settings.Password)
+                                .DefaultIndex("fakehubapi-logs-*"); // default index pattern
+    return new ElasticClient(connectionSettings);
+});
+
+//
+// ✅ Swagger configuration
+//
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(opt =>
 {
@@ -98,6 +131,9 @@ builder.Services.AddSwaggerGen(opt =>
     );
 });
 
+//
+// ✅ Authorization policies
+//
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminPolicy", policy => policy.RequireRole("ADMIN"))
     .AddPolicy("UserPolicy", policy => policy.RequireRole("USER"))
@@ -111,9 +147,14 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddSingleton<IAuthorizationHandler, NoRoleHandler>();
 
+//
+// ✅ Build app
+//
 var app = builder.Build();
 
-// Seed the superadmin user and roles
+//
+// ✅ Seed the superadmin user and roles
+//
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -123,12 +164,13 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while seeding the database.");
+        Log.Error(ex, "An error occurred while seeding the database.");
     }
 }
 
-// Configure middleware
+//
+// ✅ Middleware pipeline
+//
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -136,14 +178,26 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseCors(CorsExtensions.GetCorsPolicyName());
 app.UseAuthentication();
 app.UseAuthorization();
 
-// app.UseSerilogRequestLogging();
+// Optional — log all requests (good with Serilog)
+app.UseSerilogRequestLogging();
 
 app.MapControllers();
 app.ApplyPendingMigrations();
 
-app.Run();
+try
+{
+    Log.Information("Starting up");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application start-up failed");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

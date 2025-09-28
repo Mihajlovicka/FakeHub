@@ -9,10 +9,10 @@
             </div>
             <div *ngIf="isLoggedIn" class="navbar-links">
                 <a *ngIf="isUser" class="nav-link text-white mx-2" (click)="goToHomePage()">Explore</a>
+                <a *ngIf="isAdmin || isSuperAdmin" class="nav-link text-white mx-2" (click)="goToAnalytics()">Analytics</a>
                 <a class="nav-link text-white mx-2" (click)="goToRepositories()">Repositories</a>
                 <a *ngIf="isUser" class="nav-link text-white mx-2" (click)="goToOrganizations()">Organizations</a>
 
-                <!-- superadmin-->
                 <div *ngIf="isSuperAdmin"  class="nav-link2 text-white mx-2" (click)="toggleUsersDropdown($event)">
                     <a>Users</a>
                     <div class="dropdown2 dropdown" [class.show]="isUsersDropdownVisible">
@@ -23,7 +23,6 @@
                     </div>
                 </div>
 
-                <!-- admin-->
                 <a *ngIf="isAdmin" class="nav-link text-white mx-2" (click)="goToUsers()">Users</a>
 
             </div>

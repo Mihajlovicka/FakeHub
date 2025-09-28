@@ -1,4 +1,5 @@
 using FakeHubApi.ContainerRegistry;
+using FakeHubApi.ElasticSearch;
 using FakeHubApi.Filters;
 using FakeHubApi.Mapper;
 using FakeHubApi.Mapper.OrganizationMapper;
@@ -57,6 +58,7 @@ public static class ServiceExtensions
         });
 
         services.AddScoped<IRedisCacheService, RedisCacheService>();
+        services.AddSingleton<ElasticSearchService>();
 
         // Mapper-related scoped services
         services.AddScoped<

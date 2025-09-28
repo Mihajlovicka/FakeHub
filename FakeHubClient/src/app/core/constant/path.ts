@@ -24,7 +24,8 @@ export const Path = {
   OrganizationByUserIdName: organizationApi + "user/names",
   Repositories: repositoryApi,
   Log: api + 'log',
-  Tag: repositoryApi + '/tag/'
+  Tag: repositoryApi + '/tag/',
+  ElasticLogs: api + 'elasticsearch/logs'
 };
 
 export function getProfilePath(username: string): string {

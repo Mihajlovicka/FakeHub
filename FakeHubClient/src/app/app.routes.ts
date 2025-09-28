@@ -22,11 +22,17 @@ import { RepositoriesListViewComponent } from './features/repository/repositorie
 import { CreateRepositoryComponent } from './features/repository/create-repository/create-repository.component';
 import { ViewRepositoryComponent } from './features/repository/view-repository/view-repository.component';
 import { EditRepositoryComponent } from './features/repository/edit-repository/edit-repository.component';
+import { AnalyticsComponent } from './features/analytics/analytics.component';
 
 export const routes: Routes = [
   {
     path: '',
     component: HomeComponent,
+    canActivate: [NotEnabledGuard]
+  },
+  {
+    path: "analytics",
+    component: AnalyticsComponent,
     canActivate: [NotEnabledGuard]
   },
   {
@@ -122,7 +128,7 @@ export const routes: Routes = [
         path: "team",
         children: [
           {
-            path: "add/:organizationName",  // Ensure you are using this path structure for AddTeam
+            path: "add/:organizationName",
             component: AddTeamComponent,
           },
           {
