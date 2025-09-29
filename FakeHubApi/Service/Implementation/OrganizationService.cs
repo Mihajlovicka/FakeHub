@@ -222,14 +222,26 @@ public class OrganizationService(
             if (organization == null)
                 return ResponseBase.ErrorResponse("Organization not found");
 
-            if (!await IsLoggedInUserOwner(organization))
+            var currentUser = await userContext.GetCurrentUserAsync();
+            var isCurrentUserLeavingOrganizaion = string.Equals(currentUser.UserName, username, StringComparison.OrdinalIgnoreCase);
+            if (!isCurrentUserLeavingOrganizaion
+                && !(organization.OwnerId == currentUser.Id))
                 return ResponseBase.ErrorResponse("You are not the owner of this organization");
 
             if (organization.Users.FirstOrDefault(u => u.UserName == username) == null)
                 return ResponseBase.ErrorResponse("User not in organization");
 
-            organization.Teams.ForEach(t => t.Users.Remove(user));
-            organization.Users.Remove(user);
+            foreach (var t in organization.Teams)
+            {
+                if (t.Users.Remove(user))
+                {
+                    await harborService.removeMemberFromTeam(
+                        $"{name}-{t.Repository.Name}",
+                        username,
+                        isCurrentUserLeavingOrganizaion
+                    );
+                }
+            }
 
             var deleteRelation = organization.UserOrganizations.FirstOrDefault(x =>
                 x.UserId == user.Id && x.OrganizationId == organization.Id

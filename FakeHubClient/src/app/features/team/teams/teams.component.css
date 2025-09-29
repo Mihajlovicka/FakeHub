@@ -103,36 +103,6 @@ span.footer-text {
   margin-top: 20px;
 }
 
-.delete-button {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  border: none;
-  background: transparent;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s ease-in;
-  border-radius: 50%;
-  padding: 0.25rem;
-  width: 2rem;
-  height: 2rem;
-}
-
-.delete-button mat-icon {
-  font-size: 17px;
-  color: gray;
-  transition: all 0.2s ease-in;
-  height: auto;
-}
-
-.delete-button:hover mat-icon {
-  color: #8b0c33;
-}
-.delete-button:hover {
-  background-color: #e2e3e5;
-}
-
 .search {
   display: flex;
   align-items: center;
@@ -184,4 +154,51 @@ span.footer-text {
   gap: 20px;
   justify-content: flex-start;
   width: 100%;
+}
+
+
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-direction: row-reverse;
+    position:absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+.action-button {
+    border: none;
+    background: transparent;
+    transition: all 0.2s ease-in;
+    border-radius: 50%;
+    padding: 0.25rem;
+    width: 2rem;
+    height: 2rem;
+}
+
+.delete-button mat-icon {
+    font-size: 1rem;
+    color: gray;
+    height: auto;
+}
+
+.delete-button:hover mat-icon {
+    color: #8b0c33;
+}
+.delete-button:hover {
+    background-color: #e2e3e5;
+}
+
+.leave-button mat-icon {
+    font-size: 1rem;
+    color: gray;
+    height: auto;
+}
+
+.leave-button:hover mat-icon {
+    color: #8b0c33;
+}
+.leave-button:hover {
+    background-color: #e2e3e5;
 }

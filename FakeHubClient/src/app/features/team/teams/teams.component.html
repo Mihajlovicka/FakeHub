@@ -8,7 +8,8 @@
         name="search"
         class="search-input"
         autocomplete="off"
-        [(ngModel)]="searchQuery" />
+        [(ngModel)]="searchQuery"
+      />
       <button type="submit" class="search-button">
         <img src="icons/search.png" width="25rem" height="25rem" />
       </button>
@@ -16,27 +17,46 @@
   </div>
   <div class="teams-container">
     @for (team of filteredTeams; track team.name) {
-      <div class="team-container">
-        <div class="team-details-container" (click)="goToTeam(team.name)">
-          <div class="link-header">
-            <span class="ellipsis">{{ team.repository?.name }}/{{ team.name }}</span>
-          </div>
+    <div class="team-container">
+      <div class="team-details-container" (click)="goToTeam(team.name)">
+        <div class="link-header">
+          <span class="ellipsis"
+            >{{ team.repository?.name }}/{{ team.name }}</span
+          >
+        </div>
+        <div class="button-container">
           @if(isOwner){
-            <button class="delete-button" (click)="openDeleteTeamModal(team)">
-              <mat-icon>delete</mat-icon>
-            </button>
+          <button class="action-button delete-button" (click)="openDeleteTeamModal(team)">
+            <mat-icon>delete</mat-icon>
+          </button>
           }
-          <div class="multi-line-ellipsis">
-            {{ team.description.substring(0, 50) }}{{ team.description.length > 50 ? "..." : "" }}
-          </div>
-          <div class="link-footer">
-            <span class="footer-text">{{ team.teamRole }} ({{ team.users?.length || 0 }})</span>
-            <span class="footer-text">Created at: {{ team.createdAt | date : "mediumDate" }}</span>
-          </div>
+          @if(isTeamMember(team)){
+          <button
+            class="action-button leave-button"
+            mat-icon-button
+            (click)="leaveTeam(team); $event.stopPropagation()"
+            matTooltip="Leave team"
+          >
+            <mat-icon>exit_to_app</mat-icon>
+          </button>
+          }
+        </div>
+        <div class="multi-line-ellipsis">
+          {{ team.description.substring(0, 50)
+          }}{{ team.description.length > 50 ? "..." : "" }}
+        </div>
+        <div class="link-footer">
+          <span class="footer-text"
+            >{{ team.teamRole }} ({{ team.users?.length || 0 }})</span
+          >
+          <span class="footer-text"
+            >Created at: {{ team.createdAt | date : "mediumDate" }}</span
+          >
         </div>
       </div>
+    </div>
     } @empty {
-      <div class="no-teams">There are no teams</div>
+    <div class="no-teams">There are no teams</div>
     }
   </div>
 </div>

@@ -404,6 +404,32 @@ public class RepositoryService(
         return ResponseBase.SuccessResponse(updatedDtos);
     }
 
+    public async Task<ResponseBase> RemoveCollaborator(int repositoryId, string username)
+    {
+        var repo = await repositoryManager.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId);
+        if (repo == null)
+            return ResponseBase.ErrorResponse("Repository not found.");
+
+        var (currentUser, role) = await userContextService.GetCurrentUserWithRoleAsync();
+
+        var collaborator = repo.Collaborators.FirstOrDefault(c => c.UserName == username);
+        if (collaborator == null)
+            return ResponseBase.ErrorResponse("User is not a collaborator.");
+
+        var isCurrentUserLeavingRepository = collaborator.Id == currentUser.Id;
+        if (!isCurrentUserLeavingRepository && repo.OwnerId != currentUser.Id)
+            return ResponseBase.ErrorResponse("You are not the owner and cannot remove other collaborators.");
+
+        repo.Collaborators.Remove(collaborator);
+        await repositoryManager.RepositoryRepository.UpdateAsync(repo);
+
+        var ownerUser = await userManager.FindByIdAsync(repo.OwnerId.ToString());
+        var harborProjectName = $"{ownerUser.UserName}-{repo.Name}";
+        await harborService.removeMemberFromTeam(harborProjectName, collaborator.UserName, isCurrentUserLeavingRepository);
+
+        return ResponseBase.SuccessResponse();
+    }
+
     private async Task<(bool IsAllowed, Model.Entity.Repository? Repository)> IsEditAllowed(int repositoryId)
     {
         var (user, role) = await userContextService.GetCurrentUserWithRoleAsync();
