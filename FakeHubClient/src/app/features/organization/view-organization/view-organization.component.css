@@ -237,3 +237,15 @@ input:focus {
   width: 25px;
   height: 25px;
 }
+
+.leave-org-button {
+    transition: all 0.2s ease-in;
+    color: #8b0c33;
+}
+
+.leave-org-button:hover mat-icon {
+    color: gray;
+}
+.leave-org-button:hover {
+    background-color: #e2e3e5;
+}

@@ -21,8 +21,8 @@ public interface IHarborService
     Task<bool> deleteProject(string projectName, string repositoryName);
     Task<bool> addMember(string projectName, HarborProjectMember member);
     Task<bool> removeMembersByRole(string projectName, int role);
-    Task<bool> removeMembers(string projectName, IEnumerable<int> memberIds);
-    Task<bool> removeMemberFromTeam(string projectName, string username);
+    Task<bool> removeMembers(string projectName, IEnumerable<int> memberIds, bool useAdminToken = false);
+    Task<bool> removeMemberFromTeam(string projectName, string username, bool useAdminToken = false);
     Task<List<HarborArtifact>> GetTags(string projectName, string repositoryName);
     Task<bool> UpdateProjectVisibility(string projectName, bool isPublic);
     Task<bool> deleteTag(string projectName, string repositoryName, string digest, string tagName, bool useAdminToken = false);
@@ -106,7 +106,10 @@ public class HarborService : IHarborService
         bool useAdminToken = false) where TResponse : class
     {
 
-        if (!useAdminToken) await SetUserAuthorization();
+        if (useAdminToken)
+            SetDefaultAuthorization();
+        else
+            await SetUserAuthorization();
 
         _httpClient.DefaultRequestHeaders.Remove("Cookie");
 
@@ -245,7 +248,7 @@ public class HarborService : IHarborService
         return await removeMembers(projectName, memberIds);
     }
 
-    public async Task<bool> removeMemberFromTeam(string projectName, string username)
+    public async Task<bool> removeMemberFromTeam(string projectName, string username, bool useAdminToken = false)
     {
         var (success, members, _, _) = await SendRequestAsync<List<HarborProjectMemberGet>>(HttpMethod.Get, $"{Projects}{projectName}/{Members}");
         if (!success || members == null || members.Count == 0) return false;
@@ -253,14 +256,14 @@ public class HarborService : IHarborService
         var userId = members.FirstOrDefault(m => m.EntityName.Equals(username, StringComparison.OrdinalIgnoreCase))?.Id;
         if (userId == null) return false;
 
-        return await removeMembers(projectName, new List<int> { userId.Value });
+        return await removeMembers(projectName, new List<int> { userId.Value }, useAdminToken);
     }
 
-    public async Task<bool> removeMembers(string projectName, IEnumerable<int> memberIds)
+    public async Task<bool> removeMembers(string projectName, IEnumerable<int> memberIds, bool useAdminToken = false)
     {
         foreach (var memberId in memberIds)
         {
-            var (success, _, _, _) = await SendRequestAsync<object>(HttpMethod.Delete, $"{Projects}{projectName}/{Members}{memberId}");
+            var (success, _, _, _) = await SendRequestAsync<object>(HttpMethod.Delete, $"{Projects}{projectName}/{Members}{memberId}", useAdminToken: useAdminToken);
             if (!success) return false;
         }
         return true;

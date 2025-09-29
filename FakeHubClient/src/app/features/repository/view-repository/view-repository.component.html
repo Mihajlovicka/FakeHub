@@ -33,6 +33,17 @@
           <span>Delete repository</span>
         </button>
       </mat-menu>
+      } 
+      @if(isCurrentUserCollaborator && !isOrganizationRepository() &&
+      !canUserDelete) {
+      <button
+        class="leave-repository-button"
+        mat-icon-button
+        (click)="leaveRepository()"
+        matTooltip="Leave repository"
+      >
+        <mat-icon>exit_to_app</mat-icon>
+      </button>
       }
     </div>
     <div class="community-info">
@@ -53,18 +64,24 @@
   </div>
 </div>
 
-<mat-tab-group mat-stretch-tabs="false" mat-align-tabs="start">
+<mat-tab-group #tabGroup mat-stretch-tabs="false" mat-align-tabs="start">
   <mat-tab label="Tags" *ngIf="repository">
     <ng-template matTabContent>
       <app-tags [repository]="repository"></app-tags>
     </ng-template>
   </mat-tab>
-  <mat-tab label="Collaborators" *ngIf="isCurrentUserCollaborator && collaborators">
+  <mat-tab
+    label="Collaborators"
+    *ngIf="isCurrentUserCollaborator && collaborators"
+  >
     <ng-template matTabContent>
       <div class="users-content-container">
         <div class="users-container">
           <ng-container
-            *ngIf="collaborators && collaborators.length > 0; else noCollaborators"
+            *ngIf="
+              collaborators && collaborators.length > 0;
+              else noCollaborators
+            "
           >
             <ng-container
               *ngFor="let item of collaborators; trackBy: trackById"
@@ -82,6 +99,20 @@
                       [showInfo]="false"
                       [iconSize]="'small-icon'"
                     ></app-user-badge>
+
+                    <div class="button-container">
+                      @if(canUserDelete){
+                      <button
+                        class="action-button delete-button"
+                        (click)="
+                          openDeleteCollaboratorModal(item);
+                          $event.stopPropagation()
+                        "
+                      >
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                      }
+                    </div>
                   </div>
                   <div class="multi-line-ellipsis">{{ item.email }}</div>
                   <div class="link-footer">
@@ -103,6 +134,29 @@
                     <span class="ellipsis">{{ item.name }}</span>
                   </div>
                   <div class="multi-line-ellipsis">{{ item.description }}</div>
+                  <div class="button-container">
+                    @if(canUserDelete){
+                    <button
+                      class="action-button delete-button"
+                      (click)="
+                        openDeleteCollaboratorModal(item);
+                        $event.stopPropagation()
+                      "
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                    } 
+                    @if(isCurrentUserCollaborator && isUserInTeam(item)){
+                    <button
+                      class="action-button leave-button"
+                      mat-icon-button
+                      (click)="leaveTeam(item); $event.stopPropagation()"
+                      matTooltip="Leave team"
+                    >
+                      <mat-icon>exit_to_app</mat-icon>
+                    </button>
+                    }
+                  </div>
                   <div class="link-footer date-role-container">
                     <span class="footer-text"
                       >Created At:

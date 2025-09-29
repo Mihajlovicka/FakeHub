@@ -28,6 +28,7 @@ public class TeamServiceTests
         _mapperManagerMock = new Mock<IMapperManager>();
         _repositoryManagerMock = new Mock<IRepositoryManager>();
         _userServiceMock = new Mock<IUserService>();
+        _userContextServiceMock = new Mock<IUserContextService>();
         _organizationServiceMock = new Mock<IOrganizationService>();
         _harborServiceMock = new Mock<IHarborService>();
         _redisCacheServiceMock = new Mock<IRedisCacheService>();
@@ -37,6 +38,7 @@ public class TeamServiceTests
             _mapperManagerMock.Object,
             _repositoryManagerMock.Object,
             _userServiceMock.Object,
+            _userContextServiceMock.Object,
             _harborServiceMock.Object,
             _redisCacheServiceMock.Object
         );
@@ -463,6 +465,10 @@ public class TeamServiceTests
             .Setup(us => us.GetUserProfileByUsernameAsync(username))
             .ReturnsAsync(userResponseBase);
 
+        _userContextServiceMock
+            .Setup(uc => uc.GetCurrentUserAsync())
+            .ReturnsAsync(new User { UserName = "user1"});
+
         _repositoryManagerMock
             .Setup(rm => rm.TeamRepository.GetTeam(organizationName, teamName))
             .ReturnsAsync(team);
@@ -498,6 +504,10 @@ public class TeamServiceTests
         _userServiceMock
             .Setup(us => us.GetUserProfileByUsernameAsync(username))
             .ReturnsAsync(userResponseBase);
+
+        _userContextServiceMock
+            .Setup(uc => uc.GetCurrentUserAsync())
+            .ReturnsAsync(new User { UserName = "user1" });
 
         _repositoryManagerMock
             .Setup(rm => rm.TeamRepository.GetTeam(organizationName, teamName))

@@ -72,4 +72,8 @@ export class RepositoryService {
   public getRepositoriesUserContributed(username: string): Observable<Repository[]> {
     return this.http.get<Repository[]>(`${Path.Repositories}/contributed/${username}`);
   }
+
+  public removeUserCollaborator(repoId: number, username: string): Observable<void> {
+    return this.http.delete<void>(`${Path.Repositories}/${repoId}/remove-collaborator/${username}`);
+  }
 }

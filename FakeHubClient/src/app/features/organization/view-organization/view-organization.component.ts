@@ -9,6 +9,7 @@ import { MatDialog } from "@angular/material/dialog";
 import { MatIconModule } from "@angular/material/icon";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatTabsModule } from "@angular/material/tabs";
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TeamsComponent } from "../../team/teams/teams.component";
 import {
   BehaviorSubject,
@@ -40,7 +41,8 @@ import { FormsModule } from "@angular/forms";
     TeamsComponent,
     ViewOrganizationsMembersComponent,
     DockerImageComponent,
-    FormsModule
+    FormsModule,
+    MatTooltipModule
   ],
   templateUrl: "./view-organization.component.html",
   styleUrl: "./view-organization.component.css",
@@ -64,12 +66,17 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   public repositories: Repository[] = [];
   public searchQuery: string = "";
   public filteredRepositories: Repository[]= [];
+  public currentUserUsername: string = "";
 
   public isOwner(): boolean {
     return (
       this.organization.owner !== null &&
       this.organization.owner === this.userService.getUserName()
     );
+  }
+
+  public isMember(): boolean {
+     return this.organization?.users?.some((u) => u.username === this.currentUserUsername) ?? false;
   }
 
   public edit(): void {
@@ -169,6 +176,23 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
     this.filteredRepositories = result;
   }
 
+  public leaveOrganization(): void {
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: "Leave organization",
+        description:
+          'Are you sure you want to leave the "' + this.organization.name + '" organization?',
+      },
+    });
+    dialogRef.afterClosed().subscribe((isConfirmed) => {
+      if (isConfirmed) {
+        this.service.deleteMember(this.organization.name, this.currentUserUsername)
+          .subscribe((_) => {
+            this.router.navigate(["/organizations"]);
+          });
+      }
+    });
+  }
 
   private filterUsers(newUsers: UserProfileResponseDto[]): void {
     const filteredUsers =
@@ -239,6 +263,8 @@ export class ViewOrganizationComponent implements OnInit, OnDestroy {
   }
 
   public ngOnInit(): void {
+    this.currentUserUsername = this.userService.getUserNameFromToken() ?? '';
+
     const name = this.activatedRoute.snapshot.paramMap.get("name");
     if (name) {
       this.loadAsync(name).then(() => {

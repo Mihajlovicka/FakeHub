@@ -84,7 +84,6 @@
 .user-details-container {
     position: relative;
     width: 21rem;
-/*   height: fit-content; */
     box-shadow: 1px 1px 6px 0px lightgray;
     border-radius: 10px;
     background-color: #e7e7e71f;
@@ -195,4 +194,64 @@ span.footer-text {
     margin: 0;
     opacity: 0.8;
     color: var(--primary-color);
+}
+
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-direction: row-reverse;
+    position:absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+.action-button {
+    border: none;
+    background: transparent;
+    transition: all 0.2s ease-in;
+    border-radius: 50%;
+    padding: 0.25rem;
+    width: 2rem;
+    height: 2rem;
+}
+
+.delete-button mat-icon {
+    font-size: 1rem;
+    color: gray;
+    height: auto;
+}
+
+.delete-button:hover mat-icon {
+    color: #8b0c33;
+}
+.delete-button:hover {
+    background-color: #e2e3e5;
+}
+
+.leave-button mat-icon {
+    font-size: 1rem;
+    height: auto;
+    color: gray;
+}
+
+.leave-button:hover mat-icon {
+    color: #8b0c33;
+}
+
+.leave-button:hover {
+    background-color: #e2e3e5;
+}
+
+.leave-repository-button {
+    color: #8b0c33;
+    transition: all 0.2s ease-in;
+}
+
+.leave-repository-button:hover mat-icon {
+    color: gray;
+}
+
+.leave-repository-button:hover {
+    background-color: #e2e3e5;
 }

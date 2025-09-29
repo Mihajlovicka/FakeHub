@@ -15,6 +15,7 @@ public class TeamService(
     IMapperManager mapperManager,
     IRepositoryManager repositoryManager,
     IUserService userService,
+    IUserContextService userContext,
     IHarborService harborService,
     IRedisCacheService _cacheService
 ) : ITeamService
@@ -184,7 +185,9 @@ public class TeamService(
             if (team == null)
                 return ResponseBase.ErrorResponse("Team not in organization");
 
-            if (!await organizationService.IsLoggedInUserOwner(team.Organization))
+            var currentUser = await userContext.GetCurrentUserAsync();
+            var isCurrentUserLeavingTeam = string.Equals(currentUser.UserName, username, StringComparison.OrdinalIgnoreCase);
+            if (!isCurrentUserLeavingTeam && !(team.Organization?.OwnerId == currentUser.Id))
                 return ResponseBase.ErrorResponse("You are not the owner of this organization");
                 
             var deleteRelation = team.Users.FirstOrDefault(u =>
@@ -194,7 +197,7 @@ public class TeamService(
             if (deleteRelation == null)
                 return ResponseBase.ErrorResponse("User is not member of team");
 
-            await harborService.removeMemberFromTeam($"{organizationName}-{team.Repository.Name}", username);
+            await harborService.removeMemberFromTeam($"{organizationName}-{team.Repository.Name}", username, isCurrentUserLeavingTeam);
 
             team.Users.Remove(deleteRelation);
 

@@ -1,9 +1,9 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnDestroy, OnInit, inject } from "@angular/core";
+import { Component, OnDestroy, OnInit, ViewChild, inject } from "@angular/core";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIconModule } from "@angular/material/icon";
 import { MatMenuModule } from "@angular/material/menu";
-import { MatTabsModule } from "@angular/material/tabs";
+import { MatTabsModule, MatTabGroup } from "@angular/material/tabs";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
 import { Repository, RepositoryOwnedBy } from "../../../core/model/repository";
 import { RepositoryService } from "../../../core/services/repository.service";
@@ -19,6 +19,9 @@ import { AddCollaboratorComponent } from "../add-collaborator/add-collaborator.c
 import { UserProfileResponseDto } from "../../../core/model/user";
 import { UserBadgeComponent } from "../../../shared/components/user-badge/user-badge.component";
 import { Team } from "../../../core/model/team";
+import { MatTooltipModule } from "@angular/material/tooltip";
+import { OrganizationService } from "../../../core/services/organization.service";
+import { TeamService } from "../../../core/services/team.service";
 
 @Component({
   selector: "app-view-repository",
@@ -34,20 +37,27 @@ import { Team } from "../../../core/model/team";
     RepositoryBadgeComponent,
     MatInputModule,
     UserBadgeComponent,
+    MatTooltipModule,
   ],
   templateUrl: "./view-repository.component.html",
   styleUrl: "./view-repository.component.css",
 })
 export class ViewRepositoryComponent implements OnInit, OnDestroy {
+  @ViewChild('tabGroup') tabGroup!: MatTabGroup;
+  
   public repository!: Repository;
   public capitalizedLetterAvatar: string = "";
   public canUserDelete: boolean = false;
   public isCurrentUserCollaborator: boolean = false;
   public collaborators?: (UserProfileResponseDto | Team)[] = [];
+  public currentUserUsername: string = "";
 
   private readonly repositoryService: RepositoryService =
     inject(RepositoryService);
+  private readonly organizationService: OrganizationService =
+    inject(OrganizationService);
   private readonly userService: UserService = inject(UserService);
+  private readonly teamService: TeamService = inject(TeamService);
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly helperService: HelperService = inject(HelperService);
   private getRepositorySubscription: Subscription | null = null;
@@ -58,6 +68,8 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
   private readonly dialog = inject(MatDialog);
 
   public ngOnInit() {
+    this.currentUserUsername = this.userService.getUserNameFromToken() ?? "";
+
     const repoId = this.getRepoId();
     if (repoId) {
       this.canEditRepositorySubscription = this.getRepositorySubscription =
@@ -68,7 +80,7 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
             if (this.userService.isLoggedIn()) {
               this.isOwner();
               this.loadCollaborators();
-            } 
+            }
           }
         });
     }
@@ -146,6 +158,9 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
         this.repositoryService.addCollaborator(repoId, username).subscribe({
           next: () => {
             this.loadCollaborators();
+            if (this.tabGroup) {
+              this.tabGroup.selectedIndex = 1;
+            }
           },
         });
       }
@@ -192,6 +207,102 @@ export class ViewRepositoryComponent implements OnInit, OnDestroy {
 
   public trackById(index: number, item: any) {
     return item.id;
+  }
+
+  public openDeleteCollaboratorModal(
+    item: UserProfileResponseDto | Team
+  ): void {
+    let name = this.isUser(item) ? item.username : item.name;
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: "Delete collaborator",
+        description: `Would you like to delete "${name}" from repository?`,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((isConfirmed) => {
+      if (isConfirmed) {
+        const repoId = this.repository?.id;
+        if (!repoId) return;
+
+        if (this.isUser(item)) {
+          this.repositoryService
+            .removeUserCollaborator(repoId, item.username)
+            .subscribe(() => this.loadCollaborators());
+        } else if (this.isTeam(item)) {
+          this.organizationService
+            .deleteTeam(this.repository.ownerUsername!, item.name)
+            .subscribe(() => this.loadCollaborators());
+        }
+      }
+    });
+  }
+
+  public leaveRepository(): void {
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: "Leave repository",
+        description: `Would you like to leave "${this.repository.name}" repository?`,
+      },
+    });
+
+    this.dialogSubscription = dialogRef
+      .afterClosed()
+      .subscribe((isConfirmed) => {
+        if (isConfirmed) {
+          const repoId = this.repository?.id;
+          if (!repoId) return;
+
+          this.repositoryService
+            .removeUserCollaborator(repoId, this.currentUserUsername)
+            .subscribe({
+              next: () => {
+                if (this.repository.isPrivate) {
+                  this.router.navigate(["/repositories"]);
+                } else {
+                  this.loadCollaborators();
+                  this.isCurrentUserCollaborator = false;
+                }
+              },
+            });
+        }
+      });
+  }
+
+  public isUserInTeam(team: Team): boolean {
+    return (
+      team.users?.some(u => u.username === this.currentUserUsername) ?? false
+    );
+  }
+
+  public leaveTeam(team: Team): void {
+    if (this.isTeam(team)) {
+      const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+        data: {
+          title: "Leave team",
+          description: `Would you like to leave "${team.name}" team?`,
+        },
+      });
+      this.dialogSubscription = dialogRef
+        .afterClosed()
+        .subscribe((isConfirmed) => {
+          if (isConfirmed) {
+            this.teamService
+              .deleteMember(
+                this.repository.ownerUsername!,
+                team.name!,
+                this.currentUserUsername
+              )
+              .subscribe({
+                next: () => {
+                  this.loadCollaborators();
+                  this.isCurrentUserCollaborator = false;
+                },
+              });
+          }
+        });
+    }
   }
 
   private getRepoId(): number | undefined {

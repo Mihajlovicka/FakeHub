@@ -23,4 +23,5 @@ public interface IRepositoryService
     Task<ResponseBase> AddCollaborator(int repositoryId, string username);
     Task<ResponseBase> GetCollaborators(int repositoryId);
     Task<ResponseBase> GetRepositoriesUserContributed(string username);
+    Task<ResponseBase> RemoveCollaborator(int repositoryId, string username);
 }

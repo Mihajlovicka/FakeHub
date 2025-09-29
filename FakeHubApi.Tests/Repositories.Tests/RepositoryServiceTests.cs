@@ -1871,5 +1871,196 @@ namespace FakeHubApi.Tests.Repositories.Tests
             });
         }
 
+        [Test]
+        public async Task RemoveCollaborator_RepositoryNotFound_ReturnsErrorResponse()
+        {
+            var repositoryId = 999;
+            var username = "collaborator";
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync((Model.Entity.Repository)null);
+
+            var response = await _repositoryService.RemoveCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("Repository not found."));
+            });
+        }
+
+        [Test]
+        public async Task RemoveCollaborator_UserNotCollaborator_ReturnsErrorResponse()
+        {
+            var repositoryId = 1;
+            var username = "notcollaborator";
+            var collaborator = new User { Id = 5, UserName = "existingcollaborator" };
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaborator }
+            };
+            var currentUser = new User { Id = 10, UserName = "owner" };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            var response = await _repositoryService.RemoveCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("User is not a collaborator."));
+            });
+        }
+
+        [Test]
+        public async Task RemoveCollaborator_OwnerRemovesCollaborator_ReturnsSuccessResponse()
+        {
+            var repositoryId = 1;
+            var username = "collaborator";
+            var collaborator = new User { Id = 5, UserName = username };
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaborator }
+            };
+            var currentUser = new User { Id = 10, UserName = "owner" };
+            var ownerUser = new User { Id = 10, UserName = "owner" };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.UpdateAsync(It.IsAny<Model.Entity.Repository>()))
+                .Returns(Task.CompletedTask);
+
+            _userManagerMock
+                .Setup(u => u.FindByIdAsync(repository.OwnerId.ToString()))
+                .ReturnsAsync(ownerUser);
+
+            _harborServiceMock
+                .Setup(h => h.removeMemberFromTeam(It.IsAny<string>(), username, false))
+                .ReturnsAsync(true);
+
+            var response = await _repositoryService.RemoveCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+                Assert.That(repository.Collaborators, Does.Not.Contain(collaborator));
+            });
+
+            _repositoryManagerMock.Verify(r => r.RepositoryRepository.UpdateAsync(repository), Times.Once);
+            _harborServiceMock.Verify(h => h.removeMemberFromTeam("owner-TestRepo", username, false), Times.Once);
+        }
+
+        [Test]
+        public async Task RemoveCollaborator_CollaboratorLeavesRepository_ReturnsSuccessResponse()
+        {
+            var repositoryId = 1;
+            var username = "collaborator";
+            var collaborator = new User { Id = 5, UserName = username };
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaborator }
+            };
+            var currentUser = new User { Id = 5, UserName = username };
+            var ownerUser = new User { Id = 10, UserName = "owner" };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.UpdateAsync(It.IsAny<Model.Entity.Repository>()))
+                .Returns(Task.CompletedTask);
+
+            _userManagerMock
+                .Setup(u => u.FindByIdAsync(repository.OwnerId.ToString()))
+                .ReturnsAsync(ownerUser);
+
+            _harborServiceMock
+                .Setup(h => h.removeMemberFromTeam(It.IsAny<string>(), username, true))
+                .ReturnsAsync(true);
+
+            var response = await _repositoryService.RemoveCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.True);
+                Assert.That(repository.Collaborators, Does.Not.Contain(collaborator));
+            });
+
+            _repositoryManagerMock.Verify(r => r.RepositoryRepository.UpdateAsync(repository), Times.Once);
+            _harborServiceMock.Verify(h => h.removeMemberFromTeam("owner-TestRepo", username, true), Times.Once);
+        }
+
+        [Test]
+        public async Task RemoveCollaborator_NonOwnerTriesToRemoveOtherCollaborator_ReturnsErrorResponse()
+        {
+            var repositoryId = 1;
+            var username = "collaborator";
+            var collaborator = new User { Id = 5, UserName = username };
+            var repository = new Model.Entity.Repository
+            {
+                Id = repositoryId,
+                Name = "TestRepo",
+                OwnerId = 10,
+                OwnedBy = RepositoryOwnedBy.User,
+                Collaborators = new List<User> { collaborator }
+            };
+            var currentUser = new User { Id = 15, UserName = "anothercollaborator" };
+
+            _repositoryManagerMock
+                .Setup(r => r.RepositoryRepository.GetByIdWithCollaboratorsAsync(repositoryId))
+                .ReturnsAsync(repository);
+
+            _userContextServiceMock
+                .Setup(u => u.GetCurrentUserWithRoleAsync())
+                .ReturnsAsync((currentUser, "USER"));
+
+            var response = await _repositoryService.RemoveCollaborator(repositoryId, username);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(response, Is.Not.Null);
+                Assert.That(response.Success, Is.False);
+                Assert.That(response.ErrorMessage, Is.EqualTo("You are not the owner and cannot remove other collaborators."));
+            });
+
+            _repositoryManagerMock.Verify(r => r.RepositoryRepository.UpdateAsync(It.IsAny<Model.Entity.Repository>()), Times.Never);
+            _harborServiceMock.Verify(h => h.removeMemberFromTeam(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        }
+
     }
 }

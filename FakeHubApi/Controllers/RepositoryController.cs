@@ -162,4 +162,16 @@ public class RepositoryController(IRepositoryService repositoryService) : Contro
         }
         return BadRequest(response);
     }
+
+    [Authorize(Roles = "USER, ADMIN, SUPERADMIN")]
+    [HttpDelete("{repositoryId:int}/remove-collaborator/{username}")]
+    public async Task<IActionResult> RemoveCollaborator([FromRoute] int repositoryId, [FromRoute] string username)
+    {
+        var response = await repositoryService.RemoveCollaborator(repositoryId, username);
+        if (response.Success)
+        {
+            return Ok(response);
+        }
+        return BadRequest(response);
+    }
 }

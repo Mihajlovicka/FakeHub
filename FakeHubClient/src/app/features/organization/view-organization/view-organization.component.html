@@ -27,6 +27,11 @@
         </button>
       </mat-menu>
       }
+      @if(isMember()) {
+        <button class="leave-org-button" mat-icon-button matTooltip="Leave organization" (click)="leaveOrganization()">
+          <mat-icon>exit_to_app</mat-icon>
+        </button>
+      }
     </div>
     @if(!isOwner()){
     <div class="community-info">

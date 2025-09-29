@@ -754,6 +754,131 @@ namespace FakeHubApi.Tests.Repositories.Tests
         }
 
         [Test, Order(34)]
+        public async Task RemoveCollaborator_OwnerRemovesCollaborator_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RemoveCollabTestRepo",
+                Description = "Repository for remove collaborator testing",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+            var addResponse = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", addCollaboratorDto);
+            addResponse.EnsureSuccessStatusCode();
+
+            var removeResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo.Id}/remove-collaborator/user1@fakehub.com");
+            removeResponse.EnsureSuccessStatusCode();
+
+            var responseObj = await removeResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+        }
+
+        [Test, Order(35)]
+        public async Task RemoveCollaborator_WithoutToken_ReturnsUnauthorized()
+        {
+            _client.DefaultRequestHeaders.Authorization = null;
+            var response = await _client.DeleteAsync("/api/repositories/1/remove-collaborator/user1@fakehub.com");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        }
+
+        [Test, Order(36)]
+        public async Task RemoveCollaborator_InvalidRepository_ReturnsBadRequest()
+        {
+            var invalidRepoId = 9999;
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var response = await _client.DeleteAsync($"/api/repositories/{invalidRepoId}/remove-collaborator/user1@fakehub.com");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await response.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+            Assert.That(responseObj!.ErrorMessage, Is.EqualTo("Repository not found."));
+        }
+
+        [Test, Order(37)]
+        public async Task RemoveCollaborator_CollaboratorLeavesRepository_ReturnsOk()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "LeaveCollabTestRepo",
+                Description = "Repository for leave collaborator testing",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var addCollaboratorDto = new AddCollaboratorDto { Username = "user1@fakehub.com" };
+            var addResponse = await _client.PostAsJsonAsync($"/api/repositories/{createdRepo!.Id}/add-collaborator", addCollaboratorDto);
+            addResponse.EnsureSuccessStatusCode();
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUser1Token);
+            var leaveResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo.Id}/remove-collaborator/user1@fakehub.com");
+            leaveResponse.EnsureSuccessStatusCode();
+
+            var responseObj = await leaveResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.True);
+        }
+
+        [Test, Order(38)]
+        public async Task RemoveCollaborator_NonExistentUser_ReturnsBadRequest()
+        {
+            var repositoryDto = new RepositoryDto
+            {
+                Name = "RemoveNonExistentCollabRepo",
+                Description = "Repository for testing non-existent collaborator removal",
+                IsPrivate = false,
+                OwnedBy = RepositoryOwnedBy.User,
+                OwnerId = -1
+            };
+
+            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
+            var createResponse = await _client.PostAsJsonAsync("/api/repositories", repositoryDto);
+            createResponse.EnsureSuccessStatusCode();
+
+            var createdRepoObj = await createResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            var createdRepoString = createdRepoObj?.Result?.ToString() ?? string.Empty;
+            var createdRepo = JsonConvert.DeserializeObject<Model.Entity.Repository>(createdRepoString);
+
+            Assert.That(createdRepo, Is.Not.Null);
+
+            var removeResponse = await _client.DeleteAsync($"/api/repositories/{createdRepo!.Id}/remove-collaborator/nonexistent@fakehub.com");
+
+            Assert.That(removeResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+            var responseObj = await removeResponse.Content.ReadFromJsonAsync<ResponseBase>();
+            Assert.That(responseObj, Is.Not.Null);
+            Assert.That(responseObj!.Success, Is.False);
+            Assert.That(responseObj!.ErrorMessage, Is.EqualTo("User is not a collaborator."));
+        }
+
+        [Test, Order(39)]
         public async Task Register_WithValidUserToken_AndSuccessfulSave_ReturnsOk()
         {
             var repositoryDto = new RepositoryDto
@@ -791,7 +916,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(responseObj!.Success, Is.True);
         }
 
-        [Test, Order(35)]
+        [Test, Order(40)]
         public async Task Register_WithValidUserToken_AndUnsuccessfulSave_ReturnsBadRequest()
         {
             var repositoryDto = new RepositoryDto
@@ -833,7 +958,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             });
         }
         
-        [Test, Order(36)]
+        [Test, Order(41)]
         public async Task EditRepository_AsAdmin_SuccessfulEdit_ReturnsOk()
         {
             var fakeService = new FakeRepositoryService
@@ -883,7 +1008,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             });
         }
 
-        [Test, Order(37)]
+        [Test, Order(42)]
         public async Task EditRepository_WithoutToken_ReturnsUnauthorized()
         {
             var editDto = new EditRepositoryDto(1, "", false);
@@ -893,7 +1018,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
         }
 
-        [Test, Order(38)]
+        [Test, Order(43)]
         public async Task EditRepository_RepoDoesNotExist_ReturnsBadRequest()
         {
             var editDto = new EditRepositoryDto(9999, "Updated Description", true);
@@ -951,7 +1076,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             });
         }
 
-        [Test, Order(39)]
+        [Test, Order(44)]
         public async Task GetAllPublicRepositories_WithoutQuery_ReturnsAllPublicRepositories()
         {
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
@@ -970,7 +1095,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.IsPrivate == false));
         }
 
-        [Test, Order(40)]
+        [Test, Order(45)]
         public async Task GetAllPublicRepositories_WithDescriptionQuery_ReturnsFilteredRepositories()
         {
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
@@ -989,7 +1114,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Description.Contains("description", StringComparison.OrdinalIgnoreCase)));
         }
 
-        [Test, Order(41)]
+        [Test, Order(46)]
         public async Task GetAllPublicRepositories_WithComplexQuery_ReturnsFilteredRepositories()
         {
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
@@ -1010,7 +1135,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(repositories, Has.All.Matches<RepositoryDto>(r => r.Badge == Badge.DockerOfficialImage));
         }
 
-        [Test, Order(42)]
+        [Test, Order(47)]
         public async Task GetAllPublicRepositories_WithGeneralTermQuery_ReturnsFilteredRepositories()
         {
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
@@ -1030,7 +1155,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
                     (r.Description != null && r.Description.Contains("Repository", StringComparison.OrdinalIgnoreCase))));
         }
 
-        [Test, Order(43)]
+        [Test, Order(48)]
         public async Task GetAllPublicRepositories_WithNonExistentQuery_ReturnsEmptyList()
         {
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _regularUserToken);
@@ -1048,7 +1173,7 @@ namespace FakeHubApi.Tests.Repositories.Tests
             Assert.That(repositories!.Count, Is.EqualTo(0));
         }
 
-        [Test, Order(44)]
+        [Test, Order(49)]
         public async Task GetAllPublicRepositories_WithoutToken_ReturnsOk()
         {
             _client.DefaultRequestHeaders.Authorization = null;
@@ -1468,6 +1593,13 @@ namespace FakeHubApi.Tests.Repositories.Tests
                     })
                 });
 
+
+            private Func<int, string, Task<ResponseBase>> RemoveCollaboratorFunc { get; set; } =
+                (repositoryId, username) => Task.FromResult(new ResponseBase
+                {
+                    Success = true
+                });
+
             public Task<ResponseBase> Save(RepositoryDto model)
             {
                 return SaveFunc(model);
@@ -1525,6 +1657,11 @@ namespace FakeHubApi.Tests.Repositories.Tests
             public Task<ResponseBase> GetRepositoriesUserContributed(string username)
             {
                 return GetRepositoriesUserContributedFunc(username);
+            }
+
+            public Task<ResponseBase> RemoveCollaborator(int repositoryId, string username)
+            {
+                return RemoveCollaboratorFunc(repositoryId, username);
             }
         }
     }

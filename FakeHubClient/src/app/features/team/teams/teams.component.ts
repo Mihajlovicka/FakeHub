@@ -2,19 +2,20 @@ import { Component, EventEmitter, inject, Input, Output } from "@angular/core";
 import { Team } from "../../../core/model/team";
 import { CommonModule, DatePipe } from "@angular/common";
 import { ActivatedRoute, Router } from "@angular/router";
-import {
-  ConfirmationDialogComponent
-} from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
+import { ConfirmationDialogComponent } from "../../../shared/components/confirmation-dialog/confirmation-dialog.component";
 import { MatDialog } from "@angular/material/dialog";
 import { OrganizationService } from "../../../core/services/organization.service";
 import { UserProfileResponseDto } from "../../../core/model/user";
 import { MatIcon } from "@angular/material/icon";
 import { FormsModule } from "@angular/forms";
+import { TeamService } from "../../../core/services/team.service";
+import { UserService } from "../../../core/services/user.service";
+import { MatTooltipModule } from "@angular/material/tooltip";
 
 @Component({
   selector: "app-teams",
   standalone: true,
-  imports: [CommonModule, MatIcon, FormsModule],
+  imports: [CommonModule, MatIcon, FormsModule, MatTooltipModule],
   providers: [DatePipe],
   templateUrl: "./teams.component.html",
   styleUrl: "./teams.component.css",
@@ -22,7 +23,6 @@ import { FormsModule } from "@angular/forms";
 export class TeamsComponent {
   public searchQuery: string = "";
   public filteredTeams: Team[] = [];
-
 
   @Input() public set teams(value: Team[]) {
     this._teams = value;
@@ -43,9 +43,10 @@ export class TeamsComponent {
   @Output() deleteUserEvent = new EventEmitter<UserProfileResponseDto>();
   @Output() deleteTeamEvent = new EventEmitter<Team>();
 
-
   private readonly activatedRoute: ActivatedRoute = inject(ActivatedRoute);
   private readonly router: Router = inject(Router);
+  private readonly teamService: TeamService = inject(TeamService);
+  private readonly userService: UserService = inject(UserService);
 
   public openDeleteTeamModal(team: Team): void {
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
@@ -56,14 +57,14 @@ export class TeamsComponent {
     });
     dialogRef.afterClosed().subscribe((isConfirmed) => {
       if (isConfirmed) {
-        this.service.deleteTeam(this.organizationName, team.name).subscribe(
-          _ => {
-            const userIndex = this.teams.findIndex(u => u.name == team.name);
+        this.service
+          .deleteTeam(this.organizationName, team.name)
+          .subscribe((_) => {
+            const userIndex = this.teams.findIndex((u) => u.name == team.name);
             this.teams.splice(userIndex, 1);
             this.deleteTeamEvent.emit(team);
-            this.router.navigate(['organization/view/', this.organizationName]);
-          }
-        )
+            this.router.navigate(["organization/view/", this.organizationName]);
+          });
       }
     });
   }
@@ -143,4 +144,39 @@ export class TeamsComponent {
     this.filteredTeams = result;
   }
 
+  public leaveTeam(team: Team): void {
+    const currentUserUsername = this.userService.getUserNameFromToken() ?? "";
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: "Leave team",
+        description:
+          'Are you sure you want to leave the "' + team.name + '" team?',
+      },
+    });
+    dialogRef.afterClosed().subscribe((isConfirmed) => {
+      if (isConfirmed) {
+        this.teamService
+          .deleteMember(this.organizationName, team.name, currentUserUsername)
+          .subscribe((_) => {
+            this.teams.forEach((t) => {
+              if (t.name === team.name) {
+                const userIndex = t.users?.findIndex(
+                  (u) => u.username === currentUserUsername
+                );
+                if (userIndex !== undefined && userIndex >= 0) {
+                  t.users?.splice(userIndex, 1);
+                }
+              }
+            });
+          });
+      }
+    });
+  }
+  public isTeamMember(team: Team): boolean {
+    const currentUserUsername: string =
+      this.userService.getUserNameFromToken() ?? "";
+    return (
+      team.users?.some((user) => user.username === currentUserUsername) ?? false
+    );
+  }
 }
