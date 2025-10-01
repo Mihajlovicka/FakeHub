@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using FakeHubApi.Model.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

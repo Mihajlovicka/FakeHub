@@ -1,4 +1,4 @@
-﻿using FakeHubApi.ContainerRegistry;
+using FakeHubApi.ContainerRegistry;
 using FakeHubApi.Model.Entity;
 using Microsoft.AspNetCore.Identity;
 
